@@ -1,10 +1,12 @@
 // backend/functions/sla-workflow.js
 // VERSÃO FINALIZADA: Implementa a lógica real de 'calculateImpact'
 
+// SDK v2 para STS e DynamoDB
 const AWS = require('aws-sdk');
 // Usar o SDK v3 para Cost Explorer é preferível pela modularidade
 const { CostExplorerClient, GetCostAndUsageCommand } = require('@aws-sdk/client-cost-explorer');
 const dynamoDb = new AWS.DynamoDB.DocumentClient();
+const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
 
 const DYNAMODB_TABLE = process.env.DYNAMODB_TABLE;
 
@@ -26,11 +28,16 @@ async function getAssumedClients(roleArn, region = 'us-east-1') {
       secretAccessKey: assumedRole.Credentials.SecretAccessKey,
       sessionToken: assumedRole.Credentials.SessionToken,
     };
-
+    
     // Retorna clientes dos serviços necessários
     return {
       // Cost Explorer API é sempre 'us-east-1'
       costExplorer: new CostExplorerClient({
+        region: 'us-east-1',
+        credentials
+      }),
+      // AWS Support API também é 'us-east-1' para operações de caso
+      support: new AWS.Support({
         region: 'us-east-1',
         credentials
       }),
@@ -155,7 +162,7 @@ exports.checkSLA = async (event) => {
  * Entrada: { ...event, violation, credit, durationMinutes }
  */
 exports.generateReport = async (event) => {
-  console.log('generateReport event:', event);
+  console.log('generateReport event:', JSON.stringify(event, null, 2));
   const { violation, credit, customerId, incidentId, awsAccountId } = event;
 
   // Se não houver violação ou crédito, não faz nada
@@ -179,6 +186,38 @@ exports.generateReport = async (event) => {
   
   console.log(`Relatório gerado e salvo em: ${reportUrl}`);
 
+  // 2. Criar a Fatura (Invoice) no Stripe para a comissão de 30%
+  let invoiceId = null;
+  try {
+    const commissionAmount = Math.round(credit * 0.30 * 100); // Em centavos (30% de comissão)
+
+    if (commissionAmount > 50) { // Stripe tem um valor mínimo de cobrança (ex: $0.50)
+      // Etapa 1: Criar um item de fatura pendente
+      const invoiceItem = await stripe.invoiceItems.create({
+        customer: customerId, // Assumimos que o customerId do nosso sistema é o Stripe Customer ID
+        amount: commissionAmount,
+        currency: 'usd',
+        description: `Comissão de 30% sobre crédito SLA de $${credit.toFixed(2)} (Incidente: ${incidentId})`,
+      });
+
+      // Etapa 2: Criar a fatura a partir do item e finalizá-la
+      const invoice = await stripe.invoices.create({
+        customer: customerId,
+        collection_method: 'charge_automatically', // Tenta cobrar o método de pagamento padrão
+        auto_advance: true, // Move a fatura do estado 'draft' para 'open'
+        metadata: {
+          claimId: incidentId.replace('INCIDENT#', ''), // Link para o webhook
+          customerId: customerId,
+        },
+      });
+      invoiceId = invoice.id;
+      console.log(`Fatura ${invoiceId} criada no Stripe para o cliente ${customerId} no valor de ${commissionAmount / 100} USD.`);
+    }
+  } catch (stripeError) {
+    console.error(`Erro ao criar fatura no Stripe para o cliente ${customerId}:`, stripeError);
+    // Não interromper o fluxo, apenas registrar o erro. A fatura pode ser gerada manualmente.
+  }
+
   // 2. Salvar a reivindicação (CLAIM) no DynamoDB
   const claimId = `CLAIM#${incidentId.replace('INCIDENT#', '')}`;
   await dynamoDb.put({
@@ -191,6 +230,7 @@ exports.generateReport = async (event) => {
       reportUrl: reportUrl,
       incidentId: incidentId,
       awsAccountId: awsAccountId,
+      stripeInvoiceId: invoiceId, // Salva o ID da fatura
       details: event, // Armazena todos os dados do evento e cálculo
     },
   }).promise();
@@ -204,10 +244,84 @@ exports.generateReport = async (event) => {
       ExpressionAttributeValues: { ':status': 'CLAIM_GENERATED', ':claimId': claimId }
   }).promise();
 
-  // 4. TODO: Criar a Fatura (Invoice) no Stripe para a comissão de 30%
-  // const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
-  // const commissionAmount = Math.round(credit * 0.3 * 100); // Em centavos
-  // await stripe.invoices.create({ ... });
-
   return { ...event, reportUrl, status: 'generated', claimId: claimId };
+};
+
+/**
+ * 4. Submit Support Ticket
+ * Entrada: { ...event, claimId, credit }
+ */
+exports.submitSupportTicket = async (event) => {
+  console.log('submitSupportTicket event:', event);
+  const { customerId, awsAccountId, claimId, credit, healthEvent, durationMinutes } = event;
+
+  // Se não houver claimId, algo deu errado.
+  if (!claimId) {
+    console.warn('Nenhum claimId encontrado. Pulando envio de ticket.');
+    return { ...event, status: 'submission-skipped' };
+  }
+
+  const roleToAssume = `arn:aws:iam::${awsAccountId}:role/CostGuardianDelegatedRole`;
+
+  try {
+    // 1. Assumir a role do cliente para ter permissão de criar um caso de suporte
+    const { support } = await getAssumedClients(roleToAssume);
+
+    // 2. Montar o corpo do ticket de suporte
+    const subject = `[Cost Guardian] Reivindicação de Crédito SLA para ${healthEvent.service}`;
+    const communicationBody = `
+Prezada equipe de suporte da AWS,
+
+Esta é uma solicitação de crédito de SLA gerada automaticamente pela plataforma AWS Cost Guardian em nome de nosso cliente mútuo (Conta AWS: ${awsAccountId}).
+
+Detectamos uma violação do Acordo de Nível de Serviço (SLA) para o serviço ${healthEvent.service} com base no seguinte evento do AWS Health:
+
+- ID do Evento: ${healthEvent.eventArn}
+- Início do Incidente: ${healthEvent.startTime}
+- Fim do Incidente: ${healthEvent.endTime || 'Em andamento'}
+- Duração da Interrupção: ${durationMinutes.toFixed(2)} minutos
+- Recursos Afetados: ${healthEvent.resources.join(', ')}
+
+Com base no custo dos recursos afetados durante o período da interrupção, calculamos um crédito de SLA estimado de US$ ${credit.toFixed(2)}.
+
+Solicitamos a análise deste evento e a aplicação do crédito de SLA correspondente na fatura desta conta.
+
+Obrigado,
+AWS Cost Guardian
+    `;
+
+    // 3. Chamar a API CreateCase
+    const caseResult = await support.createCase({
+      subject,
+      communicationBody,
+      serviceCode: healthEvent.service.toLowerCase(), // Ex: 'ec2'. Requer mapeamento ou pode falhar.
+      categoryCode: 'billing', // Categoria apropriada
+      severityCode: 'low', // Casos de faturamento geralmente são de baixa severidade
+    }).promise();
+
+    console.log(`Ticket de suporte criado com sucesso: Case ID ${caseResult.caseId}`);
+
+    // 4. Atualizar o status da reivindicação no DynamoDB
+    await dynamoDb.update({
+        TableName: DYNAMODB_TABLE,
+        Key: { id: customerId, sk: claimId },
+        UpdateExpression: 'SET #status = :status, #caseId = :caseId',
+        ExpressionAttributeNames: { '#status': 'status', '#caseId': 'caseId' },
+        ExpressionAttributeValues: { ':status': 'SUBMITTED', ':caseId': caseResult.caseId }
+    }).promise();
+
+    return { ...event, status: 'submitted', caseId: caseResult.caseId };
+
+  } catch (err) {
+    console.error(`Erro ao enviar ticket de suporte para ${awsAccountId} (Claim ${claimId}):`, err);
+    // Atualizar status para falha para não tentar novamente
+    await dynamoDb.update({
+        TableName: DYNAMODB_TABLE,
+        Key: { id: customerId, sk: claimId },
+        UpdateExpression: 'SET #status = :status, #error = :error',
+        ExpressionAttributeNames: { '#status': 'status', '#error': 'submissionError' },
+        ExpressionAttributeValues: { ':status': 'SUBMISSION_FAILED', ':error': err.message }
+    }).promise();
+    throw new Error(`Falha ao enviar ticket de suporte: ${err.message}`);
+  }
 };

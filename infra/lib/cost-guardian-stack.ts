@@ -39,6 +39,14 @@ export class CostGuardianStack extends cdk.Stack {
       projectionType: dynamodb.ProjectionType.INCLUDE,
       nonKeyAttributes: ['id'], // Projetar o 'id' (nosso Customer ID)
     });
+
+    // GSI para o callback do onboarding via ExternalId
+    table.addGlobalSecondaryIndex({
+      indexName: 'ExternalIdIndex',
+      partitionKey: { name: 'externalId', type: dynamodb.AttributeType.STRING },
+      projectionType: dynamodb.ProjectionType.INCLUDE,
+      nonKeyAttributes: ['id', 'status'],
+    });
     
     // GSI para consultar por cliente (ex: incidentes, claims)
     table.addGlobalSecondaryIndex({
@@ -107,8 +115,46 @@ export class CostGuardianStack extends cdk.Stack {
       })
     });
     
-    // (Definir Lambdas similares para checkSLA e generateReport)
-    // ... slaCheckLambda, slaGenerateReportLambda ...
+    const slaCheckLambda = new lambda.Function(this, 'SlaCheck', {
+      runtime: lambda.Runtime.NODEJS_18_X,
+      handler: 'functions/sla-workflow.checkSLA',
+      code: lambda.Code.fromAsset('../backend'),
+      environment: { DYNAMODB_TABLE: table.tableName },
+    });
+
+    const slaGenerateReportLambda = new lambda.Function(this, 'SlaGenerateReport', {
+      runtime: lambda.Runtime.NODEJS_18_X,
+      handler: 'functions/sla-workflow.generateReport',
+      code: lambda.Code.fromAsset('../backend'),
+      environment: {
+        DYNAMODB_TABLE: table.tableName,
+        STRIPE_SECRET_KEY: stripeSecret.secretValue.toString(), // Passa o valor do secret
+      },
+    });
+    table.grantReadWriteData(slaGenerateReportLambda);
+    stripeSecret.grantRead(slaGenerateReportLambda);
+
+    const slaSubmitTicketLambda = new lambda.Function(this, 'SlaSubmitTicket', {
+      runtime: lambda.Runtime.NODEJS_18_X,
+      handler: 'functions/sla-workflow.submitSupportTicket',
+      code: lambda.Code.fromAsset('../backend'),
+      environment: { DYNAMODB_TABLE: table.tableName },
+      role: new iam.Role(this, 'SlaSubmitRole', {
+        assumedBy: new iam.ServicePrincipal('lambda.amazonaws.com'),
+        managedPolicies: [
+          iam.ManagedPolicy.fromAwsManagedPolicyName('service-role/AWSLambdaBasicExecutionRole')
+        ],
+        inlinePolicies: {
+          AssumeCustomerRolePolicy: new iam.PolicyDocument({
+            statements: [new iam.PolicyStatement({
+              actions: ['sts:AssumeRole'],
+              resources: ['arn:aws:iam::*:role/CostGuardianDelegatedRole'],
+            })]
+          })
+        }
+      })
+    });
+    table.grantReadWriteData(slaSubmitTicketLambda);
     
     // *** FIM DAS CORREÇÕES DE LAMBDA ***
 
@@ -128,11 +174,21 @@ export class CostGuardianStack extends cdk.Stack {
     healthRule.addTarget(new targets.LambdaFunction(healthEventHandlerLambda));
 
     // Step Functions SLA (Usando os Lambdas corretos)
-    const getEventDetails = new sfn_tasks.LambdaInvoke(this, 'GetEventDetails', { lambdaFunction: healthEventHandlerLambda }); // Reutilizando ou criando um novo
-    const calculateImpactTask = new sfn_tasks.LambdaInvoke(this, 'CalculateImpact', { lambdaFunction: slaCalculateImpactLambda });
-    // ... tarefas para checkSLA e generateReport ...
-    
-    const slaDefinition = getEventDetails.next(calculateImpactTask); // .next(checkSLATask)...
+    const calculateImpactTask = new sfn_tasks.LambdaInvoke(this, 'CalculateImpact', { lambdaFunction: slaCalculateImpactLambda, outputPath: '$.Payload' });
+    const checkSlaTask = new sfn_tasks.LambdaInvoke(this, 'CheckSLA', { lambdaFunction: slaCheckLambda, outputPath: '$.Payload' });
+    const generateReportTask = new sfn_tasks.LambdaInvoke(this, 'GenerateReport', { lambdaFunction: slaGenerateReportLambda, outputPath: '$.Payload' });
+    const submitTicketTask = new sfn_tasks.LambdaInvoke(this, 'SubmitTicket', { lambdaFunction: slaSubmitTicketLambda, outputPath: '$.Payload' });
+    const noClaim = new stepfunctions.Succeed(this, 'NoClaimGenerated');
+
+    const claimChoice = new stepfunctions.Choice(this, 'IsClaimGenerated?')
+      .when(stepfunctions.Condition.stringEquals('$.status', 'generated'), submitTicketTask)
+      .otherwise(noClaim);
+
+    const slaDefinition = calculateImpactTask
+      .next(checkSlaTask)
+      .next(generateReportTask)
+      .next(claimChoice);
+
     const sfn = new stepfunctions.StateMachine(this, 'SLAWorkflow', {
       definitionBody: stepfunctions.DefinitionBody.fromChainable(slaDefinition),
     });
@@ -155,7 +211,7 @@ export class CostGuardianStack extends cdk.Stack {
 
     // Resources API (Corrigido)
     const onboard = api.root.addResource('onboard');
-    onboard.addMethod('POST', apiIntegration, { authorizer: auth });
+    onboard.addMethod('POST', apiIntegration); // Webhook, sem auth
     
     // Novo endpoint para gerar config de onboarding
     const onboardInit = api.root.addResource('onboard-init');
@@ -165,6 +221,9 @@ export class CostGuardianStack extends cdk.Stack {
     incidents.addMethod('GET', apiIntegration, { authorizer: auth });
     const slaClaims = api.root.addResource('sla-claims');
     slaClaims.addMethod('GET', apiIntegration, { authorizer: auth });
+
+    const invoicesApi = api.root.addResource('invoices');
+    invoicesApi.addMethod('GET', apiIntegration, { authorizer: auth });
 
     // Outputs (Mantido)
     new cdk.CfnOutput(this, 'APIUrl', { value: api.url });

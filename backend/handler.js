@@ -66,14 +66,25 @@ app.get('/api/onboard-init', authenticateUser, async (req, res) => {
 });
 
 // POST /api/onboard
-app.post('/api/onboard', authenticateUser, async (req, res) => {
+app.post('/api/onboard', async (req, res) => {
   try {
-    const { roleArn, awsAccountId } = req.body;
-    const userId = req.user.sub;
-    const email = req.user.email;
+    const { roleArn, awsAccountId, externalId } = req.body;
 
-    // 1. Validar se a roleArn é válida (implementação futura)
-    // 2. Salvar mapeamento
+    // 1. Encontrar o usuário pelo externalId para validar o callback
+    const configQuery = await dynamoDb.query({
+      TableName: process.env.DYNAMODB_TABLE,
+      IndexName: 'ExternalIdIndex', // GSI necessário: externalId -> userId
+      KeyConditionExpression: 'externalId = :externalId',
+      ExpressionAttributeValues: { ':externalId': externalId },
+    }).promise();
+
+    if (!configQuery.Items || configQuery.Items.length === 0) {
+      return res.status(404).json({ success: false, message: 'Configuração de onboarding não encontrada para o ExternalId.' });
+    }
+    const userConfig = configQuery.Items[0];
+    const userId = userConfig.id;
+
+    // 2. Salvar mapeamento da conta do cliente
     const params = {
       TableName: process.env.DYNAMODB_TABLE,
       Item: {
@@ -81,7 +92,6 @@ app.post('/api/onboard', authenticateUser, async (req, res) => {
         sk: `ACCOUNT#${awsAccountId}`,
         roleArn,
         awsAccountId,
-        email,
         plan: 'free',
         createdAt: new Date().toISOString(),
         locale: req.locale,
@@ -90,7 +100,7 @@ app.post('/api/onboard', authenticateUser, async (req, res) => {
 
     await dynamoDb.put(params).promise();
 
-    // 3. Atualizar status do onboarding
+    // 3. Atualizar status do onboarding para COMPLETED
     await dynamoDb.update({
       TableName: process.env.DYNAMODB_TABLE,
       Key: { id: userId, sk: 'CONFIG#ONBOARD' },
@@ -100,7 +110,7 @@ app.post('/api/onboard', authenticateUser, async (req, res) => {
     }).promise();
 
     res.json({ 
-      success: true, 
+      success: true,
       message: 'Onboarding completo!',
       accountId: awsAccountId
     });
@@ -155,6 +165,33 @@ app.get('/api/sla-claims', authenticateUser, async (req, res) => {
   }
 });
 
+// GET /api/invoices
+app.get('/api/invoices', authenticateUser, async (req, res) => {
+  try {
+    const userId = req.user.sub; // Este é o nosso Stripe Customer ID
+
+    const invoices = await stripe.invoices.list({
+      customer: userId,
+      limit: 100, // Pega até 100 faturas
+    });
+
+    // Formata a resposta para o frontend
+    const formattedInvoices = invoices.data.map(inv => ({
+      id: inv.id,
+      date: inv.created,
+      amount: (inv.amount_due / 100).toFixed(2),
+      status: inv.status, // ex: 'paid', 'open', 'draft'
+      pdfUrl: inv.invoice_pdf,
+      hostedUrl: inv.hosted_invoice_url,
+    }));
+
+    res.json(formattedInvoices);
+  } catch (err) {
+    console.error('Erro ao buscar faturas do Stripe:', err);
+    res.status(500).json({ message: 'Erro ao buscar faturas' });
+  }
+});
+
 // POST /api/stripe/webhook (LÓGICA CORRIGIDA)
 app.post('/api/stripe/webhook', express.raw({ type: 'application/json' }), async (req, res) => {
   const sig = req.headers['stripe-signature'];
@@ -172,17 +209,18 @@ app.post('/api/stripe/webhook', express.raw({ type: 'application/json' }), async
   if (event.type === 'invoice.paid') {
     const invoice = event.data.object;
     const commissionAmount = invoice.amount_paid / 100; // Valor em dólares
-    const claimId = invoice.metadata.claimId; // Metadata setada ao criar a fatura
+    const claimId = `CLAIM#${invoice.metadata.claimId}`; // Metadata setada ao criar a fatura
+    const customerId = invoice.metadata.customerId;
 
-    console.log(`Comissão de $${commissionAmount} recebida para a Reivindicação: ${claimId}`);
+    console.log(`Comissão de $${commissionAmount} recebida para a Reivindicação: ${claimId} do cliente ${customerId}`);
 
     // Atualizar o status da reivindicação no DynamoDB para 'PAID'
     try {
       await dynamoDb.update({
         TableName: process.env.DYNAMODB_TABLE,
         Key: {
-          id: invoice.customer, // Ou outro identificador apropriado
-          sk: `CLAIM#${claimId}`
+          id: customerId, // Usar o ID do nosso sistema, vindo dos metadados
+          sk: claimId
         },
         UpdateExpression: 'SET #status = :status, commissionAmount = :amount',
         ExpressionAttributeNames: {

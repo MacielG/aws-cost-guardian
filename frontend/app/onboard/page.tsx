@@ -3,20 +3,32 @@
 'use client';
 import { useTranslation } from 'react-i18next';
 import { Button } from '@/components/ui/button';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
+import { useRouter } from 'next/navigation';
 // Assuma que existe um hook ou contexto para obter o token de autenticação
 // import { useAuth } from '@/context/AuthContext'; 
 
 export default function Onboard() {
   const { t } = useTranslation();
-  const [roleArn, setRoleArn] = useState('');
-  const [awsAccountId, setAwsAccountId] = useState(''); // Novo: Coletar Account ID
   const [cfnLink, setCfnLink] = useState('');
+  const [onboardingStatus, setOnboardingStatus] = useState('PENDING_CFN');
+  const [isConnecting, setIsConnecting] = useState(false);
+  const router = useRouter();
   // const { getToken } = useAuth(); // Exemplo de como obter o token
 
-  // Buscar o ExternalId seguro no backend
-  useEffect(() => {
-    const fetchOnboardConfig = async () => {
+  const checkOnboardingStatus = useCallback(async () => {
+    // const token = await getToken();
+    const response = await fetch('/api/onboard-init'); // Este endpoint agora retorna o status
+    if (response.ok) {
+      const data = await response.json();
+      setOnboardingStatus(data.status);
+      if (data.status === 'COMPLETED') {
+        router.push('/dashboard');
+      }
+    }
+  }, [router]);
+
+  const fetchOnboardConfig = useCallback(async () => {
       // const token = await getToken(); // Obter token do Cognito
       const response = await fetch('/api/onboard-init', {
         headers: {
@@ -27,66 +39,55 @@ export default function Onboard() {
       if (response.ok) {
         const config = await response.json();
         // Constrói o link do CloudFormation dinamicamente
+        setOnboardingStatus(config.status);
         const templateUrl = 'https://s3.amazonaws.com/cost-guardian-templates/cost-guardian-template.yaml';
-        const link = `https://console.aws.amazon.com/cloudformation/home?region=us-east-1#/stacks/create/review?templateURL=${templateUrl}&stackName=CostGuardianStack&param_ExternalId=${config.externalId}&param_PlatformAccountId=${config.platformAccountId}`;
+        const callbackUrl = `${window.location.origin}/api/onboard`;
+        const link = `https://console.aws.amazon.com/cloudformation/home?region=us-east-1#/stacks/create/review?templateURL=${templateUrl}&stackName=CostGuardianStack&param_ExternalId=${config.externalId}&param_PlatformAccountId=${config.platformAccountId}&param_CallbackUrl=${encodeURIComponent(callbackUrl)}`;
         setCfnLink(link);
       }
-    };
+    }, []);
 
+  // Buscar o ExternalId seguro no backend
+  useEffect(() => {
     fetchOnboardConfig();
-  }, []); // Adicionado 'getToken' ao array de dependência se ele mudar
+  }, [fetchOnboardConfig]);
+
+  useEffect(() => {
+    if (isConnecting && onboardingStatus !== 'COMPLETED') {
+      const interval = setInterval(checkOnboardingStatus, 5000); // Verifica a cada 5 segundos
+      return () => clearInterval(interval);
+    }
+  }, [isConnecting, onboardingStatus, checkOnboardingStatus]);
 
   const handleConnect = () => {
     if (cfnLink) {
       window.open(cfnLink, '_blank');
+      setIsConnecting(true);
     } else {
       alert('Gerando link de conexão, por favor aguarde...');
     }
   };
 
-  const saveRole = async () => {
-    // const token = await getToken();
-    // Chame backend /api/onboard
-    await fetch('/api/onboard', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        // 'Authorization': `Bearer ${token}`,
-      },
-      body: JSON.stringify({ 
-          roleArn, 
-          awsAccountId // Enviar o ID da conta também
-        }),
-    });
-    alert('Onboarding completo!');
-  };
-
   return (
     <div className="p-8">
       <h1>{t('connectAws')}</h1>
-      <Button onClick={handleConnect} className="mt-4" disabled={!cfnLink}>
-        1. Conectar AWS (Abrir CloudFormation)
-      </Button>
-      <p className="text-sm text-gray-600 mt-2">
-        Após criar a pilha no console da AWS, copie o 'RoleArn' e o 'AWS Account ID' da aba 'Outputs' e cole-os abaixo.
-      </p>
-      <input
-        type="text"
-        placeholder="Insira o ID da Conta AWS (ex: 123456789012)"
-        value={awsAccountId}
-        onChange={(e) => setAwsAccountId(e.target.value)}
-        className="mt-4 p-2 border w-full"
-      />
-      <input
-        type="text"
-        placeholder="Insira o ARN da Role gerada (ex: arn:aws:iam::...)"
-        value={roleArn}
-        onChange={(e) => setRoleArn(e.target.value)}
-        className="mt-4 p-2 border w-full"
-      />
-      <Button onClick={saveRole} className="mt-2">
-        2. Salvar e Iniciar Monitoramento
-      </Button>
+      {onboardingStatus === 'COMPLETED' ? (
+        <div className="mt-4 p-4 bg-green-100 text-green-800 rounded">
+          <p>✅ Conexão com a AWS realizada com sucesso!</p>
+          <p>Você será redirecionado para o dashboard...</p>
+        </div>
+      ) : (
+        <>
+          <Button onClick={handleConnect} className="mt-4" disabled={!cfnLink || isConnecting}>
+            {isConnecting ? 'Aguardando conexão...' : '1. Conectar AWS (Abrir CloudFormation)'}
+          </Button>
+          <p className="text-sm text-gray-600 mt-2">
+            {isConnecting 
+              ? 'Após criar a stack no console da AWS, pode fechar a aba e voltar para cá. Estamos aguardando a confirmação automática.'
+              : 'Isto abrirá o console da AWS para você criar a role de acesso. É seguro e transparente.'}
+          </p>
+        </>
+      )}
     </div>
   );
 }

@@ -45,7 +45,10 @@ export default function Dashboard() {
           </CardContent>
         </Card>
       ))}
-      <Link href="/sla-claims" className="block mt-4 text-blue-500">Ver Reivindicações SLA</Link>
+      <div className="mt-6 flex space-x-4">
+        <Link href="/sla-claims" className="text-blue-500 hover:underline">Ver Reivindicações SLA</Link>
+        <Link href="/billing" className="text-blue-500 hover:underline">Ver Histórico de Faturamento</Link>
+      </div>
     </div>
   );
 }

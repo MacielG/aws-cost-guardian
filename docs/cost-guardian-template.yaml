@@ -11,6 +11,10 @@ Parameters:
     Type: String
     Default: '123456789012'  # Sua Account ID
     Description: 'Platform Account ID'
+  CallbackUrl:
+    Type: String
+    Description: 'URL de callback para notificar a plataforma sobre a criação da role.'
+    AllowedPattern: 'https://.+'
 
 Resources:
   CostGuardianRole:
@@ -21,8 +25,7 @@ Resources:
         Version: '2012-10-17'
         Statement:
           - Effect: Allow
-            Principal:
-              AWS: !Sub 'arn:aws:iam::${PlatformAccountId}:role/CostGuardianPlatformRole'
+            Principal: { AWS: !Ref PlatformAccountId } # Simplificado para aceitar a conta raiz
             Action: sts:AssumeRole
             Condition:
               StringEquals:
@@ -41,6 +44,8 @@ Resources:
                   - health:DescribeEvents
                   - health:DescribeAffectedEntities
                   - cloudwatch:GetMetricData
+                  - support:CreateCase
+                  - support:DescribeServices
                 Resource: '*'
 
   # Custom Resource para Callback (ativa onboarding)
@@ -52,19 +57,74 @@ Resources:
       Code:
         ZipFile: |
           const https = require('https');
-          const response = require('cfn-response');
-          exports.handler = function(event, context) {
-            if (event.RequestType === 'Create') {
-              const responseData = { RoleArn: event.ResourceProperties.RoleArn };
-              const responseURL = event.ResponseURL;
-              https.post(responseURL, {
-                headers: { 'content-type': '', 'content-length': JSON.stringify(responseData).length },
-                body: JSON.stringify({ Status: 'SUCCESS', Reason: 'Role Created', PhysicalResourceId: event.PhysicalResourceId, Data: responseData })
-              }, (err) => {
-                context.done(err, event.PhysicalResourceId);
-              });
+          const url = require('url');
+
+          exports.handler = async (event, context) => {
+            const responseData = { RoleArn: event.ResourceProperties.RoleArn };
+            try {
+              if (event.RequestType === 'Create' || event.RequestType === 'Update') {
+                const callbackUrl = event.ResourceProperties.CallbackUrl;
+                const externalId = event.ResourceProperties.ExternalId;
+                const roleArn = event.ResourceProperties.RoleArn;
+                const awsAccountId = context.invokedFunctionArn.split(':')[4];
+
+                const postData = JSON.stringify({
+                  roleArn: roleArn,
+                  awsAccountId: awsAccountId,
+                  externalId: externalId
+                });
+
+                const options = url.parse(callbackUrl);
+                options.method = 'POST';
+                options.headers = {
+                  'Content-Type': 'application/json',
+                  'Content-Length': Buffer.byteLength(postData)
+                };
+
+                await new Promise((resolve, reject) => {
+                  const req = https.request(options, (res) => res.on('end', resolve));
+                  req.on('error', reject);
+                  req.write(postData);
+                  req.end();
+                });
+              }
+              await sendResponse(event, context, 'SUCCESS', responseData);
+            } catch (err) {
+              console.error(err);
+              await sendResponse(event, context, 'FAILED', responseData, err.toString());
             }
           };
+
+          function sendResponse(event, context, responseStatus, responseData, reason) {
+            return new Promise(() => {
+              const responseBody = JSON.stringify({
+                Status: responseStatus,
+                Reason: reason || 'See the details in CloudWatch Log Stream: ' + context.logStreamName,
+                PhysicalResourceId: context.logStreamName,
+                StackId: event.StackId,
+                RequestId: event.RequestId,
+                LogicalResourceId: event.LogicalResourceId,
+                Data: responseData,
+              });
+
+              const options = url.parse(event.ResponseURL);
+              options.method = 'PUT';
+              options.headers = {
+                'Content-Type': '',
+                'Content-Length': Buffer.byteLength(responseBody),
+              };
+
+              const req = https.request(options, (res) => {
+                context.done();
+              });
+              req.on('error', (error) => {
+                console.error('sendResponse Error:', error);
+                context.done();
+              });
+              req.write(responseBody);
+              req.end();
+            });
+          }
       Runtime: nodejs18.x
       Timeout: 30
 
@@ -94,9 +154,14 @@ Resources:
     Type: AWS::CloudFormation::CustomResource
     Properties:
       ServiceToken: !GetAtt CallbackFunction.Arn
-      RoleArn: !Ref CostGuardianRole
+      RoleArn: !GetAtt CostGuardianRole.Arn
+      CallbackUrl: !Ref CallbackUrl
+      ExternalId: !Ref ExternalId
 
 Outputs:
   RoleArn:
     Value: !GetAtt CostGuardianRole.Arn
     Description: 'ARN da Role para colar no app'
+  AwsAccountId:
+    Value: !Ref "AWS::AccountId"
+    Description: 'ID da conta AWS onde a stack foi criada.'
