@@ -63,6 +63,13 @@ export class CostGuardianStack extends cdk.Stack {
       autoVerify: { email: true },
     });
 
+    // Grupo de administradores no Cognito
+    new cognito.CfnUserPoolGroup(this, 'AdminGroup', {
+      userPoolId: userPool.userPoolId,
+      groupName: 'Admins',
+      description: 'Grupo para administradores da plataforma',
+    });
+
     // *** INÍCIO DAS CORREÇÕES DE LAMBDA ***
 
     // 1. Lambda para o API Gateway (Monolito Express)
@@ -241,6 +248,16 @@ export class CostGuardianStack extends cdk.Stack {
 
     const termsApi = api.root.addResource('accept-terms');
     termsApi.addMethod('POST', apiIntegration, { authorizer: auth });
+
+    // Endpoint de Admin
+    const adminApi = api.root.addResource('admin');
+    adminApi.addResource('claims').addMethod('GET', apiIntegration, { authorizer: auth });
+    // New endpoint for admin to update claim status
+    adminApi.addResource('claims')
+      .addResource('{customerId}')
+      .addResource('{claimId}')
+      .addResource('status')
+      .addMethod('PUT', apiIntegration, { authorizer: auth });
 
     // Outputs (Mantido)
     new cdk.CfnOutput(this, 'APIUrl', { value: api.url });

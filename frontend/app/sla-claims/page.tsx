@@ -8,7 +8,7 @@ import { Badge } from '@/components/ui/badge';
 
 interface Claim {
   id: string; // customerId
-  sk: string; // CLAIM#...
+  sk: string; // CLAIM#... ou INCIDENT#...
   status: 'READY_TO_SUBMIT' | 'SUBMITTED' | 'SUBMISSION_FAILED' | 'PAID' | 'REFUNDED' | 'NO_VIOLATION' | 'NO_RESOURCES_LISTED';
   creditAmount: number;
   reportUrl?: string;
@@ -21,11 +21,11 @@ interface Claim {
 }
 
 const getStatusVariant = (status: Claim['status']) => {
-  switch (status) {
+  switch (status) { // Mapeamento de cor para o Badge
     case 'PAID': case 'REFUNDED': return 'success';
     case 'SUBMITTED': return 'default';
     case 'READY_TO_SUBMIT': return 'secondary';
-    case 'SUBMISSION_FAILED': return 'destructive';
+    case 'SUBMISSION_FAILED': case 'REPORT_FAILED': return 'destructive';
     case 'NO_VIOLATION': case 'NO_RESOURCES_LISTED': return 'outline';
     default: return 'default';
   }
@@ -76,7 +76,7 @@ export default function SLAClaims() {
                   <CardContent className="p-4">
                     <div className="flex items-center justify-between">
                       <h3 className="text-lg font-semibold">{t('slaClaims.claimId', 'Reivindicação ID')}: {claim.sk.replace('CLAIM#', '')}</h3>
-                      <Badge variant={getStatusVariant(claim.status)}>{t(`slaClaims.status.${claim.status}`, claim.status)}</Badge>
+                      <Badge variant={getStatusVariant(claim.status)}>{t(`statuses.${claim.status}`, claim.status)}</Badge>
                     </div>
                     <p className="text-sm text-muted-foreground">{t('slaClaims.incidentId', 'Incidente Associado')}: {claim.incidentId.replace('INCIDENT#', '')}</p>
                     <p className="mt-2">{t('slaClaims.awsAccount', 'Conta AWS')}: {claim.awsAccountId}</p>

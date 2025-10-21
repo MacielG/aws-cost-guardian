@@ -35,6 +35,23 @@ const authenticateUser = (req, res, next) => {
   }
 };
 
+// Valid statuses for admin updates
+const VALID_ADMIN_STATUSES = ['READY_TO_SUBMIT', 'SUBMITTED', 'SUBMISSION_FAILED', 'PAID', 'REFUNDED', 'NO_VIOLATION', 'NO_RESOURCES_LISTED', 'REPORT_FAILED'];
+
+
+// Middleware de autorização para Admins
+const authorizeAdmin = (req, res, next) => {
+  const userGroups = req.user?.['cognito:groups'];
+  if (userGroups && userGroups.includes('Admins')) {
+    return next();
+  }
+  res.status(403).json({ message: 'Acesso negado. Requer privilégios de administrador.' });
+};
+
+// Para adicionar um usuário ao grupo 'Admins', use o Console da AWS ou a AWS CLI:
+// aws cognito-idp admin-add-user-to-group --user-pool-id <user-pool-id> --username <user-sub> --group-name Admins
+
+
 // GET /api/onboard-init
 // NOTE: handler foi movido mais abaixo para incluir verificação de termos aceitos
 
@@ -281,6 +298,65 @@ app.post('/api/stripe/webhook', express.raw({ type: 'application/json' }), async
   }
 
   res.json({ received: true });
+});
+
+// --- ENDPOINTS DE ADMIN ---
+
+// GET /api/admin/claims
+app.get('/api/admin/claims', authenticateUser, authorizeAdmin, async (req, res) => {
+  try {
+    // Scan é menos eficiente que Query, mas aceitável para um painel de admin
+    // com um número moderado de itens. Para escalar, considere um GSI.
+    const params = {
+      TableName: process.env.DYNAMODB_TABLE,
+      FilterExpression: 'begins_with(sk, :prefix)',
+      ExpressionAttributeValues: {
+        ':prefix': 'CLAIM#',
+      },
+    };
+    const data = await dynamoDb.scan(params).promise();
+
+    // Opcional: Adicionar paginação se a tabela crescer muito
+    // const items = data.Items || [];
+
+    res.json(data.Items || []);
+  } catch (err) {
+    console.error('Erro ao buscar todas as reivindicações (admin):', err);
+    res.status(500).json({ message: 'Erro ao buscar reivindicações para admin' });
+  }
+});
+
+// PUT /api/admin/claims/{customerId}/{claimId}/status
+app.put('/api/admin/claims/:customerId/:claimId/status', authenticateUser, authorizeAdmin, async (req, res) => {
+  const { customerId, claimId } = req.params;
+  const { status } = req.body;
+
+  if (!status || !VALID_ADMIN_STATUSES.includes(status)) {
+    return res.status(400).json({ message: 'Status inválido fornecido.' });
+  }
+
+  const fullClaimSk = `CLAIM#${claimId}`;
+
+  try {
+    await dynamoDb.update({
+      TableName: process.env.DYNAMODB_TABLE,
+      Key: {
+        id: customerId,
+        sk: fullClaimSk,
+      },
+      UpdateExpression: 'SET #status = :status',
+      ExpressionAttributeNames: {
+        '#status': 'status',
+      },
+      ExpressionAttributeValues: {
+        ':status': status,
+      },
+    }).promise();
+    res.json({ success: true, message: `Status da reivindicação ${claimId} atualizado para ${status}.` });
+  } catch (err) {
+    console.error(`Erro ao atualizar status da reivindicação ${claimId} para ${status}:`, err);
+    res.status(500).json({ message: 'Erro ao atualizar status da reivindicação.' });
+  }
 });
 
 module.exports.app = serverless(app);
