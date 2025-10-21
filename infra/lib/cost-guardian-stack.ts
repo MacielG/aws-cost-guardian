@@ -129,10 +129,24 @@ export class CostGuardianStack extends cdk.Stack {
       environment: {
         DYNAMODB_TABLE: table.tableName,
         STRIPE_SECRET_KEY: stripeSecret.secretValue.toString(), // Passa o valor do secret
+        REPORTS_BUCKET_NAME: '', // será preenchido após criar o bucket abaixo
       },
     });
     table.grantReadWriteData(slaGenerateReportLambda);
     stripeSecret.grantRead(slaGenerateReportLambda);
+
+    // Criar bucket S3 para armazenar relatórios PDF gerados pela Lambda
+    const reportsBucket = new s3.Bucket(this, 'ReportsBucket', {
+      removalPolicy: cdk.RemovalPolicy.DESTROY,
+      autoDeleteObjects: true,
+      blockPublicAccess: s3.BlockPublicAccess.BLOCK_ALL,
+    });
+
+    // Fornecer o nome do bucket como variável de ambiente para a Lambda (atualiza)
+    slaGenerateReportLambda.addEnvironment('REPORTS_BUCKET_NAME', reportsBucket.bucketName);
+
+    // Permissões necessárias para a Lambda escrever objetos no bucket
+    reportsBucket.grantPut(slaGenerateReportLambda);
 
     const slaSubmitTicketLambda = new lambda.Function(this, 'SlaSubmitTicket', {
       runtime: lambda.Runtime.NODEJS_18_X,
@@ -224,6 +238,9 @@ export class CostGuardianStack extends cdk.Stack {
 
     const invoicesApi = api.root.addResource('invoices');
     invoicesApi.addMethod('GET', apiIntegration, { authorizer: auth });
+
+    const termsApi = api.root.addResource('accept-terms');
+    termsApi.addMethod('POST', apiIntegration, { authorizer: auth });
 
     // Outputs (Mantido)
     new cdk.CfnOutput(this, 'APIUrl', { value: api.url });

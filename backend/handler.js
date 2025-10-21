@@ -36,34 +36,7 @@ const authenticateUser = (req, res, next) => {
 };
 
 // GET /api/onboard-init
-app.get('/api/onboard-init', authenticateUser, async (req, res) => {
-  try {
-    const userId = req.user.sub;
-    const externalId = randomBytes(16).toString('hex');
-
-    const params = {
-      TableName: process.env.DYNAMODB_TABLE,
-      Item: {
-        id: userId,
-        sk: 'CONFIG#ONBOARD',
-        externalId,
-        status: 'PENDING_CFN',
-        updatedAt: new Date().toISOString(),
-      },
-    };
-
-    await dynamoDb.put(params).promise();
-
-    res.json({
-      externalId,
-      platformAccountId: process.env.PLATFORM_ACCOUNT_ID
-    });
-
-  } catch (err) {
-    console.error('Erro onboard-init:', err);
-    res.status(500).json({ message: 'Erro na configuração de onboarding' });
-  }
-});
+// NOTE: handler foi movido mais abaixo para incluir verificação de termos aceitos
 
 // POST /api/onboard
 app.post('/api/onboard', async (req, res) => {
@@ -121,33 +94,83 @@ app.post('/api/onboard', async (req, res) => {
   }
 });
 
-// GET /api/incidents (CORRIGIDO com Query)
-app.get('/api/incidents', authenticateUser, async (req, res) => {
+// POST /api/accept-terms
+app.post('/api/accept-terms', authenticateUser, async (req, res) => {
   try {
     const userId = req.user.sub;
-    
-    const params = {
+
+    // Atualiza um item de configuração ou o próprio perfil do usuário
+    await dynamoDb.update({
       TableName: process.env.DYNAMODB_TABLE,
-      IndexName: 'CustomerDataIndex',
-      KeyConditionExpression: 'id = :userId AND begins_with(sk, :prefix)',
+      Key: { id: userId, sk: 'CONFIG#ONBOARD' }, // Ou um item de perfil
+      UpdateExpression: 'SET termsAccepted = :accepted, termsAcceptedAt = :timestamp',
       ExpressionAttributeValues: {
-        ':userId': userId,
-        ':prefix': 'INCIDENT#',
-      },
-    };
-    const data = await dynamoDb.query(params).promise();
-    res.json(data.Items || []);
+        ':accepted': true,
+        ':timestamp': new Date().toISOString(),
+      }
+    }).promise();
+
+    res.json({ success: true, message: 'Termos aceitos com sucesso.' });
   } catch (err) {
-    console.error('Erro ao buscar incidentes:', err);
-    res.status(500).json({ message: 'Erro ao buscar incidentes' });
+    console.error('Erro ao aceitar termos:', err);
+    res.status(500).json({ success: false, message: 'Erro ao registrar aceitação dos termos.' });
   }
 });
 
-// GET /api/sla-claims (CORRIGIDO com Query)
+// GET /api/incidents (CORRIGIDO com Query)
+app.get('/api/onboard-init', authenticateUser, async (req, res) => {
+  try {
+    const userId = req.user.sub;
+
+    // Tenta recuperar a configuração existente
+    const getParams = {
+      TableName: process.env.DYNAMODB_TABLE,
+      Key: { id: userId, sk: 'CONFIG#ONBOARD' },
+    };
+
+    const existing = await dynamoDb.get(getParams).promise();
+    if (existing && existing.Item) {
+      const item = existing.Item;
+      return res.json({
+        externalId: item.externalId,
+        platformAccountId: process.env.PLATFORM_ACCOUNT_ID,
+        status: item.status || 'PENDING_CFN',
+        termsAccepted: !!item.termsAccepted,
+      });
+    }
+
+    // Se não existir, cria um novo registro de configuração
+    const externalId = randomBytes(16).toString('hex');
+    const putParams = {
+      TableName: process.env.DYNAMODB_TABLE,
+      Item: {
+        id: userId,
+        sk: 'CONFIG#ONBOARD',
+        externalId,
+        status: 'PENDING_CFN',
+        createdAt: new Date().toISOString(),
+      },
+    };
+
+    await dynamoDb.put(putParams).promise();
+
+    res.json({
+      externalId,
+      platformAccountId: process.env.PLATFORM_ACCOUNT_ID,
+      status: 'PENDING_CFN',
+      termsAccepted: false,
+    });
+
+  } catch (err) {
+    console.error('Erro onboard-init:', err);
+    res.status(500).json({ message: 'Erro na configura\u00e7\u00e3o de onboarding' });
+  }
+});
+// GET /api/sla-claims
 app.get('/api/sla-claims', authenticateUser, async (req, res) => {
   try {
     const userId = req.user.sub;
-    
+
     const params = {
       TableName: process.env.DYNAMODB_TABLE,
       IndexName: 'CustomerDataIndex',
@@ -158,7 +181,23 @@ app.get('/api/sla-claims', authenticateUser, async (req, res) => {
       },
     };
     const data = await dynamoDb.query(params).promise();
-    res.json(data.Items || []);
+
+    const items = data.Items || [];
+    const formatted = items.map(it => ({
+      id: it.id,
+      sk: it.sk,
+      status: it.status,
+      creditAmount: it.creditAmount,
+      reportUrl: it.reportUrl,
+      incidentId: it.incidentId,
+      awsAccountId: it.awsAccountId,
+      stripeInvoiceId: it.stripeInvoiceId,
+      caseId: it.caseId,
+      submissionError: it.submissionError || it.reportError || null,
+      commissionAmount: it.commissionAmount || null,
+    }));
+
+    res.json(formatted);
   } catch (err) {
     console.error('Erro ao buscar reivindicações:', err);
     res.status(500).json({ message: 'Erro ao buscar reivindicações' });

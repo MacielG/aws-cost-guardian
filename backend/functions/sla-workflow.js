@@ -7,6 +7,8 @@ const AWS = require('aws-sdk');
 const { CostExplorerClient, GetCostAndUsageCommand } = require('@aws-sdk/client-cost-explorer');
 const dynamoDb = new AWS.DynamoDB.DocumentClient();
 const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
+const { PDFDocument, rgb, StandardFonts } = require('pdf-lib');
+const s3 = new AWS.S3();
 
 const DYNAMODB_TABLE = process.env.DYNAMODB_TABLE;
 
@@ -178,12 +180,58 @@ exports.generateReport = async (event) => {
     return { ...event, status: 'no-claim' };
   }
 
-  // 1. Gerar PDF (lógica omitida) - Salvar em S3
-  // const s3 = new AWS.S3();
+  // 1. Gerar PDF com pdf-lib e salvar em S3
   const reportS3Key = `reports/${customerId}/${incidentId.replace('INCIDENT#', '')}-${Date.now()}.pdf`;
-  const reportUrl = `s3://${process.env.REPORTS_BUCKET_NAME}/${reportS3Key}`; // Bucket deve vir do Env
-  // await s3.putObject({ Bucket: process.env.REPORTS_BUCKET_NAME, Key: reportS3Key, Body: 'Conteúdo do PDF' }).promise();
-  
+  const reportBucket = process.env.REPORTS_BUCKET_NAME;
+  if (!reportBucket) {
+    throw new Error('REPORTS_BUCKET_NAME environment variable not set.');
+  }
+  const reportUrl = `s3://${reportBucket}/${reportS3Key}`;
+
+  try {
+    const pdfDoc = await PDFDocument.create();
+    const page = pdfDoc.addPage();
+    const { width, height } = page.getSize();
+    const font = await pdfDoc.embedFont(StandardFonts.Helvetica);
+
+    const fontSize = 12;
+    let y = height - 4 * fontSize;
+
+    const drawText = (text, options) => {
+      page.drawText(text, options);
+      y -= options.font.heightAtSize(options.size) * 1.5;
+    };
+
+    drawText('SLA Credit Claim Report - AWS Cost Guardian', { x: 50, y, font, size: 18, color: rgb(0, 0, 0) });
+    y -= 20;
+    drawText(`Incident ID: ${incidentId}`, { x: 50, y, font, size: fontSize });
+    drawText(`AWS Account: ${awsAccountId}`, { x: 50, y, font, size: fontSize });
+    drawText(`Service: ${event.healthEvent.service}`, { x: 50, y, font, size: fontSize });
+    drawText(`Start Time: ${event.healthEvent.startTime}`, { x: 50, y, font, size: fontSize });
+    drawText(`Duration: ${event.durationMinutes.toFixed(2)} minutes`, { x: 50, y, font, size: fontSize });
+    drawText(`Calculated Impacted Cost: $${event.impactedCost.toFixed(4)}`, { x: 50, y, font, size: fontSize });
+    drawText(`Requested Credit (10%): $${credit.toFixed(2)}`, { x: 50, y, font, size: 14, color: rgb(0.1, 0.5, 0.1) });
+
+    const pdfBytes = await pdfDoc.save();
+
+    await s3.putObject({ Bucket: reportBucket, Key: reportS3Key, Body: pdfBytes, ContentType: 'application/pdf' }).promise();
+
+  } catch (pdfError) {
+    console.error('Failed to generate or upload PDF report:', pdfError);
+    // Atualizar DynamoDB para indicar falha na geração do relatório para rastreabilidade
+    try {
+      await dynamoDb.update({
+        TableName: DYNAMODB_TABLE,
+        Key: { id: customerId, sk: incidentId },
+        UpdateExpression: 'SET #status = :status, reportError = :err',
+        ExpressionAttributeNames: { '#status': 'status' },
+        ExpressionAttributeValues: { ':status': 'REPORT_FAILED', ':err': String(pdfError.stack || pdfError.message) }
+      }).promise();
+    } catch (dbErr) {
+      console.error('Falha ao atualizar DynamoDB após erro de PDF:', dbErr);
+    }
+    throw new Error(`PDF generation failed: ${pdfError.message}`);
+  }
   console.log(`Relatório gerado e salvo em: ${reportUrl}`);
 
   // 2. Criar a Fatura (Invoice) no Stripe para a comissão de 30%
@@ -215,7 +263,19 @@ exports.generateReport = async (event) => {
     }
   } catch (stripeError) {
     console.error(`Erro ao criar fatura no Stripe para o cliente ${customerId}:`, stripeError);
-    // Não interromper o fluxo, apenas registrar o erro. A fatura pode ser gerada manualmente.
+    // Gravar o erro no item da claim (quando possível) para facilitar diagnóstico
+    try {
+      const tmpClaimId = `CLAIM#${incidentId.replace('INCIDENT#', '')}`;
+      await dynamoDb.update({
+        TableName: DYNAMODB_TABLE,
+        Key: { id: customerId, sk: tmpClaimId },
+        UpdateExpression: 'SET stripeError = :err',
+        ExpressionAttributeValues: { ':err': String(stripeError.stack || stripeError.message) }
+      }).promise();
+    } catch (dbErr) {
+      console.error('Erro ao gravar stripeError no DynamoDB:', dbErr);
+    }
+    // Não interromper o fluxo, apenas registrar o erro.
   }
 
   // 2. Salvar a reivindicação (CLAIM) no DynamoDB

@@ -20,9 +20,14 @@ export default function Onboard() {
     // const token = await getToken();
     const response = await fetch('/api/onboard-init'); // Este endpoint agora retorna o status
     if (response.ok) {
-      const data = await response.json();
-      setOnboardingStatus(data.status);
-      if (data.status === 'COMPLETED') {
+      const config = await response.json();
+      // Se o usuário ainda não aceitou os termos, redireciona para a página de termos
+      if (config.termsAccepted === false) {
+        router.push('/terms');
+        return;
+      }
+      setOnboardingStatus(config.status);
+      if (config.status === 'COMPLETED') {
         router.push('/dashboard');
       }
     }
@@ -37,13 +42,13 @@ export default function Onboard() {
       });
 
       if (response.ok) {
-        const config = await response.json();
-        // Constrói o link do CloudFormation dinamicamente
-        setOnboardingStatus(config.status);
-        const templateUrl = 'https://s3.amazonaws.com/cost-guardian-templates/cost-guardian-template.yaml';
-        const callbackUrl = `${window.location.origin}/api/onboard`;
-        const link = `https://console.aws.amazon.com/cloudformation/home?region=us-east-1#/stacks/create/review?templateURL=${templateUrl}&stackName=CostGuardianStack&param_ExternalId=${config.externalId}&param_PlatformAccountId=${config.platformAccountId}&param_CallbackUrl=${encodeURIComponent(callbackUrl)}`;
-        setCfnLink(link);
+      const config = await response.json();
+      // Constrói o link do CloudFormation dinamicamente
+      setOnboardingStatus(config.status);
+      const templateUrl = 'https://s3.amazonaws.com/cost-guardian-templates/cost-guardian-template.yaml';
+      const callbackUrl = `${window.location.origin}/api/onboard`;
+      const link = `https://console.aws.amazon.com/cloudformation/home?region=us-east-1#/stacks/create/review?templateURL=${templateUrl}&stackName=CostGuardianStack&param_ExternalId=${config.externalId}&param_PlatformAccountId=${config.platformAccountId}&param_CallbackUrl=${encodeURIComponent(callbackUrl)}`;
+      setCfnLink(link);
       }
     }, []);
 
