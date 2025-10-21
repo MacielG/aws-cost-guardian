@@ -10,7 +10,8 @@ import { Badge } from '@/components/ui/badge';
 interface Claim {
   id: string; // customerId
   sk: string; // CLAIM#... ou INCIDENT#...
-  status: 'READY_TO_SUBMIT' | 'SUBMITTED' | 'SUBMISSION_FAILED' | 'PAID' | 'REFUNDED' | 'NO_VIOLATION' | 'NO_RESOURCES_LISTED';
+  // Status possíveis para uma claim (inclui REPORT_FAILED para compatibilidade)
+  status: 'READY_TO_SUBMIT' | 'SUBMITTED' | 'SUBMISSION_FAILED' | 'REPORT_FAILED' | 'PAID' | 'REFUNDED' | 'NO_VIOLATION' | 'NO_RESOURCES_LISTED';
   creditAmount: number;
   reportUrl?: string;
   incidentId: string;

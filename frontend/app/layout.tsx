@@ -1,21 +1,15 @@
-import type { Metadata } from 'next';
+'use client';
+
 import { Inter } from 'next/font/google';
 import './globals.css';
-import { Amplify } from 'aws-amplify';
 import { I18nextProvider } from 'react-i18next';
-import i18n from '@/i18n'; // Caminho ajustado para ser mais robusto
+import i18n from '@/i18n';
 import '@aws-amplify/ui-react/styles.css';
-import amplifyConfig from '@/amplify-config'; // Importe a configuração
 
-// Configure o Amplify no lado do cliente
-Amplify.configure(amplifyConfig, { ssr: true });
+// Dynamic import para AWS Amplify (somente client-side)
+import('../amplifyClient');
 
 const inter = Inter({ subsets: ['latin'] });
-
-export const metadata: Metadata = {
-  title: 'AWS Cost Guardian',
-  description: 'Automate AWS refunds',
-};
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (

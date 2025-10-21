@@ -58,6 +58,7 @@ export default function TermsPage() {
             <Button onClick={acceptTerms} disabled={!accepted || loading}>{loading ? 'Enviando...' : 'Aceitar'}</Button>
           </div>
           {message && <p className="mt-3">{message}</p>}
+          </div>
         </CardContent>
       </Card>
     </div>
