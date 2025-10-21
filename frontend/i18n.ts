@@ -12,7 +12,7 @@ i18n
     supportedLngs: ['en', 'pt-BR', 'es', 'fr', 'de', 'ja', 'zh-CN'],
     interpolation: { escapeValue: false },
     backend: {
-      loadPath: '/locales/{{lng}}/{{ns}}.json',
+      loadPath: '/locales/{{lng}}/{{ns}}.json', // Corrija este caminho após mover os arquivos para public/locales
     },
   });
 

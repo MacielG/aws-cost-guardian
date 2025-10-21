@@ -1,53 +1,82 @@
+// backend/functions/correlate-health.js
+
 const AWS = require('aws-sdk');
 const dynamoDb = new AWS.DynamoDB.DocumentClient();
-const { Health } = require('@aws-sdk/client-health');
+const { CostExplorer } = require('@aws-sdk/client-cost-explorer');
+const { StepFunctions } = require('aws-sdk'); // SDK v2
+
+const ce = new CostExplorer({ region: 'us-east-1' });
+const sfn = new StepFunctions();
+const DYNAMODB_TABLE = process.env.DYNAMODB_TABLE;
+const SFN_ARN = process.env.SFN_ARN;
 
 exports.handler = async (event) => {
   const healthEvent = event.detail;
-  const customerId = 'from-event'; // Extraia do contexto
+  const affectedAccount = healthEvent.affectedAccount; // ID da conta AWS do cliente
+  const affectedResources = healthEvent.resources || []; // ARNs dos recursos
 
-  // Armazena no DynamoDB
+  // 1. Encontrar nosso customerId usando o ID da conta AWS do cliente
+  // Esta query usa o GSI 'AwsAccountIndex' definido no CDK
+  const queryParams = {
+    TableName: DYNAMODB_TABLE,
+    IndexName: 'AwsAccountIndex',
+    KeyConditionExpression: 'awsAccountId = :awsAccountId',
+    ExpressionAttributeValues: {
+      ':awsAccountId': affectedAccount,
+    },
+    ProjectionExpression: 'id', // 'id' é o nosso customerId
+  };
+
+  let customerId;
+  try {
+    const data = await dynamoDb.query(queryParams).promise();
+    if (!data.Items || data.Items.length === 0) {
+      console.error(`Nenhum cliente encontrado para AWS Account ID: ${affectedAccount}`);
+      return { status: 'error', reason: 'Customer not found' };
+    }
+    customerId = data.Items[0].id; // Encontramos nosso cliente!
+  } catch (err) {
+    console.error('Erro ao consultar DynamoDB:', err);
+    return { status: 'error', reason: 'DB query failed' };
+  }
+
+  // 2. Armazenar o incidente no DynamoDB (agora com o customerId correto)
+  const incidentId = `INCIDENT#${healthEvent.id}`;
+  const timestamp = healthEvent.startTime || new Date().toISOString();
   await dynamoDb.put({
-    TableName: process.env.DYNAMODB_TABLE,
+    TableName: DYNAMODB_TABLE,
     Item: {
-      id: `health-${healthEvent.id}`,
-      customerId,
-      timestamp: healthEvent.startTime,
+      id: customerId, // PK: Nosso Customer ID
+      sk: incidentId, // SK: ID do incidente
+      timestamp: timestamp,
       service: healthEvent.service,
-      affectedResources: healthEvent.resources || [],
+      affectedResources: affectedResources,
       status: 'correlated',
+      awsAccountId: affectedAccount,
+      details: healthEvent, // Armazena o evento completo
     },
   }).promise();
 
-  // Correlaciona com custos
-  const { CostExplorer } = require('@aws-sdk/client-cost-explorer');
-  const ce = new CostExplorer({ region: 'us-east-1' });
-  const costData = await ce.getCostAndUsageWithResources({
-    TimePeriod: {
-      Start: healthEvent.startTime,
-      End: healthEvent.endTime || new Date().toISOString(),
-    },
-    Granularity: 'DAILY',
-    Metrics: ['UnblendedCost'],
-    Filter: {
-      Dimensions: {
-        Key: 'SERVICE',
-        Values: [healthEvent.service],
-      },
-    },
-  });
+  // 3. Correlacionar com custos (lógica movida para o Step Function 'calculateImpact')
+  // O Lambda do EventBridge deve ser rápido. Ele apenas identifica o cliente,
+  // armazena o incidente e inicia o fluxo de trabalho.
+  // A chamada ao Cost Explorer (que é lenta) deve ser a primeira etapa do Step Function.
 
-  const impactedCost = costData.ResultsByTime[0]?.Total?.UnblendedCost?.Amount || 0;
+  if (!SFN_ARN) {
+      console.error('ARN do Step Function não definido');
+      return { status: 'error', reason: 'SFN_ARN not set' };
+  }
 
-  // Gera alerta (envie via SNS/SES)
-  console.log(`Alerta: ${healthEvent.summary} impactou $${impactedCost}`);
-
-  // Trigger Step Functions para SLA se aplicável
-  const sfn = new AWS.StepFunctions();
+  // 4. Iniciar o Step Function para análise de impacto
   await sfn.startExecution({
-    stateMachineArn: process.env.SFN_ARN, // De CDK output
-    input: JSON.stringify({ event: healthEvent, impactedCost }),
+    stateMachineArn: SFN_ARN,
+    input: JSON.stringify({
+      customerId: customerId,
+      awsAccountId: affectedAccount,
+      healthEvent: healthEvent,
+      incidentId: incidentId
+    }),
   }).promise();
 
-  return { status: 'success', impactedCost };
+  return { status: 'success', customerId: customerId, incidentId: incidentId };
 };
