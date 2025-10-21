@@ -9,11 +9,11 @@ import * as cognito from 'aws-cdk-lib/aws-cognito';
 import * as s3 from 'aws-cdk-lib/aws-s3';
 import * as s3deploy from 'aws-cdk-lib/aws-s3-deployment';
 import * as events from 'aws-cdk-lib/aws-events';
-import * as targets from 'aws-cdk-lib/aws-events-targets'; // Corrigido o import
+import * as targets from 'aws-cdk-lib/aws-events-targets';
 import * as stepfunctions from 'aws-cdk-lib/aws-stepfunctions';
 import * as sfn_tasks from 'aws-cdk-lib/aws-stepfunctions-tasks';
 import * as secretsmanager from 'aws-cdk-lib/aws-secretsmanager';
-import * as iam from 'aws-cdk-lib/aws-iam'; // Importar IAM
+import * as iam from 'aws-cdk-lib/aws-iam';
 
 export class CostGuardianStack extends cdk.Stack {
   constructor(scope: Construct, id: string, props?: cdk.StackProps) {
@@ -67,14 +67,10 @@ export class CostGuardianStack extends cdk.Stack {
 
     // S3 Bucket para hospedar o template do CloudFormation
     const templateBucket = new s3.Bucket(this, 'CfnTemplateBucket', {
-      // ATENÇÃO: publicReadAccess é deprecated. Em produção, considere usar
-      // blockPublicAccess: s3.BlockPublicAccess.BLOCK_ACLS e uma BucketPolicy
-      // mais granular para s3:GetObject. Para este caso de uso específico
-      // de template público, publicReadAccess: true é funcional.
       publicReadAccess: true,
-      websiteIndexDocument: 'template.yaml', // Define o arquivo padrão para acesso via website endpoint
-      removalPolicy: cdk.RemovalPolicy.DESTROY, // Para fácil limpeza em ambientes de desenvolvimento
-      autoDeleteObjects: true, // Para fácil limpeza em ambientes de desenvolvimento
+      websiteIndexDocument: 'template.yaml',
+      removalPolicy: cdk.RemovalPolicy.DESTROY,
+      autoDeleteObjects: true,
     });
 
     // Implantação do template do CloudFormation no bucket S3
@@ -95,7 +91,7 @@ export class CostGuardianStack extends cdk.Stack {
     // Cliente do User Pool para a aplicação web
     const userPoolClient = new cognito.UserPoolClient(this, 'CostGuardianUserPoolClient', {
       userPool,
-      generateSecret: false, // Aplicações web de cliente não devem ter segredos
+      generateSecret: false, 
     });
 
     // Grupo de administradores no Cognito
@@ -105,16 +101,14 @@ export class CostGuardianStack extends cdk.Stack {
       description: 'Grupo para administradores da plataforma',
     });
 
-    // *** INÍCIO DAS CORREÇÕES DE LAMBDA ***
-
     // 1. Lambda para o API Gateway (Monolito Express)
     const apiHandlerLambda = new lambda.Function(this, 'ApiHandler', {
       runtime: lambda.Runtime.NODEJS_18_X,
-      handler: 'handler.app', // Aponta para o Express app
+      handler: 'handler.app', 
       code: lambda.Code.fromAsset('../backend'),
       environment: {
         DYNAMODB_TABLE: table.tableName,
-        STRIPE_SECRET_ARN: stripeSecret.secretArn, // Renomeado para clareza
+        STRIPE_SECRET_ARN: stripeSecret.secretArn,
       },
     });
     table.grantReadWriteData(apiHandlerLambda);
@@ -123,24 +117,23 @@ export class CostGuardianStack extends cdk.Stack {
     // 2. Lambda para o EventBridge (Correlacionar Eventos Health)
     const healthEventHandlerLambda = new lambda.Function(this, 'HealthEventHandler', {
       runtime: lambda.Runtime.NODEJS_18_X,
-      handler: 'functions/correlate-health.handler', // Handler específico
-      code: lambda.Code.fromAsset('../backend'), // Mesmo pacote de código
+      handler: 'functions/correlate-health.handler',
+      code: lambda.Code.fromAsset('../backend'), 
       environment: {
         DYNAMODB_TABLE: table.tableName,
         SFN_ARN: '', // Será preenchido abaixo
       },
     });
-    table.grantReadWriteData(healthEventHandlerLambda); // Precisa ler o GSI e escrever incidentes
+    table.grantReadWriteData(healthEventHandlerLambda);
 
     // 3. Lambdas para as Tarefas do Step Functions
     const slaCalculateImpactLambda = new lambda.Function(this, 'SlaCalculateImpact', {
       runtime: lambda.Runtime.NODEJS_18_X,
-      handler: 'functions/sla-workflow.calculateImpact', // Handler específico
+      handler: 'functions/sla-workflow.calculateImpact',
       code: lambda.Code.fromAsset('../backend'),
       environment: {
         DYNAMODB_TABLE: table.tableName,
       },
-      // Permissão para chamar Cost Explorer (Assumindo a Role do Cliente)
       role: new iam.Role(this, 'SlaCalcRole', {
         assumedBy: new iam.ServicePrincipal('lambda.amazonaws.com'),
         managedPolicies: [
@@ -150,7 +143,7 @@ export class CostGuardianStack extends cdk.Stack {
           AssumeCustomerRolePolicy: new iam.PolicyDocument({
             statements: [new iam.PolicyStatement({
               actions: ['sts:AssumeRole'],
-              resources: ['arn:aws:iam::*:role/CostGuardianDelegatedRole'], // Permite assumir a role em *qualquer* conta cliente
+              resources: ['arn:aws:iam::*:role/CostGuardianDelegatedRole'], 
             })]
           })
         }
@@ -170,8 +163,8 @@ export class CostGuardianStack extends cdk.Stack {
       code: lambda.Code.fromAsset('../backend'),
       environment: {
         DYNAMODB_TABLE: table.tableName,
-        STRIPE_SECRET_ARN: stripeSecret.secretArn, // Passa a referência ao secret
-        REPORTS_BUCKET_NAME: '', // Será preenchido após criar o bucket abaixo
+        STRIPE_SECRET_ARN: stripeSecret.secretArn,
+        REPORTS_BUCKET_NAME: '', // Será preenchido abaixo
       },
     });
     table.grantReadWriteData(slaGenerateReportLambda);
@@ -212,8 +205,6 @@ export class CostGuardianStack extends cdk.Stack {
     });
     table.grantReadWriteData(slaSubmitTicketLambda);
     
-    // *** FIM DAS CORREÇÕES DE LAMBDA ***
-
     // Obter o event bus padrão da plataforma
     const eventBus = events.EventBus.fromEventBusName(this, 'DefaultBus', 'default');
 
@@ -226,20 +217,21 @@ export class CostGuardianStack extends cdk.Stack {
     });
 
     // --- INÍCIO DA CORREÇÃO ---
-    // Injetar a condição como JSON bruto no template CloudFormation.
-    // A estrutura 'Condition' do CfnEventBusPolicy (L1) é diferente
-    // da estrutura de Condição de uma política IAM e espera Type/Key/Value.
+    // REMOVA este bloco. A filtragem de 'events:source' é feita
+    // pela 'healthRule' abaixo, não pela política do barramento.
+    /*
     eventBusPolicy.addPropertyOverride('Condition', {
       Type: 'StringEquals',
       Key: 'events:source',
       Value: 'aws.health',
     });
+    */
     // --- FIM DA CORREÇÃO ---
 
-    // EventBridge Health (Corrigido com permissionamento seguro)
+    // EventBridge Health (Esta é a regra de FILTRAGEM correta)
     const healthRule = new events.Rule(this, 'HealthEventRule', {
       eventPattern: {
-        source: ['aws.health'],
+        source: ['aws.health'], // A filtragem acontece aqui
         detailType: ['AWS Health Event'],
       },
       eventBus,
