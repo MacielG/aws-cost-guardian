@@ -217,16 +217,16 @@ export class CostGuardianStack extends cdk.Stack {
     // Obter o event bus padrão da plataforma
     const eventBus = events.EventBus.fromEventBusName(this, 'DefaultBus', 'default');
 
-    // Política segura para o Event Bus que permite apenas regras EventBridge específicas
+    // Política segura para o Event Bus que permite apenas eventos específicos
     new events.CfnEventBusPolicy(this, 'EventBusPolicy', {
       eventBusName: eventBus.eventBusName,
       statementId: 'AllowClientHealthEvents',
       action: 'events:PutEvents',
-      principal: '*', // Necessário, mas restrito por condição
+      principal: '*', // Necessário para cross-account
       condition: {
-        type: 'ArnLike',
-        key: 'aws:SourceArn',
-        value: 'arn:aws:events:*:*:rule/cost-guardian-client-*/ClientHealthEventRule',
+        type: 'StringEquals',
+        key: 'events:source',
+        value: 'aws.health',
       },
     });
 
@@ -297,19 +297,20 @@ export class CostGuardianStack extends cdk.Stack {
 
     // Endpoint de Admin
     const adminApi = api.root.addResource('admin');
-    adminApi.addResource('claims').addMethod('GET', apiIntegration, { authorizer: auth });
-    // New endpoint for admin to update claim status
-    adminApi.addResource('claims')
-      .addResource('{customerId}')
-      .addResource('{claimId}')
-      .addResource('status')
-      .addMethod('PUT', apiIntegration, { authorizer: auth });
-    // New endpoint for admin to create Stripe invoice and mark claim as refunded
-    adminApi.addResource('claims')
-      .addResource('{customerId}')
-      .addResource('{claimId}')
-      .addResource('create-invoice')
-      .addMethod('POST', apiIntegration, { authorizer: auth });
+    const adminClaims = adminApi.addResource('claims');
+    
+    // GET /api/admin/claims
+    adminClaims.addMethod('GET', apiIntegration, { authorizer: auth });
+
+    // Sub-recursos para operações em claims específicas
+    const claimsByCustomer = adminClaims.addResource('{customerId}');
+    const specificClaim = claimsByCustomer.addResource('{claimId}');
+    
+    // PUT /api/admin/claims/{customerId}/{claimId}/status
+    specificClaim.addResource('status').addMethod('PUT', apiIntegration, { authorizer: auth });
+    
+    // POST /api/admin/claims/{customerId}/{claimId}/create-invoice
+    specificClaim.addResource('create-invoice').addMethod('POST', apiIntegration, { authorizer: auth });
 
     // Outputs (Mantido)
     new cdk.CfnOutput(this, 'APIUrl', { value: api.url });
