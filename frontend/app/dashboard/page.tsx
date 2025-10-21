@@ -1,5 +1,6 @@
 'use client';
 import { useTranslation } from 'react-i18next';
+import Link from 'next/link';
 import { useEffect, useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'; // Assuma shadcn
 import { AlertCircle, DollarSign } from 'lucide-react';

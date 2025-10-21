@@ -1,36 +1,33 @@
 #!/bin/bash
 set -e  # Exit on error
 
-echo "🚀 Deploying AWS Cost Guardian (Serverless-First)..."
+echo "🚀 Deploying AWS Cost Guardian (CDK-First)..."
 
 # Infra (CDK)
-echo "1. Deploying Infra via CDK..."
+echo "1. Deploying Infra (CDK) e Backend Lambdas..."
 cd infra
 npm ci
 npm run build
 cdk deploy --all --require-approval never
-API_URL=$(cdk synth | grep "CostGuardianAPIEndpoint" | awk '{print $2}')
-echo "API URL: $API_URL"
-
-# Backend (Serverless)
-echo "2. Deploying Backend via Serverless..."
-cd ../backend
-npm ci
-npm run deploy
+CDK_OUTPUTS_FILE=$(mktemp)
+cdk deploy --all --require-approval never --outputs-file $CDK_OUTPUTS_FILE
+STACK_NAME=$(jq -r 'keys[0]' $CDK_OUTPUTS_FILE)
+API_URL=$(jq -r '."'$STACK_NAME'".APIUrl' $CDK_OUTPUTS_FILE)
+USER_POOL_ID=$(jq -r '."'$STACK_NAME'".UserPoolId' $CDK_OUTPUTS_FILE)
+rm $CDK_OUTPUTS_FILE
 
 # Frontend (Amplify)
-echo "3. Deploying Frontend via Amplify..."
+echo "2. Deploying Frontend via Amplify..."
 cd ../frontend
 npm ci
-amplify env pull  # Se já init
+amplify pull --yes
 amplify push --yes
 
 cd ..
 
 echo "✅ Deploy completo!"
 echo "Outputs:"
-echo "- API: $API_URL"
-echo "- Cognito Pool: $(aws cognito-idp describe-user-pool --user-pool-id $(cdk synth | grep UserPoolId | awk '{print $2}') --query 'UserPool.Id')"
-echo "Teste: Acesse frontend em $(amplify status | grep 'GraphQL endpoint' | awk '{print $3}')"
+echo "- API URL: $API_URL"
+echo "- Cognito User Pool ID: $USER_POOL_ID"
 echo "Onboarding: Use CloudFormation link para conectar contas."
 echo "Monitore: CloudWatch Logs no console AWS."
