@@ -1,0 +1,19 @@
+# Dependencies
+node_modules/
+*.log
+
+# Env
+.env
+.env.local
+
+# CDK
+cdk.out/
+amplify/
+
+# IDE
+.vscode/
+.idea/
+
+# OS
+.DS_Store
+Thumbs.db

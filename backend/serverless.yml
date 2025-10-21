@@ -1,0 +1,51 @@
+service: aws-cost-guardian-backend
+
+provider:
+  name: aws
+  runtime: nodejs18.x
+  region: us-east-1
+  environment:
+    DYNAMODB_TABLE: CostGuardianTable
+    STRIPE_SECRET_KEY: ${ssm:/stripe/secret-key}
+    PLATFORM_ACCOUNT_ID: ${env:AWS_ACCOUNT_ID}
+  iamRoleStatements:
+    - Effect: Allow
+      Action:
+        - dynamodb:*
+        - cloudwatch:*
+        - ce:GetCostAndUsage
+        - support:*
+        - health:*
+        - sts:AssumeRole
+      Resource: "*"
+
+functions:
+  app:
+    handler: handler.app
+    events:
+      - http: ANY /
+      - http: ANY {proxy+}
+  correlateHealth:
+    handler: functions/correlate-health.handler
+    events:
+      - eventBridgeRule:
+          eventBus: default
+          pattern:
+            source:
+              - aws.health
+  slaWorkflow:
+    handler: functions/sla-workflow.calculateImpact  # Exemplo para tasks
+
+resources:
+  Resources:
+    CostGuardianTable:
+      Type: AWS::DynamoDB::Table
+      Properties:
+        TableName: ${self:provider.environment.DYNAMODB_TABLE}
+        AttributeDefinitions:
+          - AttributeName: id
+            AttributeType: S
+        KeySchema:
+          - AttributeName: id
+            KeyType: HASH
+        BillingMode: PAY_PER_REQUEST

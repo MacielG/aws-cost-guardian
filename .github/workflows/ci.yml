@@ -1,0 +1,38 @@
+name: CI/CD Pipeline
+
+on:
+  push:
+    branches: [ develop, main ]
+  pull_request:
+    branches: [ develop ]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions/setup-node@v3
+        with:
+          node-version: 18
+      - run: npm ci
+      - run: npm run lint --workspaces
+      - run: npm run test --workspaces  # Adicione tests
+
+  deploy-dev:
+    needs: test
+    if: github.ref == 'refs/heads/develop'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - uses: aws-actions/configure-aws-credentials@v2
+        with:
+          role-to-assume: arn:aws:iam::${{ secrets.AWS_ACCOUNT_ID }}:role/GitHubActionsRole
+          aws-region: us-east-1
+      - run: npm ci
+      - run: ./deploy-all.sh  # Para dev; customize para staging/prod
+
+  deploy-prod:
+    needs: test
+    if: github.ref == 'refs/heads/main' && contains(github.event.head_commit.message, 'release:')
+    runs-on: ubuntu-latest
+    # Similar, mas com approval manual via environments

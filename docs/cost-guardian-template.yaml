@@ -1,0 +1,102 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: 'AWS Cost Guardian IAM Role for Cross-Account Access'
+
+Parameters:
+  ExternalId:
+    Type: String
+    Description: 'Unique External ID for AssumeRole Security'
+    MinLength: '1'
+    MaxLength: '1024'
+  PlatformAccountId:
+    Type: String
+    Default: '123456789012'  # Sua Account ID
+    Description: 'Platform Account ID'
+
+Resources:
+  CostGuardianRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: CostGuardianDelegatedRole
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              AWS: !Sub 'arn:aws:iam::${PlatformAccountId}:role/CostGuardianPlatformRole'
+            Action: sts:AssumeRole
+            Condition:
+              StringEquals:
+                sts:ExternalId: !Ref ExternalId
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/ReadOnlyAccess  # Mínimo; customize para ce:Get*, health:Describe*
+      Policies:
+        - PolicyName: CostGuardianReadPolicy
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
+                  - ce:GetCostAndUsage
+                  - ce:GetCostAndUsageWithResources
+                  - health:DescribeEvents
+                  - health:DescribeAffectedEntities
+                  - cloudwatch:GetMetricData
+                Resource: '*'
+
+  # Custom Resource para Callback (ativa onboarding)
+  CallbackFunction:
+    Type: AWS::Lambda::Function
+    Properties:
+      Handler: index.handler
+      Role: !GetAtt LambdaExecutionRole.Arn
+      Code:
+        ZipFile: |
+          const https = require('https');
+          const response = require('cfn-response');
+          exports.handler = function(event, context) {
+            if (event.RequestType === 'Create') {
+              const responseData = { RoleArn: event.ResourceProperties.RoleArn };
+              const responseURL = event.ResponseURL;
+              https.post(responseURL, {
+                headers: { 'content-type': '', 'content-length': JSON.stringify(responseData).length },
+                body: JSON.stringify({ Status: 'SUCCESS', Reason: 'Role Created', PhysicalResourceId: event.PhysicalResourceId, Data: responseData })
+              }, (err) => {
+                context.done(err, event.PhysicalResourceId);
+              });
+            }
+          };
+      Runtime: nodejs18.x
+      Timeout: 30
+
+  LambdaExecutionRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: lambda.amazonaws.com
+            Action: sts:AssumeRole
+      Policies:
+        - PolicyName: LogsPolicy
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
+                  - logs:CreateLogGroup
+                  - logs:CreateLogStream
+                  - logs:PutLogEvents
+                Resource: '*'
+
+  CustomResource:
+    Type: AWS::CloudFormation::CustomResource
+    Properties:
+      ServiceToken: !GetAtt CallbackFunction.Arn
+      RoleArn: !Ref CostGuardianRole
+
+Outputs:
+  RoleArn:
+    Value: !GetAtt CostGuardianRole.Arn
+    Description: 'ARN da Role para colar no app'

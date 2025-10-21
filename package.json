@@ -1,0 +1,19 @@
+{
+  "name": "aws-cost-guardian-monorepo",
+  "version": "1.0.0",
+  "private": true,
+  "workspaces": [
+    "frontend",
+    "backend",
+    "infra"
+  ],
+  "scripts": {
+    "install:all": "npm ci --workspaces",
+    "dev": "npm run dev --workspace=frontend & npm run dev --workspace=backend",
+    "deploy": "./deploy-all.sh"
+  },
+  "devDependencies": {
+    "husky": "^8.0.0",
+    "lint-staged": "^13.0.0"
+  }
+}
