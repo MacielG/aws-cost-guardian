@@ -1,6 +1,15 @@
 import * as cdk from 'aws-cdk-lib';
 import { CostGuardianStack } from './lib/cost-guardian-stack';
 
+declare global {
+  namespace NodeJS {
+    interface ProcessEnv {
+      CDK_DEFAULT_ACCOUNT: string;
+      CDK_DEFAULT_REGION: string;
+    }
+  }
+}
+
 const app = new cdk.App();
 const stack = new CostGuardianStack(app, 'CostGuardianStack', {
   env: { account: process.env.CDK_DEFAULT_ACCOUNT, region: process.env.CDK_DEFAULT_REGION },

@@ -79,9 +79,9 @@ export class CostGuardianStack extends cdk.Stack {
 
     // Implantação do template do CloudFormation no bucket S3
     new s3deploy.BucketDeployment(this, 'DeployCfnTemplate', {
-      sources: [s3deploy.Source.asset('../docs/cost-guardian-template.yaml')],
+      sources: [s3deploy.Source.asset('../docs')],
       destinationBucket: templateBucket,
-      destinationKey: 'template.yaml', // O nome do arquivo no bucket
+      destinationKeyPrefix: '',
     });
 
 

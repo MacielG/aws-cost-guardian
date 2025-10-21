@@ -3,6 +3,15 @@ import 'source-map-support/register';
 import * as cdk from 'aws-cdk-lib';
 import { CostGuardianStack } from '../lib/cost-guardian-stack';
 
+declare global {
+  namespace NodeJS {
+    interface ProcessEnv {
+      CDK_DEFAULT_ACCOUNT: string;
+      CDK_DEFAULT_REGION: string;
+    }
+  }
+}
+
 const app = new cdk.App();
 new CostGuardianStack(app, 'CostGuardianStack', {
   env: { 
