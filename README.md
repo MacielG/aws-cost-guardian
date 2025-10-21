@@ -5,11 +5,10 @@
 [![React](https://img.shields.io/badge/React-18-green)](https://react.dev/)
 [![Node.js](https://img.shields.io/badge/Node-18-blue)](https://nodejs.org/)
 [![CDK](https://img.shields.io/badge/AWS%20CDK-v2-orange)](https://aws.amazon.com/cdk/)
-[![Serverless](https://img.shields.io/badge/Serverless-First-red)](https://aws.amazon.com/serverless/)
 
 **Plataforma FinOps automatizada para otimização de custos AWS: Visibilidade, automação e inteligência proativa. Recupere créditos SLA automaticamente e correlacione incidentes com impactos financeiros. Modelo: 30% sobre economias recuperadas.**
 
-Baseado na [Análise Estratégica e Arquitetônica](docs/analise-estrategica.md) (PT-BR). MVP em 3 semanas, escalável via serverless.
+Baseado na [Análise Estratégica e Arquitetônica](docs/analise-estrategica.md) (PT-BR). MVP em 3 semanas, escalável com CDK e Lambda.
 
 ## 📋 Visão Geral
 
@@ -28,7 +27,7 @@ O AWS Cost Guardian resolve o paradoxo da nuvem: flexibilidade que leva a desper
 
 Veja a [matriz competitiva](docs/analise-estrategica.md#parte-i-funcionalidade-essencial-e-posicionamento-competitivo) para posicionamento vs. CloudZero, ProsperOps.
 
-## 🛠️ Stack Técnica (Serverless-First)
+## 🛠️ Stack Técnica (CDK-First)
 
 | Camada | Tecnologia |
 |--------|------------|
@@ -58,14 +57,15 @@ git clone https://github.com/guilherme-maciel/aws-cost-guardian.git
 
 
 4. **Deploy Autônomo**: 
-./deploy-all.sh  # CDK + Serverless + Amplify
+./deploy-all.sh  # Apenas CDK + Amplify
 
 - Gera: API URL, Cognito Pool, DynamoDB Table.
 - Teste onboarding: Clique "Conectar AWS" → CloudFormation link.
 
 5. **Dev Local**:
-cd frontend && npm run dev  # localhost:3000
-   cd backend && npm run dev   # API local via serverless-offline
+   cd frontend && npm run dev  # localhost:3000
+   # O desenvolvimento do backend é feito via deploy em ambiente de dev/sandbox
+   cd infra && cdk deploy --hotswap # Para atualizações rápidas de Lambdas
 
 
 ## 📊 Estrutura do Projeto
@@ -73,19 +73,17 @@ aws-cost-guardian/
 ├── frontend/              # Next.js + Amplify
 │   ├── app/               # Páginas: dashboard, onboard, sla-claims
 │   ├── lib/               # Amplify config + i18n
-│   └── locales/           # pt-BR, en-US, etc.
-├── backend/               # Serverless Framework
-│   ├── handler.js         # Express + Stripe webhooks
-│   ├── functions/         # detect-anomalies.js, submit-sla.js
-│   └── serverless.yml     # Lambda + DynamoDB
-├── infra/                 # AWS CDK
+│   └── public/locales/    # Arquivos i18n (CORRIGIDO)
+├── backend/               # Lógica dos Lambdas
+│   ├── handler.js         # API (Express) + Webhooks
+│   └── functions/         # Handlers (correlate-health, sla-workflow)
+├── infra/                 # AWS CDK (Fonte única da Infra)
 │   ├── lib/               # CostGuardianStack.ts (Step Functions + EventBridge)
 │   ├── bin/app.ts         # Deploy script
 │   └── cdk.json
 ├── docs/                  # Documentos
 │   ├── analise-estrategica.md  # O documento traduzido
 │   └── deploy.md          # Guia de conexão AWS
-├── locales/               # i18n global
 └── deploy-all.sh          # Script único de deploy
 
 

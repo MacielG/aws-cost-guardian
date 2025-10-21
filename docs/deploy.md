@@ -5,7 +5,7 @@
 ## Pré-requisitos
 - AWS Free Tier.
 - Node 18+, Git.
-- `npm i -g aws-cdk@2 serverless amplify-cli`.
+- `npm i -g aws-cdk@2 amplify-cli`.
 
 ## Passos
 1. **Env**: Copie `.env.example` para `.env`.
