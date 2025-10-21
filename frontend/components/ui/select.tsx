@@ -1,6 +1,6 @@
-'use client';
 
-import React, { createContext, useContext, useState } from 'react';
+'use client';
+import { createContext, useContext, useState } from 'react';
 
 type SelectContextType = {
   value?: string;
