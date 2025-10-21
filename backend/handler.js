@@ -1,10 +1,26 @@
 const serverless = require('serverless-http');
 const express = require('express');
 const AWS = require('aws-sdk');
-const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
-const { randomBytes } = require('crypto');
 
 const dynamoDb = new AWS.DynamoDB.DocumentClient();
+const secretsManager = new AWS.SecretsManager();
+const { randomBytes } = require('crypto');
+
+let stripe;
+
+// Async factory to initialize Stripe
+const getStripe = async () => {
+  if (stripe) {
+    return stripe;
+  }
+  const secretData = await secretsManager.getSecretValue({
+    SecretId: process.env.STRIPE_SECRET_ARN // Usando a variável de ambiente correta
+  }).promise();
+  const secret = JSON.parse(secretData.SecretString);
+  stripe = require('stripe')(secret.key);
+  return stripe;
+};
+
 const app = express();
 
 // Middleware para parsing JSON (exceto para webhook Stripe)
@@ -305,21 +321,42 @@ app.post('/api/stripe/webhook', express.raw({ type: 'application/json' }), async
 // GET /api/admin/claims
 app.get('/api/admin/claims', authenticateUser, authorizeAdmin, async (req, res) => {
   try {
-    // Scan é menos eficiente que Query, mas aceitável para um painel de admin
-    // com um número moderado de itens. Para escalar, considere um GSI.
+    const { nextToken, limit = 50, status } = req.query;
+    
+    // Usa o novo GSI para consultas de admin mais eficientes
     const params = {
       TableName: process.env.DYNAMODB_TABLE,
-      FilterExpression: 'begins_with(sk, :prefix)',
+      IndexName: 'AdminViewIndex',
+      KeyConditionExpression: 'entityType = :type',
       ExpressionAttributeValues: {
-        ':prefix': 'CLAIM#',
+        ':type': 'CLAIM',
       },
+      // Ordenar por mais recentes primeiro
+      ScanIndexForward: false,
+      // Limite padrão de 50 itens por página
+      Limit: Math.min(parseInt(limit) || 50, 100),
     };
-    const data = await dynamoDb.scan(params).promise();
 
-    // Opcional: Adicionar paginação se a tabela crescer muito
-    // const items = data.Items || [];
+    // Adiciona filtro de status se fornecido
+    if (status) {
+      params.FilterExpression = '#status = :status';
+      params.ExpressionAttributeNames = { '#status': 'status' };
+      params.ExpressionAttributeValues[':status'] = status;
+    }
 
-    res.json(data.Items || []);
+    // Suporte a paginação
+    if (nextToken) {
+      params.ExclusiveStartKey = JSON.parse(Buffer.from(nextToken, 'base64').toString());
+    }
+
+    const data = await dynamoDb.query(params).promise();
+
+    res.json({
+      items: data.Items,
+      nextToken: data.LastEvaluatedKey 
+        ? Buffer.from(JSON.stringify(data.LastEvaluatedKey)).toString('base64')
+        : null,
+    });
   } catch (err) {
     console.error('Erro ao buscar todas as reivindicações (admin):', err);
     res.status(500).json({ message: 'Erro ao buscar reivindicações para admin' });
@@ -362,6 +399,7 @@ app.put('/api/admin/claims/:customerId/:claimId/status', authenticateUser, autho
 // POST /api/admin/claims/{customerId}/{claimId}/create-invoice
 app.post('/api/admin/claims/:customerId/:claimId/create-invoice', authenticateUser, authorizeAdmin, async (req, res) => {
   const { customerId, claimId } = req.params;
+  const stripe = await getStripe(); // Initialize Stripe
   const fullClaimSk = `CLAIM#${claimId}`;
 
   try {

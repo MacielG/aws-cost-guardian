@@ -7,6 +7,7 @@ import * as apigw from 'aws-cdk-lib/aws-apigateway';
 import * as dynamodb from 'aws-cdk-lib/aws-dynamodb';
 import * as cognito from 'aws-cdk-lib/aws-cognito';
 import * as s3 from 'aws-cdk-lib/aws-s3';
+import * as s3deploy from 'aws-cdk-lib/aws-s3-deployment';
 import * as events from 'aws-cdk-lib/aws-events';
 import * as targets from 'aws-cdk-lib/aws-events-targets'; // Corrigido o import
 import * as stepfunctions from 'aws-cdk-lib/aws-stepfunctions';
@@ -51,8 +52,36 @@ export class CostGuardianStack extends cdk.Stack {
     // GSI para consultar por cliente (ex: incidentes, claims)
     table.addGlobalSecondaryIndex({
       indexName: 'CustomerDataIndex',
-      partitionKey: { name: 'id', type: dynamodb.AttributeType.STRING }, // 'id' seria o CustomerID
-      sortKey: { name: 'sk', type: dynamodb.AttributeType.STRING }, // 'sk' começaria com 'INCIDENT#' ou 'CLAIM#'
+      partitionKey: { name: 'id', type: dynamodb.AttributeType.STRING },
+      sortKey: { name: 'sk', type: dynamodb.AttributeType.STRING },
+    });
+
+    // GSI para consultas de Admin (usar entity/partition sharding para performance)
+    table.addGlobalSecondaryIndex({
+      indexName: 'AdminViewIndex',
+      partitionKey: { name: 'entityType', type: dynamodb.AttributeType.STRING },
+      sortKey: { name: 'createdAt', type: dynamodb.AttributeType.STRING },
+      projectionType: dynamodb.ProjectionType.INCLUDE,
+      nonKeyAttributes: ['status', 'creditAmount', 'reportUrl', 'incidentId', 'awsAccountId', 'stripeInvoiceId', 'caseId', 'submissionError', 'reportError', 'commissionAmount'],
+    });
+
+    // S3 Bucket para hospedar o template do CloudFormation
+    const templateBucket = new s3.Bucket(this, 'CfnTemplateBucket', {
+      // ATENÇÃO: publicReadAccess é deprecated. Em produção, considere usar
+      // blockPublicAccess: s3.BlockPublicAccess.BLOCK_ACLS e uma BucketPolicy
+      // mais granular para s3:GetObject. Para este caso de uso específico
+      // de template público, publicReadAccess: true é funcional.
+      publicReadAccess: true,
+      websiteIndexDocument: 'template.yaml', // Define o arquivo padrão para acesso via website endpoint
+      removalPolicy: cdk.RemovalPolicy.DESTROY, // Para fácil limpeza em ambientes de desenvolvimento
+      autoDeleteObjects: true, // Para fácil limpeza em ambientes de desenvolvimento
+    });
+
+    // Implantação do template do CloudFormation no bucket S3
+    new s3deploy.BucketDeployment(this, 'DeployCfnTemplate', {
+      sources: [s3deploy.Source.asset('../docs/cost-guardian-template.yaml')],
+      destinationBucket: templateBucket,
+      destinationKey: 'template.yaml', // O nome do arquivo no bucket
     });
 
 
@@ -61,6 +90,12 @@ export class CostGuardianStack extends cdk.Stack {
       selfSignUpEnabled: true,
       signInAliases: { email: true },
       autoVerify: { email: true },
+    });
+
+    // Cliente do User Pool para a aplicação web
+    const userPoolClient = new cognito.UserPoolClient(this, 'CostGuardianUserPoolClient', {
+      userPool,
+      generateSecret: false, // Aplicações web de cliente não devem ter segredos
     });
 
     // Grupo de administradores no Cognito
@@ -79,7 +114,7 @@ export class CostGuardianStack extends cdk.Stack {
       code: lambda.Code.fromAsset('../backend'),
       environment: {
         DYNAMODB_TABLE: table.tableName,
-        STRIPE_SECRET: stripeSecret.secretArn,
+        STRIPE_SECRET_ARN: stripeSecret.secretArn, // Renomeado para clareza
       },
     });
     table.grantReadWriteData(apiHandlerLambda);
@@ -135,8 +170,8 @@ export class CostGuardianStack extends cdk.Stack {
       code: lambda.Code.fromAsset('../backend'),
       environment: {
         DYNAMODB_TABLE: table.tableName,
-        STRIPE_SECRET_KEY: stripeSecret.secretValue.toString(), // Passa o valor do secret
-        REPORTS_BUCKET_NAME: '', // será preenchido após criar o bucket abaixo
+        STRIPE_SECRET_ARN: stripeSecret.secretArn, // Passa a referência ao secret
+        REPORTS_BUCKET_NAME: '', // Será preenchido após criar o bucket abaixo
       },
     });
     table.grantReadWriteData(slaGenerateReportLambda);
@@ -182,40 +217,28 @@ export class CostGuardianStack extends cdk.Stack {
     // Obter o event bus padrão da plataforma
     const eventBus = events.EventBus.fromEventBusName(this, 'DefaultBus', 'default');
 
-    // Política para permitir recebimento de eventos cross-account (ex: via OrgID)
-    // ATENÇÃO: Substitua 'o-SUA-ORG-ID-AQUI' pelo ID da sua Organização AWS para segurança.
-    // Isso garante que apenas contas dentro da sua organização possam enviar eventos.
-    // Se você não usa AWS Organizations ou quer permitir contas fora da sua organização,
-    // você precisará ajustar esta política (ex: usar Principal: '*' com condições mais específicas,
-    // ou permitir contas individuais explicitamente).
+    // Política segura para o Event Bus que permite apenas regras EventBridge específicas
     new events.CfnEventBusPolicy(this, 'EventBusPolicy', {
       eventBusName: eventBus.eventBusName,
-      statementId: 'AllowCrossAccountHealthEvents',
+      statementId: 'AllowClientHealthEvents',
       action: 'events:PutEvents',
-      principal: '*',
+      principal: '*', // Necessário, mas restrito por condição
       condition: {
-        type: 'StringEquals',
-        key: 'aws:PrincipalOrgID',
-        value: 'o-SUA-ORG-ID-AQUI', // Substitua pelo ID da sua Organização AWS para segurança
+        type: 'ArnLike',
+        key: 'aws:SourceArn',
+        value: 'arn:aws:events:*:*:rule/cost-guardian-client-*/ClientHealthEventRule',
       },
     });
 
-    // EventBridge Health (Agora aponta para o Lambda correto)
+    // EventBridge Health (Corrigido com permissionamento seguro)
     const healthRule = new events.Rule(this, 'HealthEventRule', {
       eventPattern: {
         source: ['aws.health'],
-        // Eventos de saúde para contas de *outra organização* (nossos clientes)
-        // Isso requer que o cliente configure um envio de eventos para nosso Event Bus
-        // A arquitetura em 'correlate-health.js' assume que o evento 'aws.health'
-        // aparece magicamente. Isso SÓ funciona se o cliente for da MESMA organização
-        // ou se ele configurar um EventBus cross-account.
-        // Assumindo que o cliente fará isso:
         detailType: ['AWS Health Event'],
       },
-      eventBus: eventBus, // Especifica o barramento para o qual a regra deve ouvir
-      },
+      eventBus,
+      targets: [new targets.LambdaFunction(healthEventHandlerLambda)],
     });
-    healthRule.addTarget(new targets.LambdaFunction(healthEventHandlerLambda));
 
     // Step Functions SLA (Usando os Lambdas corretos)
     const calculateImpactTask = new sfn_tasks.LambdaInvoke(this, 'CalculateImpact', { lambdaFunction: slaCalculateImpactLambda, outputPath: '$.Payload' });
@@ -291,7 +314,12 @@ export class CostGuardianStack extends cdk.Stack {
     // Outputs (Mantido)
     new cdk.CfnOutput(this, 'APIUrl', { value: api.url });
     new cdk.CfnOutput(this, 'UserPoolId', { value: userPool.userPoolId });
+    new cdk.CfnOutput(this, 'UserPoolClientId', { value: userPoolClient.userPoolClientId });
     new cdk.CfnOutput(this, 'TableName', { value: table.tableName });
     new cdk.CfnOutput(this, 'SFNArn', { value: sfn.stateMachineArn });
+    new cdk.CfnOutput(this, 'CfnTemplateUrl', {
+      value: templateBucket.urlForObject('template.yaml'),
+      description: 'URL do template do CloudFormation para o onboarding do cliente. Use esta URL no frontend.',
+    });
   }
 }

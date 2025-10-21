@@ -15,6 +15,11 @@ export default function TermsPage() {
       if (!res.ok) throw new Error('Failed to accept terms');
       setAccepted(true);
       setMessage('Termos aceitos com sucesso.');
+      
+      // Pequeno delay para mostrar a mensagem
+      await new Promise(resolve => setTimeout(resolve, 800));
+      // Redireciona de volta para o onboarding
+      window.location.href = '/onboard';
     } catch (err) {
       setMessage(err instanceof Error ? err.message : 'Erro desconhecido');
     } finally {

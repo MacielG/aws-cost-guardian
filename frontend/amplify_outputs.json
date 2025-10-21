@@ -1,9 +1,0 @@
-{
-  "aws_region": "us-east-1",
-  "aws_project_region": "us-east-1",
-  "cognito_user_pool_id": "us-east-1_abc123",
-  "cognito_user_pool_client_id": "def456",
-  "cognito_identity_pool_id": "us-east-1:ghi789",
-  "storage_bucket_name": "costguardian-storage-xyz",
-  "api_url": "https://abc123.appsync-api.us-east-1.amazonaws.com/graphql"
-}

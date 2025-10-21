@@ -196,7 +196,7 @@ export default function AdminClaims() {
                           </a>
                         </Button>
                       )}
-                      {/* O botão "Marcar como Reembolsado" agora chama o novo handler e gera a fatura */}
+                      {/* Botão para marcar como reembolsado e gerar fatura */}
                       {claim.status === 'READY_TO_SUBMIT' && (
                         <Button
                           variant="secondary"
@@ -206,7 +206,23 @@ export default function AdminClaims() {
                           {t('adminClaims.markAsRefundedAndInvoice', 'Marcar como Reembolsado (Gerar Fatura)')}
                         </Button>
                       )}
-                      {/* Add other status update options as needed */}
+
+                      {/* Seletor de status para atualizações manuais (emergência) */}
+                      <Select
+                        value={claim.status}
+                        onValueChange={(newStatus) => handleUpdateClaimStatus(claim.id, claim.sk, newStatus as Claim['status'])}
+                      >
+                        <SelectTrigger className="w-[200px]">
+                          <SelectValue placeholder={t('adminClaims.changeStatus', 'Mudar Status (Emergência)')} />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {allStatuses.filter(s => s !== 'ALL').map(status => (
+                            <SelectItem key={status} value={status}>
+                              {t(`statuses.${status}`, status.replace(/_/g, ' '))}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
                     </div>
                   </CardContent>
                 </Card>

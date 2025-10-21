@@ -150,19 +150,24 @@ describe('SLA Workflow Functions', () => {
       impactedCost: 250,
     };
 
-    it('should generate report, create claim, and create Stripe invoice', async () => {
+    it('should generate report and save claim without generating Stripe invoice', async () => {
       process.env.REPORTS_BUCKET_NAME = 'test-bucket';
-      mockDynamoDb.promise.mockResolvedValueOnce({ Item: {} }); // Simula usuário sem stripeCustomerId
-      mockStripe.customers.create.mockResolvedValueOnce({ id: 'cus_stripe_123' });
-      mockStripe.invoices.create.mockResolvedValueOnce({ id: 'in_stripe_123' });
+      mockDynamoDb.promise.mockResolvedValueOnce({ Item: {} });
 
       const result = await generateReport(baseEvent);
 
       expect(mockS3.putObject).toHaveBeenCalled();
-      expect(mockStripe.customers.create).toHaveBeenCalled(); // Cria novo cliente Stripe
-      expect(mockStripe.invoices.create).toHaveBeenCalled();
+      // Não deveria mais criar um cliente ou fatura no Stripe
+      expect(mockStripe.customers.create).not.toHaveBeenCalled();
+      expect(mockStripe.invoices.create).not.toHaveBeenCalled();
+      // Deveria apenas salvar a claim como READY_TO_SUBMIT
       expect(mockDynamoDb.put).toHaveBeenCalledWith(expect.objectContaining({
-        Item: expect.objectContaining({ status: 'READY_TO_SUBMIT' }),
+        Item: expect.objectContaining({
+          status: 'READY_TO_SUBMIT',
+          stripeInvoiceId: null,
+          entityType: 'CLAIM',
+          createdAt: expect.any(String),
+        }),
       }));
       expect(result.status).toBe('generated');
       expect(result.claimId).toBe('CLAIM#abc-123');

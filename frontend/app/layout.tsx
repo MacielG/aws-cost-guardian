@@ -3,8 +3,12 @@ import { Inter } from 'next/font/google';
 import './globals.css';
 import { Amplify } from 'aws-amplify';
 import { I18nextProvider } from 'react-i18next';
-import i18n from '../i18n';
+import i18n from '@/i18n'; // Caminho ajustado para ser mais robusto
 import '@aws-amplify/ui-react/styles.css';
+import amplifyConfig from '@/amplify-config'; // Importe a configuração
+
+// Configure o Amplify no lado do cliente
+Amplify.configure(amplifyConfig, { ssr: true });
 
 const inter = Inter({ subsets: ['latin'] });
 
