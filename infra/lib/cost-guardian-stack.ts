@@ -222,17 +222,19 @@ export class CostGuardianStack extends cdk.Stack {
       eventBusName: eventBus.eventBusName,
       statementId: 'AllowClientHealthEvents',
       action: 'events:PutEvents',
-      principal: '*', // Necess e1rio para cross-account
+      principal: '*', // Necessário para cross-account
     });
 
-    // Injetar a condição como JSON bruto no template CloudFormation. Usamos
-    // addPropertyOverride para garantir que o formato seja exatamente o
-    // necessário pelo CloudFormation: { "StringEquals": { "events:source": "aws.health" } }
+    // --- INÍCIO DA CORREÇÃO ---
+    // Injetar a condição como JSON bruto no template CloudFormation.
+    // A estrutura 'Condition' do CfnEventBusPolicy (L1) é diferente
+    // da estrutura de Condição de uma política IAM e espera Type/Key/Value.
     eventBusPolicy.addPropertyOverride('Condition', {
-      StringEquals: {
-        'events:source': 'aws.health',
-      },
+      Type: 'StringEquals',
+      Key: 'events:source',
+      Value: 'aws.health',
     });
+    // --- FIM DA CORREÇÃO ---
 
     // EventBridge Health (Corrigido com permissionamento seguro)
     const healthRule = new events.Rule(this, 'HealthEventRule', {
