@@ -71,6 +71,12 @@ export class CostGuardianStack extends cdk.Stack {
       websiteIndexDocument: 'template.yaml',
       removalPolicy: cdk.RemovalPolicy.DESTROY,
       autoDeleteObjects: true,
+      blockPublicAccess: new s3.BlockPublicAccess({
+        blockPublicAcls: true,
+        ignorePublicAcls: true,
+        blockPublicPolicy: false, // Permite políticas públicas
+        restrictPublicBuckets: false,
+      }),
     });
 
     // Implantação do template do CloudFormation no bucket S3
@@ -317,7 +323,7 @@ export class CostGuardianStack extends cdk.Stack {
     new cdk.CfnOutput(this, 'TableName', { value: table.tableName });
     new cdk.CfnOutput(this, 'SFNArn', { value: sfn.stateMachineArn });
     new cdk.CfnOutput(this, 'CfnTemplateUrl', {
-      value: templateBucket.urlForObject('template.yaml'),
+      value: `${templateBucket.bucketWebsiteUrl}/template.yaml`,
       description: 'URL do template do CloudFormation para o onboarding do cliente. Use esta URL no frontend.',
     });
   }
