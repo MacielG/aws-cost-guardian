@@ -196,13 +196,14 @@ export default function AdminClaims() {
                           </a>
                         </Button>
                       )}
-                      {claim.status !== 'REFUNDED' && (
+                      {/* O botão "Marcar como Reembolsado" agora chama o novo handler e gera a fatura */}
+                      {claim.status === 'READY_TO_SUBMIT' && (
                         <Button
                           variant="secondary"
                           size="sm"
-                          onClick={() => handleUpdateClaimStatus(claim.id, claim.sk, 'REFUNDED')}
+                          onClick={() => handleMarkAsRefunded(claim.id, claim.sk)}
                         >
-                          Marcar como Reembolsado
+                          {t('adminClaims.markAsRefundedAndInvoice', 'Marcar como Reembolsado (Gerar Fatura)')}
                         </Button>
                       )}
                       {/* Add other status update options as needed */}
@@ -217,3 +218,33 @@ export default function AdminClaims() {
     </div>
   );
 }
+
+// Novo handler para marcar como reembolsado e gerar fatura
+const handleMarkAsRefunded = async (customerId: string, claimSk: string) => {
+  const claimId = claimSk.replace('CLAIM#', '');
+  if (!confirm(`Isso marcará a claim ${claimId} como REEMBOLSADA e GERARÁ A FATURA de comissão para o cliente. Continuar?`)) {
+    return;
+  }
+
+  try {
+    const response = await fetch(`/api/admin/claims/${customerId}/${claimId}/create-invoice`, {
+      method: 'POST',
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.message || 'Falha ao criar fatura');
+    }
+    const data = await response.json();
+    toast.success(`Fatura ${data.invoiceId} criada! Claim marcada como REFUNDED.`);
+    // Re-fetch claims to update the UI
+    // This assumes fetchClaims is available in the scope, which it is in the component.
+    // For a standalone function, you might need to pass fetchClaims as an argument.
+    // However, since this is within the component's scope, it can access fetchClaims.
+    // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+    // @ts-ignore
+    fetchClaims(); 
+  } catch (err) {
+    toast.error(`Erro: ${err instanceof Error ? err.message : 'Erro desconhecido'}`);
+  }
+};

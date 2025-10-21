@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Download, ExternalLink } from 'lucide-react';
+import Link from 'next/link';
 import { useEffect, useState } from 'react';
 import { Badge } from '@/components/ui/badge';
 
@@ -61,7 +62,12 @@ export default function SLAClaims() {
       <Card>
         <CardHeader>
           <CardTitle>{t('slaClaims.title', 'Reivindicações de Crédito SLA')}</CardTitle>
-          <CardDescription>{t('slaClaims.description', 'Visualize o status e os detalhes das suas reivindicações de crédito SLA.')}</CardDescription>
+          <CardDescription>
+            {t('slaClaims.description', 'Visualize o status e os detalhes das suas reivindicações de crédito SLA.')}
+            <Link href="/docs/como-funciona.md" target="_blank" className="text-blue-500 hover:underline ml-2">
+              Como calculamos isso?
+            </Link>
+          </CardDescription>
         </CardHeader>
         <CardContent>
           {loading && <p>{t('loading', 'Carregando...')}</p>}

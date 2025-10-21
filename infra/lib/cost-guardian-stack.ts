@@ -179,6 +179,27 @@ export class CostGuardianStack extends cdk.Stack {
     
     // *** FIM DAS CORREÇÕES DE LAMBDA ***
 
+    // Obter o event bus padrão da plataforma
+    const eventBus = events.EventBus.fromEventBusName(this, 'DefaultBus', 'default');
+
+    // Política para permitir recebimento de eventos cross-account (ex: via OrgID)
+    // ATENÇÃO: Substitua 'o-SUA-ORG-ID-AQUI' pelo ID da sua Organização AWS para segurança.
+    // Isso garante que apenas contas dentro da sua organização possam enviar eventos.
+    // Se você não usa AWS Organizations ou quer permitir contas fora da sua organização,
+    // você precisará ajustar esta política (ex: usar Principal: '*' com condições mais específicas,
+    // ou permitir contas individuais explicitamente).
+    new events.CfnEventBusPolicy(this, 'EventBusPolicy', {
+      eventBusName: eventBus.eventBusName,
+      statementId: 'AllowCrossAccountHealthEvents',
+      action: 'events:PutEvents',
+      principal: '*',
+      condition: {
+        type: 'StringEquals',
+        key: 'aws:PrincipalOrgID',
+        value: 'o-SUA-ORG-ID-AQUI', // Substitua pelo ID da sua Organização AWS para segurança
+      },
+    });
+
     // EventBridge Health (Agora aponta para o Lambda correto)
     const healthRule = new events.Rule(this, 'HealthEventRule', {
       eventPattern: {
@@ -190,6 +211,8 @@ export class CostGuardianStack extends cdk.Stack {
         // ou se ele configurar um EventBus cross-account.
         // Assumindo que o cliente fará isso:
         detailType: ['AWS Health Event'],
+      },
+      eventBus: eventBus, // Especifica o barramento para o qual a regra deve ouvir
       },
     });
     healthRule.addTarget(new targets.LambdaFunction(healthEventHandlerLambda));
@@ -258,6 +281,12 @@ export class CostGuardianStack extends cdk.Stack {
       .addResource('{claimId}')
       .addResource('status')
       .addMethod('PUT', apiIntegration, { authorizer: auth });
+    // New endpoint for admin to create Stripe invoice and mark claim as refunded
+    adminApi.addResource('claims')
+      .addResource('{customerId}')
+      .addResource('{claimId}')
+      .addResource('create-invoice')
+      .addMethod('POST', apiIntegration, { authorizer: auth });
 
     // Outputs (Mantido)
     new cdk.CfnOutput(this, 'APIUrl', { value: api.url });

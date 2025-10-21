@@ -359,4 +359,89 @@ app.put('/api/admin/claims/:customerId/:claimId/status', authenticateUser, autho
   }
 });
 
+// POST /api/admin/claims/{customerId}/{claimId}/create-invoice
+app.post('/api/admin/claims/:customerId/:claimId/create-invoice', authenticateUser, authorizeAdmin, async (req, res) => {
+  const { customerId, claimId } = req.params;
+  const fullClaimSk = `CLAIM#${claimId}`;
+
+  try {
+    // 1. Buscar a claim para obter o valor do crédito
+    const claimData = await dynamoDb.get({
+      TableName: process.env.DYNAMODB_TABLE,
+      Key: { id: customerId, sk: fullClaimSk },
+    }).promise();
+
+    if (!claimData.Item) {
+      return res.status(404).json({ message: 'Claim não encontrada' });
+    }
+    const credit = claimData.Item.creditAmount;
+    const creditFixed = credit.toFixed(2); // Para a descrição da fatura
+
+    // 2. Mover a Lógica do Stripe para cá (de sla-workflow.js)
+    const commissionAmount = Math.round(credit * 0.30 * 100); // 30% de comissão em centavos
+    if (commissionAmount <= 50) { // Stripe tem um valor mínimo de cobrança (ex: $0.50)
+      return res.status(400).json({ message: 'Comissão abaixo do mínimo faturável ($0.50)' });
+    }
+
+    // Obter ou criar o Stripe Customer ID
+    const userConfigKey = { id: customerId, sk: 'CONFIG#ONBOARD' };
+    const userConfig = await dynamoDb.get({ TableName: process.env.DYNAMODB_TABLE, Key: userConfigKey }).promise();
+
+    let stripeCustomerId = userConfig.Item?.stripeCustomerId;
+
+    if (!stripeCustomerId) {
+      console.log(`Cliente Stripe não encontrado para ${customerId}. Criando um novo.`);
+      const customer = await stripe.customers.create({
+        description: `AWS Cost Guardian Customer ${customerId}`,
+        metadata: { costGuardianUserId: customerId }
+      });
+      stripeCustomerId = customer.id;
+
+      // Salvar o novo ID no DynamoDB para uso futuro
+      await dynamoDb.update({
+        TableName: process.env.DYNAMODB_TABLE,
+        Key: userConfigKey,
+        UpdateExpression: 'SET stripeCustomerId = :sid',
+        ExpressionAttributeValues: { ':sid': stripeCustomerId }
+      }).promise();
+      console.log(`Novo cliente Stripe ${stripeCustomerId} criado e associado ao usuário ${customerId}.`);
+    } else {
+      console.log(`Cliente Stripe ${stripeCustomerId} encontrado para o usuário ${customerId}.`);
+    }
+
+    // Etapa 1: Criar um item de fatura pendente
+    await stripe.invoiceItems.create({
+      customer: stripeCustomerId,
+      amount: commissionAmount,
+      currency: 'usd',
+      description: `Comissão de 30% sobre crédito SLA de $${creditFixed} (Incidente: ${claimId})`,
+    });
+
+    // Etapa 2: Criar a fatura a partir do item e finalizá-la
+    const invoice = await stripe.invoices.create({
+      customer: stripeCustomerId,
+      collection_method: 'charge_automatically',
+      auto_advance: true,
+      metadata: { claimId: claimId, customerId: customerId },
+    });
+    const invoiceId = invoice.id;
+    console.log(`Fatura ${invoiceId} criada no Stripe para o cliente ${customerId} no valor de ${commissionAmount / 100} USD.`);
+
+    // 3. Atualizar a claim com o ID da fatura e status REFUNDED
+    await dynamoDb.update({
+      TableName: process.env.DYNAMODB_TABLE,
+      Key: { id: customerId, sk: fullClaimSk },
+      UpdateExpression: 'SET #status = :status, stripeInvoiceId = :invId',
+      ExpressionAttributeNames: { '#status': 'status' },
+      ExpressionAttributeValues: { ':status': 'REFUNDED', ':invId': invoiceId },
+    }).promise();
+
+    res.json({ success: true, invoiceId: invoiceId });
+
+  } catch (err) {
+    console.error('Erro ao criar fatura:', err);
+    res.status(500).json({ message: 'Erro ao criar fatura Stripe' });
+  }
+});
+
 module.exports.app = serverless(app);

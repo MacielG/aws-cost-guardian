@@ -30,8 +30,6 @@ Resources:
             Condition:
               StringEquals:
                 sts:ExternalId: !Ref ExternalId
-      ManagedPolicyArns:
-        - arn:aws:iam::aws:policy/ReadOnlyAccess  # Mínimo; customize para ce:Get*, health:Describe*
       Policies:
         - PolicyName: CostGuardianReadPolicy
           PolicyDocument:
@@ -157,6 +155,20 @@ Resources:
       RoleArn: !GetAtt CostGuardianRole.Arn
       CallbackUrl: !Ref CallbackUrl
       ExternalId: !Ref ExternalId
+
+  ClientHealthEventRule:
+    Type: AWS::Events::Rule
+    Properties:
+      Description: "Encaminha eventos do AWS Health para o Cost Guardian"
+      EventBusName: "default" # O barramento de eventos padrão da conta do cliente
+      EventPattern:
+        source:
+          - "aws.health"
+        detail-type: # Adicionado para corresponder ao padrão da plataforma
+          - "AWS Health Event"
+      Targets:
+        - Arn: !Sub "arn:aws:events:${AWS::Region}:${PlatformAccountId}:event-bus/default" # O ARN do Event Bus da sua plataforma
+          Id: "CostGuardianEventBusTarget"
 
 Outputs:
   RoleArn:
