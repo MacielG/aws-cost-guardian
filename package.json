@@ -9,10 +9,12 @@
   ],
   "scripts": {
     "install:all": "npm ci --workspaces",
-    "dev": "npm run dev --workspace=frontend & npm run dev --workspace=backend",
-    "deploy": "./deploy-all.sh"
+    "dev": "concurrently --kill-others-on-fail --names \"FRONT,BACK\" \"npm:dev --workspace=frontend\" \"npm:dev --workspace=backend\"",
+    "deploy": "./deploy-all.sh",
+    "test": "npm test --workspaces"
   },
   "devDependencies": {
+    "concurrently": "^8.2.2",
     "husky": "^8.0.0",
     "lint-staged": "^13.0.0"
   }

@@ -44,9 +44,9 @@ export default function Onboard() {
       if (response.ok) {
       const config = await response.json();
       // Constrói o link do CloudFormation dinamicamente
+      const templateUrl = process.env.NEXT_PUBLIC_CFN_TEMPLATE_URL;
       setOnboardingStatus(config.status);
-      const templateUrl = 'https://s3.amazonaws.com/cost-guardian-templates/cost-guardian-template.yaml';
-      const callbackUrl = `${window.location.origin}/api/onboard`;
+      const callbackUrl = `${process.env.NEXT_PUBLIC_API_URL}/onboard`;
       const link = `https://console.aws.amazon.com/cloudformation/home?region=us-east-1#/stacks/create/review?templateURL=${templateUrl}&stackName=CostGuardianStack&param_ExternalId=${config.externalId}&param_PlatformAccountId=${config.platformAccountId}&param_CallbackUrl=${encodeURIComponent(callbackUrl)}`;
       setCfnLink(link);
       }

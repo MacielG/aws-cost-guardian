@@ -3,6 +3,7 @@
 import * as cdk from 'aws-cdk-lib';
 import { Construct } from 'constructs';
 import * as lambda from 'aws-cdk-lib/aws-lambda';
+import { NodejsFunction } from 'aws-cdk-lib/aws-lambda-nodejs';
 import * as apigw from 'aws-cdk-lib/aws-apigateway';
 import * as dynamodb from 'aws-cdk-lib/aws-dynamodb';
 import * as cognito from 'aws-cdk-lib/aws-cognito';
@@ -108,13 +109,20 @@ export class CostGuardianStack extends cdk.Stack {
     });
 
     // 1. Lambda para o API Gateway (Monolito Express)
+    // NOTE: Deploy expects a pre-built artifact in ../backend-dist that contains
+    // handler.js plus node_modules (production). Create that locally before deploy
+    // with: (from repo root)
+    //  cd backend; npm ci --production; cd ..; rm -rf backend-dist; mkdir backend-dist; Copy-Item -Path backend\* -Destination backend-dist -Recurse
     const apiHandlerLambda = new lambda.Function(this, 'ApiHandler', {
       runtime: lambda.Runtime.NODEJS_18_X,
-      handler: 'handler.app', 
-      code: lambda.Code.fromAsset('../backend'),
+      handler: 'handler.app',
+      code: lambda.Code.fromAsset('../backend-dist'),
       environment: {
         DYNAMODB_TABLE: table.tableName,
         STRIPE_SECRET_ARN: stripeSecret.secretArn,
+        USER_POOL_ID: userPool.userPoolId,
+        USER_POOL_CLIENT_ID: userPoolClient.userPoolClientId,
+        PLATFORM_ACCOUNT_ID: this.account || process.env.CDK_DEFAULT_ACCOUNT,
       },
     });
     table.grantReadWriteData(apiHandlerLambda);
@@ -280,39 +288,46 @@ export class CostGuardianStack extends cdk.Stack {
 
     const apiIntegration = new apigw.LambdaIntegration(apiHandlerLambda);
 
-    // Resources API (Corrigido)
-    const onboard = api.root.addResource('onboard');
+    // Expor todas as rotas sob /api para coincidir com as rotas Express do backend (/api/*)
+    const apiRoot = api.root.addResource('api');
+
+  // Health público: GET /api/health -> sem authorizer
+  const health = apiRoot.addResource('health');
+  health.addMethod('GET', apiIntegration); // public health check
+
+    // Resources API (agora sob /api)
+    const onboard = apiRoot.addResource('onboard');
     onboard.addMethod('POST', apiIntegration); // Webhook, sem auth
-    
+
     // Novo endpoint para gerar config de onboarding
-    const onboardInit = api.root.addResource('onboard-init');
+    const onboardInit = apiRoot.addResource('onboard-init');
     onboardInit.addMethod('GET', apiIntegration, { authorizer: auth });
 
-    const incidents = api.root.addResource('incidents');
+    const incidents = apiRoot.addResource('incidents');
     incidents.addMethod('GET', apiIntegration, { authorizer: auth });
-    const slaClaims = api.root.addResource('sla-claims');
+    const slaClaims = apiRoot.addResource('sla-claims');
     slaClaims.addMethod('GET', apiIntegration, { authorizer: auth });
 
-    const invoicesApi = api.root.addResource('invoices');
+    const invoicesApi = apiRoot.addResource('invoices');
     invoicesApi.addMethod('GET', apiIntegration, { authorizer: auth });
 
-    const termsApi = api.root.addResource('accept-terms');
+    const termsApi = apiRoot.addResource('accept-terms');
     termsApi.addMethod('POST', apiIntegration, { authorizer: auth });
 
     // Endpoint de Admin
-    const adminApi = api.root.addResource('admin');
+    const adminApi = apiRoot.addResource('admin');
     const adminClaims = adminApi.addResource('claims');
-    
+
     // GET /api/admin/claims
     adminClaims.addMethod('GET', apiIntegration, { authorizer: auth });
 
     // Sub-recursos para operações em claims específicas
     const claimsByCustomer = adminClaims.addResource('{customerId}');
     const specificClaim = claimsByCustomer.addResource('{claimId}');
-    
+
     // PUT /api/admin/claims/{customerId}/{claimId}/status
     specificClaim.addResource('status').addMethod('PUT', apiIntegration, { authorizer: auth });
-    
+
     // POST /api/admin/claims/{customerId}/{claimId}/create-invoice
     specificClaim.addResource('create-invoice').addMethod('POST', apiIntegration, { authorizer: auth });
 

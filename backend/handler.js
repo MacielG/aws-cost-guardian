@@ -38,15 +38,70 @@ app.use((req, res, next) => {
   next();
 });
 
+// Health check público (sem autenticação) para testes e monitoramento
+app.get('/api/health', (req, res) => {
+  res.json({ status: 'ok', time: new Date().toISOString() });
+});
+
 // Middleware de autenticação
+const jwt = require('jsonwebtoken');
+const jwksClient = require('jwks-rsa');
+
+// Middleware para verificar JWT diretamente (fallback quando API Gateway não usa authorizer)
+const verifyJwt = (req) => {
+  const auth = req.headers?.authorization || req.headers?.Authorization;
+  if (!auth) return null;
+  const parts = auth.split(' ');
+  if (parts.length !== 2) return null;
+  const token = parts[1];
+
+  const region = process.env.AWS_REGION || 'us-east-1';
+  const userPoolId = process.env.USER_POOL_ID; // fornecido via CDK
+  if (!userPoolId) return null;
+
+  const client = jwksClient({
+    jwksUri: `https://cognito-idp.${region}.amazonaws.com/${userPoolId}/.well-known/jwks.json`,
+  });
+
+  function getKey(header, callback) {
+    client.getSigningKey(header.kid, function (err, key) {
+      if (err) return callback(err);
+      const signingKey = key.getPublicKey();
+      callback(null, signingKey);
+    });
+  }
+
+  try {
+    const decoded = jwt.verify(token, getKey, {
+      algorithms: ['RS256'],
+      audience: process.env.USER_POOL_CLIENT_ID || undefined,
+      issuer: `https://cognito-idp.${region}.amazonaws.com/${userPoolId}`,
+    });
+    return decoded;
+  } catch (err) {
+    console.warn('JWT verification failed:', err.message);
+    return null;
+  }
+};
+
 const authenticateUser = (req, res, next) => {
   try {
+    // If API Gateway authorizer populated claims, use them
     if (req.apiGateway?.event?.requestContext?.authorizer?.claims) {
       req.user = req.apiGateway.event.requestContext.authorizer.claims;
       return next();
     }
+
+    // Otherwise attempt direct JWT verification
+    const claims = verifyJwt(req);
+    if (claims) {
+      req.user = claims;
+      return next();
+    }
+
     res.status(401).json({ message: 'Não autenticado' });
   } catch (error) {
+    console.error('authenticateUser error:', error);
     res.status(401).json({ message: 'Token inválido' });
   }
 };
