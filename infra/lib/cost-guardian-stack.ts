@@ -4,6 +4,7 @@ import * as cdk from 'aws-cdk-lib';
 import { Construct } from 'constructs';
 import * as lambda from 'aws-cdk-lib/aws-lambda';
 import { NodejsFunction } from 'aws-cdk-lib/aws-lambda-nodejs';
+import * as path from 'path';
 import * as apigw from 'aws-cdk-lib/aws-apigateway';
 import * as dynamodb from 'aws-cdk-lib/aws-dynamodb';
 import * as cognito from 'aws-cdk-lib/aws-cognito';
@@ -109,14 +110,14 @@ export class CostGuardianStack extends cdk.Stack {
     });
 
     // 1. Lambda para o API Gateway (Monolito Express)
-    // NOTE: Deploy expects a pre-built artifact in ../backend-dist that contains
-    // handler.js plus node_modules (production). Create that locally before deploy
-    // with: (from repo root)
-    //  cd backend; npm ci --production; cd ..; rm -rf backend-dist; mkdir backend-dist; Copy-Item -Path backend\* -Destination backend-dist -Recurse
-    const apiHandlerLambda = new lambda.Function(this, 'ApiHandler', {
+    // Usamos NodejsFunction para empacotar apenas o necessário com esbuild
+    const apiHandlerLambda = new NodejsFunction(this, 'ApiHandler', {
       runtime: lambda.Runtime.NODEJS_18_X,
-      handler: 'handler.app',
-      code: lambda.Code.fromAsset('../backend-dist'),
+      entry: path.join(__dirname, '../../backend/handler.js'),
+      handler: 'app', // export do express + serverless é exposto como 'app' no handler.js
+      bundling: {
+        externalModules: ['aws-sdk'],
+      },
       environment: {
         DYNAMODB_TABLE: table.tableName,
         STRIPE_SECRET_ARN: stripeSecret.secretArn,
@@ -129,10 +130,11 @@ export class CostGuardianStack extends cdk.Stack {
     stripeSecret.grantRead(apiHandlerLambda);
 
     // 2. Lambda para o EventBridge (Correlacionar Eventos Health)
-    const healthEventHandlerLambda = new lambda.Function(this, 'HealthEventHandler', {
+    const healthEventHandlerLambda = new NodejsFunction(this, 'HealthEventHandler', {
       runtime: lambda.Runtime.NODEJS_18_X,
-      handler: 'functions/correlate-health.handler',
-      code: lambda.Code.fromAsset('../backend'), 
+      entry: path.join(__dirname, '../../backend/functions/correlate-health.js'),
+      handler: 'handler',
+      bundling: { externalModules: ['aws-sdk'] },
       environment: {
         DYNAMODB_TABLE: table.tableName,
         SFN_ARN: '', // Será preenchido abaixo
@@ -141,10 +143,11 @@ export class CostGuardianStack extends cdk.Stack {
     table.grantReadWriteData(healthEventHandlerLambda);
 
     // 3. Lambdas para as Tarefas do Step Functions
-    const slaCalculateImpactLambda = new lambda.Function(this, 'SlaCalculateImpact', {
+    const slaCalculateImpactLambda = new NodejsFunction(this, 'SlaCalculateImpact', {
       runtime: lambda.Runtime.NODEJS_18_X,
-      handler: 'functions/sla-workflow.calculateImpact',
-      code: lambda.Code.fromAsset('../backend'),
+      entry: path.join(__dirname, '../../backend/functions/sla-workflow.js'),
+      handler: 'calculateImpact',
+      bundling: { externalModules: ['aws-sdk'] },
       environment: {
         DYNAMODB_TABLE: table.tableName,
       },
@@ -164,17 +167,19 @@ export class CostGuardianStack extends cdk.Stack {
       })
     });
     
-    const slaCheckLambda = new lambda.Function(this, 'SlaCheck', {
+    const slaCheckLambda = new NodejsFunction(this, 'SlaCheck', {
       runtime: lambda.Runtime.NODEJS_18_X,
-      handler: 'functions/sla-workflow.checkSLA',
-      code: lambda.Code.fromAsset('../backend'),
+      entry: path.join(__dirname, '../../backend/functions/sla-workflow.js'),
+      handler: 'checkSLA',
+      bundling: { externalModules: ['aws-sdk'] },
       environment: { DYNAMODB_TABLE: table.tableName },
     });
 
-    const slaGenerateReportLambda = new lambda.Function(this, 'SlaGenerateReport', {
+    const slaGenerateReportLambda = new NodejsFunction(this, 'SlaGenerateReport', {
       runtime: lambda.Runtime.NODEJS_18_X,
-      handler: 'functions/sla-workflow.generateReport',
-      code: lambda.Code.fromAsset('../backend'),
+      entry: path.join(__dirname, '../../backend/functions/sla-workflow.js'),
+      handler: 'generateReport',
+      bundling: { externalModules: ['aws-sdk'] },
       environment: {
         DYNAMODB_TABLE: table.tableName,
         STRIPE_SECRET_ARN: stripeSecret.secretArn,
@@ -197,10 +202,11 @@ export class CostGuardianStack extends cdk.Stack {
     // Permissões necessárias para a Lambda escrever objetos no bucket
     reportsBucket.grantPut(slaGenerateReportLambda);
 
-    const slaSubmitTicketLambda = new lambda.Function(this, 'SlaSubmitTicket', {
+    const slaSubmitTicketLambda = new NodejsFunction(this, 'SlaSubmitTicket', {
       runtime: lambda.Runtime.NODEJS_18_X,
-      handler: 'functions/sla-workflow.submitSupportTicket',
-      code: lambda.Code.fromAsset('../backend'),
+      entry: path.join(__dirname, '../../backend/functions/sla-workflow.js'),
+      handler: 'submitSupportTicket',
+      bundling: { externalModules: ['aws-sdk'] },
       environment: { DYNAMODB_TABLE: table.tableName },
       role: new iam.Role(this, 'SlaSubmitRole', {
         assumedBy: new iam.ServicePrincipal('lambda.amazonaws.com'),
@@ -223,7 +229,7 @@ export class CostGuardianStack extends cdk.Stack {
     const eventBus = events.EventBus.fromEventBusName(this, 'DefaultBus', 'default');
 
     // Política segura para o Event Bus que permite apenas eventos específicos
-    const eventBusPolicy = new events.CfnEventBusPolicy(this, 'EventBusPolicy', {
+    new events.CfnEventBusPolicy(this, 'EventBusPolicy', {
       eventBusName: eventBus.eventBusName,
       statementId: 'AllowClientHealthEvents',
       action: 'events:PutEvents',
@@ -243,7 +249,7 @@ export class CostGuardianStack extends cdk.Stack {
     // --- FIM DA CORREÇÃO ---
 
     // EventBridge Health (Esta é a regra de FILTRAGEM correta)
-    const healthRule = new events.Rule(this, 'HealthEventRule', {
+    new events.Rule(this, 'HealthEventRule', {
       eventPattern: {
         source: ['aws.health'], // A filtragem acontece aqui
         detailType: ['AWS Health Event'],

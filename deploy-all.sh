@@ -29,6 +29,8 @@ STACK_NAME=$(jq -r 'keys[0]' $CDK_OUTPUTS_FILE)
 API_URL=$(jq -r '."'$STACK_NAME'".APIUrl' $CDK_OUTPUTS_FILE)
 USER_POOL_ID=$(jq -r '."'$STACK_NAME'".UserPoolId' $CDK_OUTPUTS_FILE)
 USER_POOL_CLIENT_ID=$(jq -r '."'$STACK_NAME'".UserPoolClientId' $CDK_OUTPUTS_FILE)
+CFN_TEMPLATE_URL=$(jq -r '."'$STACK_NAME'".CfnTemplateUrl' $CDK_OUTPUTS_FILE)
+CFN_REGION=$(jq -r '."'$STACK_NAME'".CfnTemplateUrl' $CDK_OUTPUTS_FILE | sed -n 's/^https:\/\/\([^\.]*\)\.s3.*$/\1/p' || true)
 
 cd ..
 
@@ -41,6 +43,12 @@ FRONTEND_ENV_FILE="frontend/.env.local"
 echo "NEXT_PUBLIC_API_URL=${API_URL}" > $FRONTEND_ENV_FILE
 echo "NEXT_PUBLIC_USER_POOL_ID=${USER_POOL_ID}" >> $FRONTEND_ENV_FILE
 echo "NEXT_PUBLIC_USER_POOL_CLIENT_ID=${USER_POOL_CLIENT_ID}" >> $FRONTEND_ENV_FILE
+echo "NEXT_PUBLIC_CFN_TEMPLATE_URL=${CFN_TEMPLATE_URL}" >> $FRONTEND_ENV_FILE
+if [ -n "$CFN_REGION" ]; then
+    echo "NEXT_PUBLIC_AMPLIFY_REGION=${CFN_REGION}" >> $FRONTEND_ENV_FILE
+else
+    echo "NEXT_PUBLIC_AMPLIFY_REGION=us-east-1" >> $FRONTEND_ENV_FILE
+fi
 
 echo "✅ Arquivo '$FRONTEND_ENV_FILE' criado com sucesso com os outputs do backend."
 echo "--------------------------------------------------"
@@ -54,8 +62,10 @@ echo "Monitore: CloudWatch Logs no console AWS."
 
 # Desabilita 'exit on error' para garantir que a mensagem final e a pausa sejam exibidas
 set +e
-# Adiciona uma pausa para que o usuário possa ver a saída
-read -p "Pressione Enter para fechar o terminal..."
+# Adiciona uma pausa APENAS se não estivermos em um ambiente de CI
+if [ -z "$CI" ]; then
+    read -p "Pressione Enter para fechar o terminal..."
+fi
 
 # Reabilita 'exit on error' (opcional, se o script continuasse depois disso)
 set -e

@@ -12,9 +12,7 @@
     "deploy": "cdk deploy --all --require-approval never"
   },
   "devDependencies": {
-    "@aws-cdk/aws-apigateway": "^1.203.0",
-    "@aws-cdk/aws-lambda": "^1.203.0",
-    "@aws-cdk/core": "^1.203.0",
+    "esbuild": "^0.17.19",
     "@types/node": "^20.19.23",
     "aws-cdk": "2.100.0",
     "ts-node": "^10.9.1",

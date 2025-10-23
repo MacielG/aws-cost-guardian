@@ -11,11 +11,9 @@ declare global {
 }
 
 const app = new cdk.App();
-const stack = new CostGuardianStack(app, 'CostGuardianStack', {
+new CostGuardianStack(app, 'CostGuardianStack', {
   env: { account: process.env.CDK_DEFAULT_ACCOUNT, region: process.env.CDK_DEFAULT_REGION },
 });
 
-console.log('Outputs:', {
-  APIUrl: cdk.Fn.importValue('APIUrl'),  // Use exports
-  // Adicione mais
-});
+// Observação: Os outputs do CDK são impressos pelo comando 'cdk deploy' quando
+// --outputs-file é usado. Este arquivo não precisa reexportar variáveis localmente.

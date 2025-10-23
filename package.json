@@ -19,4 +19,9 @@
     "lint-staged": "^13.0.0",
     "@swc/helpers": "^0.5.2"
   }
+  ,
+  "overrides": {
+    "react": "^18",
+    "react-dom": "^18"
+  }
 }
