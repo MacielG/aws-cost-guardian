@@ -166,6 +166,8 @@ export class CostGuardianStack extends cdk.Stack {
         }
       })
     });
+  // Garantir permissões ao DynamoDB para a Lambda de cálculo de impacto
+  table.grantReadWriteData(slaCalculateImpactLambda);
     
     const slaCheckLambda = new NodejsFunction(this, 'SlaCheck', {
       runtime: lambda.Runtime.NODEJS_18_X,
