@@ -5,7 +5,7 @@ import React from 'react';
 type Variant = 'default' | 'success' | 'destructive' | 'secondary' | 'outline';
 
 export function Badge({ children, variant = 'default' }: { children: React.ReactNode; variant?: Variant }) {
-  const base = 'inline-flex items-center px-2 py-0.5 rounded text-sm font-medium';
+  const base = 'inline-flex items-center px-2 py-0.5 rounded text-sm font-medium shadow-sm transition-colors duration-150';
   const colors: Record<Variant, string> = {
     default: 'bg-gray-100 text-gray-800',
     success: 'bg-green-100 text-green-800',

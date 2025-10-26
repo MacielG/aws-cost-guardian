@@ -5,3 +5,23 @@
 body {
   font-family: Inter, sans-serif;
 }
+
+.heading-1 {
+  @apply text-h1 font-bold text-primary;
+}
+.heading-2 {
+  @apply text-h2 font-semibold text-primary;
+}
+.heading-3 {
+  @apply text-h3 font-medium text-primary;
+}
+.heading-4 {
+  @apply text-h4 font-medium text-primary;
+}
+.paragraph {
+  @apply text-paragraph text-secondary;
+}
+.muted {
+  @apply text-muted text-secondary;
+}
+}

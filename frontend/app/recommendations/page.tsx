@@ -25,13 +25,17 @@ export default function RecommendationsPage() {
   const [loading, setLoading] = useState(true);
   const [executing, setExecuting] = useState<Record<string, boolean>>({});
   const [error, setError] = useState<string | null>(null);
+  const [filterType, setFilterType] = useState<string>('all');
+  const [filterStatus, setFilterStatus] = useState<string>('all');
+  const [orderBy, setOrderBy] = useState<'savings' | 'date'>('savings');
 
   useEffect(() => {
-    fetchRecommendations();
+  fetchRecommendations();
   }, []);
 
   const fetchRecommendations = async () => {
     try {
+      setLoading(true);
       const res = await fetch('/api/recommendations');
       if (!res.ok) {
         throw new Error('Falha ao carregar recomendações');
@@ -113,6 +117,23 @@ export default function RecommendationsPage() {
         </p>
       </div>
 
+      <div className="flex gap-4 mb-6">
+        <select value={filterType} onChange={e => setFilterType(e.target.value)} className="border rounded px-2 py-1">
+          <option value="all">Todos os tipos</option>
+          <option value="UNUSED_EBS_VOLUME">Volumes EBS não utilizados</option>
+          <option value="IDLE_INSTANCE">Instâncias ociosas</option>
+        </select>
+        <select value={filterStatus} onChange={e => setFilterStatus(e.target.value)} className="border rounded px-2 py-1">
+          <option value="all">Todos os status</option>
+          <option value="RECOMMENDED">Recomendado</option>
+          <option value="COMPLETED">Executado</option>
+          <option value="FAILED">Falhou</option>
+        </select>
+        <Button variant="outline" onClick={() => setOrderBy(orderBy === 'savings' ? 'date' : 'savings')}>
+          Ordenar por {orderBy === 'savings' ? 'Economia' : 'Data'}
+        </Button>
+      </div>
+
       {error && (
         <Alert variant="destructive" className="mb-4">
           <AlertTriangle className="h-4 w-4" />
@@ -135,61 +156,69 @@ export default function RecommendationsPage() {
         </Card>
       ) : (
         <div className="grid gap-6">
-          {recommendations.map((rec) => (
-            <Card key={rec.sk}>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <PiggyBank className="h-5 w-5" />
-                  {getRecommendationTitle(rec)}
-                </CardTitle>
-                <CardDescription>{getRecommendationDescription(rec)}</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-lg font-semibold text-green-600">
-                      Economia potencial: ${rec.potentialSavings.toFixed(2)}/mês
-                    </p>
-                    <p className="text-sm text-muted-foreground">
-                      Criado {formatDistanceToNow(new Date(rec.createdAt), { addSuffix: true, locale: ptBR })}
-                    </p>
-                  </div>
-                  {rec.status === 'RECOMMENDED' && (
-                    <Button 
-                      onClick={() => handleExecute(rec.sk.replace('REC#', ''))}
-                      disabled={executing[rec.sk]}
-                    >
-                      {executing[rec.sk] ? (
-                        <>
-                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                          Executando...
-                        </>
-                      ) : (
-                        'Executar'
-                      )}
-                    </Button>
-                  )}
-                  {rec.status === 'COMPLETED' && (
-                    <div className="flex items-center text-green-600">
-                      <Check className="mr-2" />
-                      Executado
+          {recommendations
+            .filter(rec => filterType === 'all' || rec.type === filterType)
+            .filter(rec => filterStatus === 'all' || rec.status === filterStatus)
+            .sort((a, b) => orderBy === 'savings' ? b.potentialSavings - a.potentialSavings : new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+            .map((rec) => (
+              <Card key={rec.sk}>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    {rec.type === 'UNUSED_EBS_VOLUME' ? <AlertTriangle className="h-5 w-5 text-red-500" /> : <PiggyBank className="h-5 w-5 text-green-600" />}
+                    {getRecommendationTitle(rec)}
+                  </CardTitle>
+                  <CardDescription>{getRecommendationDescription(rec)}</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-lg font-semibold text-green-600">
+                        Economia potencial: ${rec.potentialSavings.toFixed(2)}/mês
+                      </p>
+                      <p className="text-sm text-muted-foreground">
+                        Criado {formatDistanceToNow(new Date(rec.createdAt), { addSuffix: true, locale: ptBR })}
+                      </p>
                     </div>
-                  )}
-                  {rec.status === 'FAILED' && (
-                    <div className="flex flex-col">
-                      <div className="flex items-center text-red-600">
-                        <AlertTriangle className="mr-2" />
-                        Falha na execução
+                    {rec.status === 'RECOMMENDED' && (
+                      <Button 
+                        onClick={() => {
+                          if (window.confirm('Deseja realmente executar esta recomendação?')) {
+                            handleExecute(rec.sk.replace('REC#', ''));
+                          }
+                        }}
+                        disabled={executing[rec.sk]}
+                      >
+                        {executing[rec.sk] ? (
+                          <>
+                            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                            Executando...
+                          </>
+                        ) : (
+                          'Executar'
+                        )}
+                      </Button>
+                    )}
+                    {rec.status === 'COMPLETED' && (
+                      <div className="flex items-center text-green-600">
+                        <Check className="mr-2" />
+                        Executado
                       </div>
-                      {rec.error && (
-                        <p className="text-sm text-red-500 mt-1">{rec.error}</p>
-                      )}
-                    </div>
-                  )}
-                </div>
-              </CardContent>
-            </Card>
-          ))}
+                    )}
+                    {rec.status === 'FAILED' && (
+                      <div className="flex flex-col">
+                        <div className="flex items-center text-red-600">
+                          <AlertTriangle className="mr-2" />
+                          Falha na execução
+                        </div>
+                        {rec.error && (
+                          <p className="text-sm text-red-500 mt-1">{rec.error}</p>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
         </div>
       )}
     </div>

@@ -1,7 +1,11 @@
-'use client';
+"use client";
 import React, { useEffect, useState } from 'react';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import { Switch } from '@/components/ui/switch';
+import TagsInput from '@/components/ui/tags-input';
+import { Button } from '@/components/ui/button';
+import { useNotify } from '@/hooks/useNotify';
 
 interface AutomationSettings {
   stopIdle: boolean;
@@ -18,6 +22,7 @@ export default function AutomationSettingsPage() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const notify = useNotify();
 
   useEffect(() => {
     async function load() {
@@ -46,8 +51,10 @@ export default function AutomationSettingsPage() {
         body: JSON.stringify({ automation }),
       });
       if (!res.ok) throw new Error('Falha ao salvar');
+      notify.success('Preferências salvas com sucesso');
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Erro desconhecido');
+      notify.error(`Erro ao salvar: ${err instanceof Error ? err.message : 'desconhecido'}`);
     } finally {
       setSaving(false);
     }
@@ -68,28 +75,34 @@ export default function AutomationSettingsPage() {
         </CardHeader>
         <CardContent className="space-y-6">
           {/* Seção de Automações */}
-          <div className="space-y-3">
-            <label className="flex items-center">
-              <input 
-                type="checkbox" 
-                checked={automation.stopIdle} 
-                onChange={(e: React.ChangeEvent<HTMLInputElement>) => 
-                  setAutomation({ ...automation, stopIdle: e.target.checked })} 
-                className="mr-2"
-              />
-              Habilitar desligamento de instâncias de dev ociosas
-            </label>
+          <div className="space-y-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <div className="font-medium">Desligar instâncias ociosas (dev)</div>
+                <p className="text-sm text-gray-500">Desliga instâncias com baixa atividade para reduzir custos.</p>
+              </div>
+              <div className="ml-4">
+                <Switch
+                  checked={automation.stopIdle}
+                  onChange={(v) => setAutomation({ ...automation, stopIdle: v })}
+                  ariaLabel="Habilitar desligamento de instâncias ociosas"
+                />
+              </div>
+            </div>
 
-            <label className="flex items-center">
-              <input 
-                type="checkbox" 
-                checked={automation.deleteUnusedEbs} 
-                onChange={(e: React.ChangeEvent<HTMLInputElement>) => 
-                  setAutomation({ ...automation, deleteUnusedEbs: e.target.checked })} 
-                className="mr-2"
-              />
-              Habilitar exclusão automática de volumes EBS não anexados
-            </label>
+            <div className="flex items-center justify-between">
+              <div>
+                <div className="font-medium">Excluir volumes EBS não anexados</div>
+                <p className="text-sm text-gray-500">Remove automaticamente EBS que não estão anexados a nenhuma instância.</p>
+              </div>
+              <div className="ml-4">
+                <Switch
+                  checked={automation.deleteUnusedEbs}
+                  onChange={(v) => setAutomation({ ...automation, deleteUnusedEbs: v })}
+                  ariaLabel="Habilitar exclusão automática de EBS"
+                />
+              </div>
+            </div>
           </div>
 
           {/* Seção de Tags de Exclusão */}
@@ -101,23 +114,30 @@ export default function AutomationSettingsPage() {
                 Exemplo: env:prod, critical:true
               </p>
             </label>
-            <Input
-              type="text"
+            <TagsInput
               value={automation.exclusionTags || ''}
-              onChange={(e: React.ChangeEvent<HTMLInputElement>) => 
-                setAutomation({ ...automation, exclusionTags: e.target.value })}
+              onChange={(next) => setAutomation({ ...automation, exclusionTags: next })}
               placeholder="Ex: env:prod, critical:true"
-              className="w-full"
             />
           </div>
 
-          <button 
-            disabled={saving} 
-            onClick={save} 
-            className="w-full px-4 py-2 text-white bg-blue-600 hover:bg-blue-700 rounded disabled:opacity-50"
-          >
-            {saving ? 'Salvando...' : 'Salvar preferências'}
-          </button>
+          <div className="flex gap-3">
+            <button
+              type="button"
+              onClick={save}
+              disabled={saving}
+              className="flex-1 inline-flex items-center justify-center rounded font-medium shadow-sm transition-colors duration-150 bg-blue-600 text-white px-4 py-2 disabled:opacity-50"
+            >
+              {saving ? 'Salvando...' : 'Salvar preferências'}
+            </button>
+            <button
+              type="button"
+              onClick={() => { setAutomation({ stopIdle: false, deleteUnusedEbs: false, exclusionTags: '' }); notify.info('Valores restaurados'); }}
+              className="inline-flex items-center justify-center rounded font-medium shadow-sm transition-colors duration-150 bg-gray-100 text-gray-800 px-4 py-2"
+            >
+              Restaurar
+            </button>
+          </div>
         </CardContent>
       </Card>
     </div>

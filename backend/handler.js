@@ -723,6 +723,33 @@ app.get('/api/sla-claims', authenticateUser, async (req, res) => {
 });
 
 // GET /api/invoices
+// GET /api/alerts
+app.get('/api/alerts', authenticateUser, async (req, res) => {
+  try {
+    const customerId = req.user.sub;
+    const params = {
+      TableName: process.env.DYNAMODB_TABLE,
+      KeyConditionExpression: 'id = :id AND begins_with(sk, :prefix)',
+      ExpressionAttributeValues: {
+        ':id': customerId,
+        ':prefix': 'ALERT#',
+      },
+      ScanIndexForward: false, // Mais recentes primeiro
+    };
+    const data = await dynamoDb.query(params).promise();
+    const items = (data.Items || []).map(alert => ({
+      id: alert.id,
+      sk: alert.sk,
+      date: alert.date || alert.createdAt,
+      detail: alert.detail,
+      status: alert.status || 'active',
+    }));
+    res.json(items);
+  } catch (err) {
+    console.error('Erro ao buscar alertas:', err);
+    res.status(500).json({ message: 'Erro ao buscar alertas' });
+  }
+});
 app.get('/api/invoices', authenticateUser, async (req, res) => {
   try {
     const userId = req.user.sub; // Este é o nosso Stripe Customer ID
