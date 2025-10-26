@@ -7,6 +7,7 @@ const DYNAMODB_TABLE = process.env.DYNAMODB_TABLE;
 const sns = new AWS.SNS();
 
 // Helper: assume role do cliente e retorna um client CostExplorer configurado
+// Refinamento da detecção: aplicar threshold absoluto e comparação com mesmo dia nas últimas 4 semanas
 async function getAssumedCostExplorer(roleArn) {
   if (!roleArn) throw new Error('roleArn ausente ao assumir role do cliente');
 
@@ -102,9 +103,26 @@ exports.handler = async () => {
           const stddev = Math.sqrt(variance);
           const lastDayCost = daily[daily.length - 1];
 
-          const isAnomaly = lastDayCost > (mean + 3 * stddev);
-          if (isAnomaly) {
-            console.log(`ANOMALIA DETECTADA para ${customer.id}! Custo: ${lastDayCost} (média: ${mean.toFixed(2)}, stdev: ${stddev.toFixed(2)})`);
+          const isStatAnomaly = lastDayCost > (mean + 3 * stddev);
+          const minAbsoluteThreshold = 20; // mínimo absoluto para considerar uma anomalia
+
+          // Média dos mesmos dias das últimas 4 semanas (se disponível)
+          let prevWeeks = [];
+          for (let w = 1; w <= 4; w++) {
+            const idx = daily.length - 1 - (7 * w);
+            if (idx >= 0) prevWeeks.push(daily[idx]);
+          }
+          const prevWeeksAvg = prevWeeks.length ? prevWeeks.reduce((s,v) => s+v,0)/prevWeeks.length : null;
+
+          const weekOverWeekFactor = prevWeeksAvg ? (lastDayCost / (prevWeeksAvg || 1)) : null;
+
+          const isAnomalyFinal = (
+            (isStatAnomaly && lastDayCost > minAbsoluteThreshold) ||
+            (prevWeeksAvg !== null && weekOverWeekFactor > 1.5)
+          );
+
+          if (isAnomalyFinal) {
+            console.log(`ANOMALIA DETECTADA para ${customer.id}! Custo: ${lastDayCost} (média: ${mean.toFixed(2)}, stdev: ${stddev.toFixed(2)}). PrevWeeksAvg: ${prevWeeksAvg}`);
 
             // Salvar alerta no DynamoDB
             await dynamoDb.put({
@@ -113,7 +131,7 @@ exports.handler = async () => {
                 id: customer.id,
                 sk: `ALERT#ANOMALY#${new Date().toISOString()}`,
                 status: 'ACTIVE',
-                details: `Custo de ${lastDayCost.toFixed(2)} excedeu a média de ${mean.toFixed(2)} (stdev ${stddev.toFixed(2)}).`,
+                details: `Custo de ${lastDayCost.toFixed(2)} excedeu a média de ${mean.toFixed(2)} (stdev ${stddev.toFixed(2)}). PrevWeeksAvg: ${prevWeeksAvg}`,
                 createdAt: new Date().toISOString(),
               }
             }).promise();
@@ -123,7 +141,7 @@ exports.handler = async () => {
               await sns.publish({
                 TopicArn: process.env.SNS_TOPIC_ARN,
                 Subject: `[Cost Guardian] Alerta de Anomalia de Custo Detectada para ${customer.id}`,
-                Message: `Detectamos um gasto anômalo de $${lastDayCost.toFixed(2)} para o cliente ${customer.id}. Média: ${mean.toFixed(2)}, stdev: ${stddev.toFixed(2)}.`
+                Message: `Detectamos um gasto anômalo de $${lastDayCost.toFixed(2)} para o cliente ${customer.id}. Média: ${mean.toFixed(2)}, stdev: ${stddev.toFixed(2)}, PrevWeeksAvg: ${prevWeeksAvg}`
               }).promise();
             }
           }

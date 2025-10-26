@@ -129,7 +129,6 @@ export class CostGuardianStack extends cdk.Stack {
       include: ['cost-guardian-template.yaml'],
       // Renomeia o arquivo no S3 para a URL pública esperada
       destinationKeyPrefix: '',
-      rename: (key) => 'template.yaml',
       destinationBucket: templateBucket,
     });
 
@@ -315,10 +314,10 @@ export class CostGuardianStack extends cdk.Stack {
       action: 'events:PutEvents',
       principal: '*', // Mantém cross-account, mas a condição abaixo restringe a role
       condition: {
-        Type: 'StringEquals',
-        Key: 'aws:PrincipalArn',
+        type: 'StringEquals',
+        key: 'aws:PrincipalArn',
         // Ajuste o sufixo da role aqui se alterar o nome usado no template do cliente
-        Value: 'arn:aws:iam::*:role/EventBusRole',
+        value: 'arn:aws:iam::*:role/EventBusRole',
       },
     });
 
@@ -522,6 +521,10 @@ export class CostGuardianStack extends cdk.Stack {
 
     const invoicesApi = apiRoot.addResource('invoices');
     invoicesApi.addMethod('GET', apiIntegration, { authorizer: auth });
+
+  // Alerts API: GET /api/alerts (protegido)
+  const alertsApi = apiRoot.addResource('alerts');
+  alertsApi.addMethod('GET', apiIntegration, { authorizer: auth });
 
     const termsApi = apiRoot.addResource('accept-terms');
     termsApi.addMethod('POST', apiIntegration, { authorizer: auth });

@@ -4,6 +4,8 @@ const sts = new AWS.STS();
 const ec2 = new AWS.EC2();
 const cloudwatch = new AWS.CloudWatch();
 
+const pricing = new AWS.Pricing({ region: 'us-east-1' });
+
 const DYNAMODB_TABLE = process.env.DYNAMODB_TABLE;
 
 // Helper para verificar se um recurso está excluído pelas tags
@@ -99,9 +101,26 @@ exports.handler = async (event) => {
           if (avg < 5) {
             // Em vez de parar automaticamente, gravamos uma recomendação para o Guardian Advisor
             const recommendationId = `REC#EC2#${id}`;
-            // Estimativa simples de economia potencial (placeholder):
-            // assumimos uma economia mensal dependendo do tipo da instância (valor conservador)
-            const potentialSavings = parseFloat((inst.InstanceType && inst.InstanceType.includes('t3') ? 5.00 : 10.00).toFixed(2));
+            // Estimativa de economia potencial baseada no preço horário via AWS Pricing (fallback para heurística simples)
+            let potentialSavings = null;
+            try {
+              const instanceType = inst.InstanceType;
+              // Tentar obter preço horário via Pricing API
+              const price = await getEc2HourlyPrice(instanceType, 'us-east-1');
+              if (price != null) {
+                // Calcular horas restantes do mês (aprox.)
+                const now = new Date();
+                const daysInMonth = new Date(now.getFullYear(), now.getMonth()+1, 0).getDate();
+                const hoursRemaining = (daysInMonth - now.getDate()) * 24;
+                potentialSavings = parseFloat((price * hoursRemaining).toFixed(2));
+              }
+            } catch (psErr) {
+              console.warn('Falha ao calcular preço EC2 via Pricing API, usando fallback heurístico:', psErr);
+            }
+
+            if (potentialSavings == null) {
+              potentialSavings = parseFloat((inst.InstanceType && inst.InstanceType.includes('t3') ? 5.00 : 10.00).toFixed(2));
+            }
 
             await dynamoDb.put({
               TableName: DYNAMODB_TABLE,
@@ -137,3 +156,47 @@ exports.handler = async (event) => {
 
   return { status: 'completed' };
 };
+
+// Tenta consultar o preço horário de uma instância EC2 via API Pricing (caso não disponível, lançar erro)
+async function getEc2HourlyPrice(instanceType, regionCode) {
+  // Mapeamento simples de regionCode para nome usado no Pricing
+  const regionNameMap = {
+    'us-east-1': 'US East (N. Virginia)',
+    'us-east-2': 'US East (Ohio)',
+    'us-west-2': 'US West (Oregon)',
+    'eu-west-1': 'EU (Ireland)'
+  };
+  const location = regionNameMap[regionCode] || 'US East (N. Virginia)';
+
+  const filters = [
+    { Type: 'TERM_MATCH', Field: 'instanceType', Value: instanceType },
+    { Type: 'TERM_MATCH', Field: 'location', Value: location },
+    { Type: 'TERM_MATCH', Field: 'operatingSystem', Value: 'Linux' },
+    { Type: 'TERM_MATCH', Field: 'tenancy', Value: 'Shared' }
+  ];
+
+  const resp = await pricing.getProducts({ ServiceCode: 'AmazonEC2', Filters: filters, MaxResults: 100 }).promise();
+  const priceList = resp.PriceList || [];
+  for (const p of priceList) {
+    try {
+      const prod = JSON.parse(p);
+      const onDemandTerms = prod.terms && prod.terms.OnDemand;
+      if (!onDemandTerms) continue;
+      for (const termKey of Object.keys(onDemandTerms)) {
+        const term = onDemandTerms[termKey];
+        const priceDimensions = term.priceDimensions || {};
+        for (const pdKey of Object.keys(priceDimensions)) {
+          const pd = priceDimensions[pdKey];
+          const pricePerUnit = pd.pricePerUnit && pd.pricePerUnit.USD;
+          if (pricePerUnit) {
+            return parseFloat(pricePerUnit);
+          }
+        }
+      }
+    } catch (e) {
+      // ignorar parse errors e continuar
+    }
+  }
+  // Se não foi possível, retornar null para permitir fallback
+  return null;
+}

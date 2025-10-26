@@ -58,6 +58,7 @@ exports.handler = async (event) => {
       const assume = await sts.assumeRole({ RoleArn: customer.roleArn, RoleSessionName: `delete-ebs-${customer.id}-${Date.now()}`, DurationSeconds: 900 }).promise();
       const creds = assume.Credentials;
       const ec2Client = new AWS.EC2({ accessKeyId: creds.AccessKeyId, secretAccessKey: creds.SecretAccessKey, sessionToken: creds.SessionToken, region: 'us-east-1' });
+      const pricing = new AWS.Pricing({ region: 'us-east-1' });
 
       // Describe volumes with status 'available' (não anexados)
       const resp = await ec2Client.describeVolumes({ Filters: [{ Name: 'status', Values: ['available'] }] }).promise();
@@ -70,8 +71,24 @@ exports.handler = async (event) => {
             continue;
           }
 
-          // Calcular economia potencial (preço médio por GB/mês é $0.10)
-          const potentialSavings = (v.Size * 0.10).toFixed(2);
+          // Calcular economia potencial (tentar Pricing API, fallback para heurística)
+          let potentialSavings = null;
+          try {
+            const pricePerGb = await getEbsGbMonthPrice(v.VolumeType, 'us-east-1', pricing);
+            if (pricePerGb != null) {
+              potentialSavings = parseFloat((v.Size * pricePerGb).toFixed(2));
+            }
+          } catch (priceErr) {
+            console.warn('Erro ao obter preço EBS via Pricing API, usando fallback:', priceErr);
+          }
+
+          if (potentialSavings == null) {
+            // fallback heurístico
+            const fallbackMap = { gp3: 0.08, gp2: 0.10, standard: 0.05 };
+            const key = (v.VolumeType || 'gp2').toLowerCase();
+            const priceGb = fallbackMap[key] || 0.10;
+            potentialSavings = parseFloat((v.Size * priceGb).toFixed(2));
+          }
           const recommendationId = `REC#EBS#${v.VolumeId}`;
 
           // Salvar recomendação no DynamoDB
@@ -108,3 +125,44 @@ exports.handler = async (event) => {
 
   return { status: 'completed' };
 };
+
+async function getEbsGbMonthPrice(volumeType, regionCode, pricingClient) {
+  // best-effort via Pricing API
+  const regionNameMap = {
+    'us-east-1': 'US East (N. Virginia)',
+    'us-east-2': 'US East (Ohio)',
+    'us-west-2': 'US West (Oregon)',
+    'eu-west-1': 'EU (Ireland)'
+  };
+  const location = regionNameMap[regionCode] || 'US East (N. Virginia)';
+
+  const filters = [
+    { Type: 'TERM_MATCH', Field: 'location', Value: location },
+    { Type: 'TERM_MATCH', Field: 'volumeType', Value: volumeType },
+  ];
+
+  const resp = await pricingClient.getProducts({ ServiceCode: 'AmazonEC2', Filters: filters, MaxResults: 100 }).promise();
+  const priceList = resp.PriceList || [];
+  for (const p of priceList) {
+    try {
+      const prod = JSON.parse(p);
+      const onDemandTerms = prod.terms && prod.terms.OnDemand;
+      if (!onDemandTerms) continue;
+      for (const termKey of Object.keys(onDemandTerms)) {
+        const term = onDemandTerms[termKey];
+        const priceDimensions = term.priceDimensions || {};
+        for (const pdKey of Object.keys(priceDimensions)) {
+          const pd = priceDimensions[pdKey];
+          const pricePerUnit = pd.pricePerUnit && pd.pricePerUnit.USD;
+          if (pricePerUnit) {
+            // pricePerUnit here may be per GB-month
+            return parseFloat(pricePerUnit);
+          }
+        }
+      }
+    } catch (e) {
+      // ignore
+    }
+  }
+  return null;
+}

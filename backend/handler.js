@@ -280,17 +280,6 @@ const authorizeAdmin = (req, res, next) => {
 };
 
 // Helper functions and middleware
-async function updateSubscriptionStatus(customerId, status, subscriptionId) {
-  await dynamoDb.update({
-    TableName: DYNAMODB_TABLE,
-    Key: { id: customerId, sk: 'CONFIG#ONBOARD' },
-    UpdateExpression: 'SET subscriptionStatus = :status, stripeSubscriptionId = :subId',
-    ExpressionAttributeValues: {
-      ':status': status,
-      ':subId': subscriptionId,
-    }
-  }).promise();
-}
 
 // Middleware para verificar plano Pro
 const checkProPlan = async (req, res, next) => {
@@ -585,6 +574,25 @@ app.get('/api/onboard-init', authenticateUser, async (req, res) => {
 
     await dynamoDb.put(putParams).promise();
 
+      // Tentar criar Customer no Stripe antecipadamente (se tivermos e-mail disponível no token)
+      try {
+        const userEmail = req.user?.email || req.user?.email_address || req.user?.["cognito:email"];
+        if (userEmail) {
+          const stripeClient = await getStripe();
+          const customer = await stripeClient.customers.create({
+            email: userEmail,
+            metadata: { costGuardianCustomerId: userId }
+          });
+          if (customer && customer.id) {
+            await dynamoDb.update({ TableName: process.env.DYNAMODB_TABLE, Key: { id: userId, sk: 'CONFIG#ONBOARD' }, UpdateExpression: 'SET stripeCustomerId = :sid', ExpressionAttributeValues: { ':sid': customer.id } }).promise();
+            console.log(`Stripe customer antecipado criado para ${userId}: ${customer.id}`);
+          }
+        }
+      } catch (stripeErr) {
+        // Não falhar o onboarding por causa de problemas com Stripe; apenas logar
+        console.error('Falha ao criar stripeCustomerId antecipado:', stripeErr);
+      }
+
     res.json({
       externalId,
       platformAccountId: process.env.PLATFORM_ACCOUNT_ID,
@@ -732,9 +740,10 @@ app.get('/api/alerts', authenticateUser, async (req, res) => {
       KeyConditionExpression: 'id = :id AND begins_with(sk, :prefix)',
       ExpressionAttributeValues: {
         ':id': customerId,
-        ':prefix': 'ALERT#',
+        ':prefix': 'ALERT#ANOMALY#',
       },
       ScanIndexForward: false, // Mais recentes primeiro
+      Limit: 50, // Paginação simples — retorna até 50 alertas
     };
     const data = await dynamoDb.query(params).promise();
     const items = (data.Items || []).map(alert => ({
@@ -752,20 +761,29 @@ app.get('/api/alerts', authenticateUser, async (req, res) => {
 });
 app.get('/api/invoices', authenticateUser, async (req, res) => {
   try {
-    const userId = req.user.sub; // Este é o nosso Stripe Customer ID
+    const customerId = req.user.sub;
+
+    // Recupera stripeCustomerId do item CONFIG#ONBOARD
+    const cfg = (await dynamoDb.get({ TableName: process.env.DYNAMODB_TABLE, Key: { id: customerId, sk: 'CONFIG#ONBOARD' } }).promise()).Item;
+    const stripeCustomerId = cfg?.stripeCustomerId;
+
+    if (!stripeCustomerId) {
+      // Cliente ainda não vinculou conta Stripe
+      return res.status(200).json([]);
+    }
 
     const stripeClient = await getStripe();
     const invoices = await stripeClient.invoices.list({
-      customer: userId,
-      limit: 100, // Pega até 100 faturas
+      customer: stripeCustomerId,
+      limit: 20, // Página simples
     });
 
     // Formata a resposta para o frontend
-    const formattedInvoices = invoices.data.map(inv => ({
+    const formattedInvoices = (invoices.data || []).map(inv => ({
       id: inv.id,
       date: inv.created,
-      amount: (inv.amount_due / 100).toFixed(2),
-      status: inv.status, // ex: 'paid', 'open', 'draft'
+      amount: inv.amount_due != null ? (inv.amount_due / 100).toFixed(2) : null,
+      status: inv.status,
       pdfUrl: inv.invoice_pdf,
       hostedUrl: inv.hosted_invoice_url,
     }));
@@ -818,17 +836,30 @@ app.post('/api/stripe/webhook', express.raw({ type: 'application/json' }), async
       const data = event.data.object;
       const customerId = data.metadata.costGuardianCustomerId;
       const subscriptionId = data.subscription;
-      // Atualiza o usuário para ATIVO
-      await updateSubscriptionStatus(customerId, 'active', subscriptionId);
+      // Atualiza o usuário para ATIVO — envolver em try/catch para não quebrar processamento do webhook
+      try {
+        await updateSubscriptionStatus(customerId, 'active', subscriptionId);
+      } catch (uErr) {
+        console.error('Falha ao atualizar status de assinatura (checkout.session.completed):', { customerId, subscriptionId, error: uErr });
+        // Não retornar 500 para Stripe a menos que seja necessário; este erro é logado para investigação
+      }
     }
 
     // Lida com renovações falhadas ou cancelamentos
     if (event.type === 'customer.subscription.updated' || event.type === 'customer.subscription.deleted') {
       const data = event.data.object;
-      const stripeCustomer = await (await getStripe()).customers.retrieve(data.customer);
-      const customerId = stripeCustomer.metadata.costGuardianCustomerId;
-      // Atualiza o usuário para CANCELED ou PAST_DUE
-      await updateSubscriptionStatus(customerId, data.status, data.id);
+      try {
+        const stripeCustomer = await (await getStripe()).customers.retrieve(data.customer);
+        const customerId = stripeCustomer.metadata.costGuardianCustomerId;
+        // Atualiza o usuário para CANCELED ou PAST_DUE
+        try {
+          await updateSubscriptionStatus(customerId, data.status, data.id);
+        } catch (uErr) {
+          console.error('Falha ao atualizar status de assinatura (subscription.updated/deleted):', { customerId, subscriptionId: data.id, status: data.status, error: uErr });
+        }
+      } catch (retrErr) {
+        console.error('Falha ao recuperar Stripe Customer dentro do webhook:', { stripeCustomerId: data.customer, error: retrErr });
+      }
     }
 
     // Processar eventos de fatura
@@ -983,12 +1014,8 @@ app.post('/api/admin/claims/:customerId/:claimId/create-invoice', authenticateUs
 
     let stripeCustomerId = userConfig.Item?.stripeCustomerId;
     if (!stripeCustomerId) {
-      const customer = await stripe.customers.create({
-        description: `AWS Cost Guardian Customer ${customerId}`,
-        metadata: { costGuardianUserId: customerId }
-      });
-      stripeCustomerId = customer.id;
-      await dynamoDb.update({ TableName: process.env.DYNAMODB_TABLE, Key: userConfigKey, UpdateExpression: 'SET stripeCustomerId = :sid', ExpressionAttributeValues: { ':sid': stripeCustomerId } }).promise();
+      // Não criamos stripeCustomerId reativamente aqui. Exija que ele exista previamente (criado no onboarding).
+      return res.status(400).json({ message: 'stripeCustomerId não encontrado. Crie o cliente Stripe durante o onboarding ou via endpoint apropriado antes de gerar faturas.' });
     }
 
     // Criar item de fatura

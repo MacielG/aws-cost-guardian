@@ -176,6 +176,7 @@ Resources:
   EventBusRole:
     Type: AWS::IAM::Role
     Properties:
+      RoleName: EventBusRole
       AssumeRolePolicyDocument:
         Version: '2012-10-17'
         Statement:
