@@ -6,6 +6,9 @@ const dynamoDb = new AWS.DynamoDB.DocumentClient();
 const secretsManager = new AWS.SecretsManager();
 const { randomBytes } = require('crypto');
 
+const https = require('https');
+const url = require('url');
+
 let stripe;
 
 // Async factory to initialize Stripe
@@ -129,6 +132,56 @@ const authorizeAdmin = (req, res, next) => {
 // POST /api/onboard
 app.post('/api/onboard', async (req, res) => {
   try {
+    const event = req.body;
+
+    // Se for callback do CloudFormation Custom Resource, o payload vem com ResourceProperties
+    if (event && event.ResourceProperties) {
+      const props = event.ResourceProperties;
+
+      // Aceita tanto PascalCase (CFN) quanto camelCase (possível envio direto)
+      const roleArnVal = props.RoleArn || props.roleArn;
+      const awsAccountIdVal = props.AwsAccountId || props.awsAccountId;
+      const externalIdVal = props.ExternalId || props.externalId;
+      const customerId = props.CustomerId || props.customerId;
+
+      // Se o cliente passou CustomerId (integração direta com nosso fluxo), usamos o fluxo CFN
+      if (customerId && roleArnVal && awsAccountIdVal && externalIdVal) {
+        const pk = customerId;
+        const sk = 'CONFIG#ONBOARD';
+
+        const params = {
+          TableName: process.env.DYNAMODB_TABLE,
+          Item: {
+            id: pk,
+            sk: sk,
+            awsAccountId: awsAccountIdVal,
+            roleArn: roleArnVal,
+            externalId: externalIdVal,
+            status: 'ACTIVE',
+            createdAt: new Date().toISOString(),
+          },
+        };
+
+        await dynamoDb.put(params).promise();
+        console.log(`Onboarding concluído para Cliente: ${customerId}, Conta AWS: ${awsAccountIdVal}`);
+
+        // Responde ao CloudFormation que a criação foi bem-sucedida (se houver ResponseURL)
+        if (event.ResponseURL) {
+          try {
+            await sendCfnResponse(event, 'SUCCESS', { Message: 'Onboarding bem-sucedido.' });
+          } catch (err) {
+            console.error('Erro ao enviar resposta SUCCESS ao CFN:', err);
+          }
+        }
+
+        return res.status(200).send();
+      }
+
+      // Caso não venha CustomerId (ex: CallbackFunction do cliente que envia roleArn/awsAccountId/externalId em camelCase),
+      // caímos no comportamento legado e deixamos o fluxo abaixo tratar o mapeamento via externalId.
+    }
+
+    // --- comportamento legado / fallback (quando chamado pelo frontend) ---
     const { roleArn, awsAccountId, externalId } = req.body;
 
     // 1. Encontrar o usuário pelo externalId para validar o callback
@@ -142,9 +195,8 @@ app.post('/api/onboard', async (req, res) => {
     if (!configQuery.Items || configQuery.Items.length === 0) {
       return res.status(404).json({ success: false, message: 'Configuração de onboarding não encontrada para o ExternalId.' });
     }
-    const userConfig = configQuery.Items[0];
-    const userId = userConfig.id;
-
+      const userConfig = configQuery.Items[0];
+      const userId = userConfig.id;
     // 2. Salvar mapeamento da conta do cliente
     const params = {
       TableName: process.env.DYNAMODB_TABLE,
@@ -162,12 +214,14 @@ app.post('/api/onboard', async (req, res) => {
     await dynamoDb.put(params).promise();
 
     // 3. Atualizar status do onboarding para COMPLETED
+    // Também salvamos o roleArn no item CONFIG#ONBOARD para permitir que
+    // processos automáticos (ingestor, automações) assumam a role do cliente.
     await dynamoDb.update({
       TableName: process.env.DYNAMODB_TABLE,
       Key: { id: userId, sk: 'CONFIG#ONBOARD' },
-      UpdateExpression: 'SET #status = :status',
+      UpdateExpression: 'SET #status = :status, roleArn = :roleArn',
       ExpressionAttributeNames: { '#status': 'status' },
-      ExpressionAttributeValues: { ':status': 'COMPLETED' }
+      ExpressionAttributeValues: { ':status': 'COMPLETED', ':roleArn': roleArn }
     }).promise();
 
     res.json({ 
@@ -178,6 +232,16 @@ app.post('/api/onboard', async (req, res) => {
 
   } catch (err) {
     console.error('Erro onboarding:', err);
+
+    // Se foi uma chamada do CFN, tente notificar o CloudFormation sobre a falha
+    if (req.body && req.body.ResourceProperties) {
+      try {
+        await sendCfnResponse(req.body, 'FAILED', { Message: err.message || 'Erro interno.' });
+      } catch (sendErr) {
+        console.error('Erro ao enviar resposta FAILURE para o CloudFormation:', sendErr);
+      }
+    }
+
     res.status(500).json({ success: false, message: 'Erro no processo de onboarding' });
   }
 });
@@ -254,6 +318,72 @@ app.get('/api/onboard-init', authenticateUser, async (req, res) => {
     res.status(500).json({ message: 'Erro na configura\u00e7\u00e3o de onboarding' });
   }
 });
+// GET /api/dashboard/costs
+// Protegido por autenticação Cognito
+app.get('/api/dashboard/costs', authenticateUser, async (req, res) => {
+  try {
+    const customerId = req.user.sub;
+
+    const params = {
+      TableName: process.env.DYNAMODB_TABLE,
+      KeyConditionExpression: 'id = :id AND begins_with(sk, :sk)',
+      ExpressionAttributeValues: {
+        ':id': customerId,
+        ':sk': 'COST#DASHBOARD#',
+      },
+      Limit: 1,
+      ScanIndexForward: false,
+    };
+
+    const data = await dynamoDb.query(params).promise();
+
+    if (!data.Items || data.Items.length === 0) {
+      return res.status(404).send({ message: 'Nenhum dado de custo encontrado.' });
+    }
+
+    return res.status(200).json(data.Items[0].data);
+  } catch (err) {
+    console.error('Erro ao buscar dados do dashboard:', err);
+    return res.status(500).send({ error: 'Falha ao buscar dados.' });
+  }
+});
+
+// GET /api/settings/automation
+// Retorna as preferências de automação do usuário (CONFIG#ONBOARD)
+app.get('/api/settings/automation', authenticateUser, async (req, res) => {
+  try {
+    const userId = req.user.sub;
+    const params = { TableName: process.env.DYNAMODB_TABLE, Key: { id: userId, sk: 'CONFIG#ONBOARD' } };
+    const data = await dynamoDb.get(params).promise();
+    const item = data.Item || {};
+    return res.json({ automation: item.automation || {} });
+  } catch (err) {
+    console.error('Erro ao buscar settings de automação:', err);
+    return res.status(500).json({ error: 'Falha ao buscar configurações.' });
+  }
+});
+
+// POST /api/settings/automation
+// Body: { automation: { stopIdle: true, deleteUnusedEbs: false } }
+app.post('/api/settings/automation', authenticateUser, async (req, res) => {
+  try {
+    const userId = req.user.sub;
+    const automation = req.body?.automation;
+    if (!automation || typeof automation !== 'object') return res.status(400).json({ message: 'automation inválido' });
+
+    await dynamoDb.update({
+      TableName: process.env.DYNAMODB_TABLE,
+      Key: { id: userId, sk: 'CONFIG#ONBOARD' },
+      UpdateExpression: 'SET automation = :a',
+      ExpressionAttributeValues: { ':a': automation },
+    }).promise();
+
+    return res.json({ success: true });
+  } catch (err) {
+    console.error('Erro ao salvar settings de automação:', err);
+    return res.status(500).json({ error: 'Falha ao salvar configurações.' });
+  }
+});
 // GET /api/sla-claims
 app.get('/api/sla-claims', authenticateUser, async (req, res) => {
   try {
@@ -297,7 +427,8 @@ app.get('/api/invoices', authenticateUser, async (req, res) => {
   try {
     const userId = req.user.sub; // Este é o nosso Stripe Customer ID
 
-    const invoices = await stripe.invoices.list({
+    const stripeClient = await getStripe();
+    const invoices = await stripeClient.invoices.list({
       customer: userId,
       limit: 100, // Pega até 100 faturas
     });
@@ -319,56 +450,75 @@ app.get('/api/invoices', authenticateUser, async (req, res) => {
   }
 });
 
-// POST /api/stripe/webhook (LÓGICA CORRIGIDA)
+// POST /api/stripe/webhook (LÓGICA CORRIGIDA E SECRETO VIA SECRETS MANAGER)
 app.post('/api/stripe/webhook', express.raw({ type: 'application/json' }), async (req, res) => {
   const sig = req.headers['stripe-signature'];
-  const endpointSecret = process.env.STRIPE_WEBHOOK_SECRET;
-  let event;
 
   try {
-    event = stripe.webhooks.constructEvent(req.body, sig, endpointSecret);
-  } catch (err) {
-    console.warn(`Webhook Error: ${err.message}`);
-    return res.status(400).send(`Webhook Error: ${err.message}`);
-  }
+    // Ensure stripe client is initialized
+    const stripeClient = await getStripe();
 
-  // Processar eventos de fatura
-  if (event.type === 'invoice.paid') {
-    const invoice = event.data.object;
-    const commissionAmount = invoice.amount_paid / 100; // Valor em dólares
-    const claimId = `CLAIM#${invoice.metadata.claimId}`; // Metadata setada ao criar a fatura
-    const customerId = invoice.metadata.customerId;
-
-    console.log(`Comissão de $${commissionAmount} recebida para a Reivindicação: ${claimId} do cliente ${customerId}`);
-
-    // Atualizar o status da reivindicação no DynamoDB para 'PAID'
-    try {
-      await dynamoDb.update({
-        TableName: process.env.DYNAMODB_TABLE,
-        Key: {
-          id: customerId, // Usar o ID do nosso sistema, vindo dos metadados
-          sk: claimId
-        },
-        UpdateExpression: 'SET #status = :status, commissionAmount = :amount',
-        ExpressionAttributeNames: {
-          '#status': 'status'
-        },
-        ExpressionAttributeValues: {
-          ':status': 'PAID',
-          ':amount': commissionAmount
+    // Obtain webhook secret from Secrets Manager if ARN provided, otherwise fallback to env var
+    let endpointSecret = process.env.STRIPE_WEBHOOK_SECRET;
+    if (process.env.STRIPE_WEBHOOK_SECRET_ARN) {
+      try {
+        const secretVal = await secretsManager.getSecretValue({ SecretId: process.env.STRIPE_WEBHOOK_SECRET_ARN }).promise();
+        // Try parse JSON then fallback to raw string
+        if (secretVal && secretVal.SecretString) {
+          try {
+            const parsed = JSON.parse(secretVal.SecretString);
+            endpointSecret = parsed.webhook || parsed.WEBHOOK || secretVal.SecretString;
+          } catch (_) {
+            endpointSecret = secretVal.SecretString;
+          }
         }
-      }).promise();
-    } catch (dbError) {
-      console.error('Erro ao atualizar status da reivindicação:', dbError);
+      } catch (err) {
+        console.error('Erro ao recuperar STRIPE_WEBHOOK_SECRET do SecretsManager:', err);
+        return res.status(500).send('Webhook secret not available');
+      }
     }
 
-  } else if (event.type === 'invoice.payment_failed') {
-    const invoice = event.data.object;
-    console.warn(`Pagamento da fatura ${invoice.id} falhou.`);
-    // Lógica para notificar o cliente pode ser adicionada aqui
-  }
+    let event;
+    try {
+      event = stripeClient.webhooks.constructEvent(req.body, sig, endpointSecret);
+    } catch (err) {
+      console.warn(`Webhook Error: ${err.message}`);
+      return res.status(400).send(`Webhook Error: ${err.message}`);
+    }
 
-  res.json({ received: true });
+    // Processar eventos de fatura
+    if (event.type === 'invoice.paid') {
+      const invoice = event.data.object;
+      const commissionAmount = invoice.amount_paid / 100; // Valor em dólares
+      const claimSk = invoice.metadata?.costGuardianClaimId || `CLAIM#${invoice.metadata?.claimId}`;
+      const customerId = invoice.metadata?.costGuardianCustomerId || invoice.metadata?.customerId;
+
+      console.log(`Comissão de $${commissionAmount} recebida para a Reivindicação: ${claimSk} do cliente ${customerId}`);
+
+      // Atualizar o status da reivindicação no DynamoDB para 'COMMISSION_PAID'
+      try {
+        await dynamoDb.update({
+          TableName: process.env.DYNAMODB_TABLE,
+          Key: { id: customerId, sk: claimSk },
+          UpdateExpression: 'SET #status = :status, commissionAmount = :amount',
+          ExpressionAttributeNames: { '#status': 'status' },
+          ExpressionAttributeValues: { ':status': 'COMMISSION_PAID', ':amount': commissionAmount }
+        }).promise();
+      } catch (dbError) {
+        console.error('Erro ao atualizar status da reivindicação (commission paid):', dbError);
+      }
+
+    } else if (event.type === 'invoice.payment_failed') {
+      const invoice = event.data.object;
+      console.warn(`Pagamento da fatura ${invoice.id} falhou.`);
+      // Lógica para notificar o cliente pode ser adicionada aqui
+    }
+
+    return res.json({ received: true });
+  } catch (err) {
+    console.error('Erro no webhook do Stripe:', err);
+    return res.status(500).send('Internal error');
+  }
 });
 
 // --- ENDPOINTS DE ADMIN ---
@@ -467,13 +617,19 @@ app.post('/api/admin/claims/:customerId/:claimId/create-invoice', authenticateUs
     if (!claimData.Item) {
       return res.status(404).json({ message: 'Claim não encontrada' });
     }
+
+    // A claim deve estar com status 'PAID' (recebeu crédito da AWS) antes de gerar a fatura
+    if (claimData.Item.status !== 'PAID') {
+      return res.status(400).json({ message: 'A claim deve estar com status PAID para gerar fatura.' });
+    }
+
     const credit = claimData.Item.creditAmount;
     const creditFixed = credit.toFixed(2); // Para a descrição da fatura
 
-    // 2. Mover a Lógica do Stripe para cá (de sla-workflow.js)
+    // 2. Calcular comissão (30%)
     const commissionAmount = Math.round(credit * 0.30 * 100); // 30% de comissão em centavos
     if (commissionAmount <= 50) { // Stripe tem um valor mínimo de cobrança (ex: $0.50)
-      return res.status(400).json({ message: 'Comissão abaixo do mínimo faturável ($0.50)' });
+      return res.status(200).json({ message: 'Comissão muito baixa, fatura não gerada.' });
     }
 
     // Obter ou criar o Stripe Customer ID
@@ -481,55 +637,25 @@ app.post('/api/admin/claims/:customerId/:claimId/create-invoice', authenticateUs
     const userConfig = await dynamoDb.get({ TableName: process.env.DYNAMODB_TABLE, Key: userConfigKey }).promise();
 
     let stripeCustomerId = userConfig.Item?.stripeCustomerId;
-
     if (!stripeCustomerId) {
-      console.log(`Cliente Stripe não encontrado para ${customerId}. Criando um novo.`);
       const customer = await stripe.customers.create({
         description: `AWS Cost Guardian Customer ${customerId}`,
         metadata: { costGuardianUserId: customerId }
       });
       stripeCustomerId = customer.id;
-
-      // Salvar o novo ID no DynamoDB para uso futuro
-      await dynamoDb.update({
-        TableName: process.env.DYNAMODB_TABLE,
-        Key: userConfigKey,
-        UpdateExpression: 'SET stripeCustomerId = :sid',
-        ExpressionAttributeValues: { ':sid': stripeCustomerId }
-      }).promise();
-      console.log(`Novo cliente Stripe ${stripeCustomerId} criado e associado ao usuário ${customerId}.`);
-    } else {
-      console.log(`Cliente Stripe ${stripeCustomerId} encontrado para o usuário ${customerId}.`);
+      await dynamoDb.update({ TableName: process.env.DYNAMODB_TABLE, Key: userConfigKey, UpdateExpression: 'SET stripeCustomerId = :sid', ExpressionAttributeValues: { ':sid': stripeCustomerId } }).promise();
     }
 
-    // Etapa 1: Criar um item de fatura pendente
-    await stripe.invoiceItems.create({
-      customer: stripeCustomerId,
-      amount: commissionAmount,
-      currency: 'usd',
-      description: `Comissão de 30% sobre crédito SLA de $${creditFixed} (Incidente: ${claimId})`,
-    });
+    // Criar item de fatura
+    await stripe.invoiceItems.create({ customer: stripeCustomerId, amount: commissionAmount, currency: 'usd', description: `Comissão de 30% sobre crédito SLA de $${creditFixed} (Claim: ${claimId})` });
 
-    // Etapa 2: Criar a fatura a partir do item e finalizá-la
-    const invoice = await stripe.invoices.create({
-      customer: stripeCustomerId,
-      collection_method: 'charge_automatically',
-      auto_advance: true,
-      metadata: { claimId: claimId, customerId: customerId },
-    });
-    const invoiceId = invoice.id;
-    console.log(`Fatura ${invoiceId} criada no Stripe para o cliente ${customerId} no valor de ${commissionAmount / 100} USD.`);
+    // Criar a fatura com metadados para rastrear a claim
+    const invoice = await stripe.invoices.create({ customer: stripeCustomerId, collection_method: 'charge_automatically', auto_advance: true, metadata: { claimId: claimId, customerId: customerId } });
 
-    // 3. Atualizar a claim com o ID da fatura e status REFUNDED
-    await dynamoDb.update({
-      TableName: process.env.DYNAMODB_TABLE,
-      Key: { id: customerId, sk: fullClaimSk },
-      UpdateExpression: 'SET #status = :status, stripeInvoiceId = :invId',
-      ExpressionAttributeNames: { '#status': 'status' },
-      ExpressionAttributeValues: { ':status': 'REFUNDED', ':invId': invoiceId },
-    }).promise();
+    // Atualizar a claim com o ID da fatura e marcar como 'INVOICED'
+    await dynamoDb.update({ TableName: process.env.DYNAMODB_TABLE, Key: { id: customerId, sk: fullClaimSk }, UpdateExpression: 'SET stripeInvoiceId = :invId, commissionAmount = :comm, #status = :s', ExpressionAttributeNames: { '#status': 'status' }, ExpressionAttributeValues: { ':invId': invoice.id, ':comm': commissionAmount / 100, ':s': 'INVOICED' } }).promise();
 
-    res.json({ success: true, invoiceId: invoiceId });
+    res.status(201).json({ invoiceId: invoice.id, status: invoice.status });
 
   } catch (err) {
     console.error('Erro ao criar fatura:', err);
@@ -537,4 +663,68 @@ app.post('/api/admin/claims/:customerId/:claimId/create-invoice', authenticateUs
   }
 });
 
+/**
+ * Função helper obrigatória para enviar a resposta de volta ao S3 (via presigned URL)
+ * para o CloudFormation Custom Resource.
+ */
+async function sendCfnResponse(event, responseStatus, responseData) {
+  if (!event || !event.ResponseURL) {
+    console.warn('sendCfnResponse: evento sem ResponseURL - pulando envio para o CloudFormation.');
+    return;
+  }
+  const responseBody = JSON.stringify({
+    Status: responseStatus,
+    Reason: 'Veja detalhes nos logs do CloudWatch: ' + (responseData.Message || 'Sem mensagem'),
+    PhysicalResourceId: event.PhysicalResourceId || `cost-guardian-onboard-${event.LogicalResourceId}`,
+    StackId: event.StackId,
+    RequestId: event.RequestId,
+    LogicalResourceId: event.LogicalResourceId,
+    Data: responseData,
+  });
+
+  const parsedUrl = url.parse(event.ResponseURL);
+  const options = {
+    hostname: parsedUrl.hostname,
+    port: 443,
+    path: parsedUrl.path,
+    method: 'PUT',
+    headers: {
+      'Content-Type': '',
+      'Content-Length': Buffer.byteLength(responseBody),
+    },
+  };
+
+  return new Promise((resolve, reject) => {
+    const request = https.request(options, (res) => {
+      let body = '';
+      res.on('data', (chunk) => (body += chunk.toString()));
+      res.on('end', () => {
+        console.log(`CFN Response Status: ${res.statusCode}`, body);
+        if (res.statusCode >= 400) {
+          return reject(new Error(`Resposta CFN com status ${res.statusCode}`));
+        }
+        resolve();
+      });
+    });
+
+    request.on('error', (error) => {
+      console.error('Falha ao enviar resposta ao CFN:', error);
+      reject(error);
+    });
+
+    // Timeout para evitar hanging
+    request.setTimeout(10000, () => {
+      request.abort();
+      reject(new Error('Timeout ao enviar resposta ao CloudFormation'));
+    });
+
+    request.write(responseBody);
+    request.end();
+  });
+}
+
+// Export the raw Express app for unit testing (supertest)
+module.exports.rawApp = app;
+
+// Export the serverless-wrapped handler for deployment
 module.exports.app = serverless(app);

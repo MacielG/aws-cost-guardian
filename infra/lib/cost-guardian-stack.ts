@@ -26,6 +26,12 @@ export class CostGuardianStack extends cdk.Stack {
       generateSecretString: { secretStringTemplate: '{"key":""}', generateStringKey: 'key' },
     });
 
+    // Webhook secret (raw string) stored in Secrets Manager for secure delivery
+    const stripeWebhookSecret = new secretsmanager.Secret(this, 'StripeWebhookSecret', {
+      description: 'Stripe webhook signing secret for platform webhooks',
+      generateSecretString: { secretStringTemplate: '{"webhook":""}', generateStringKey: 'webhook' },
+    });
+
     // DynamoDB (Mantido, mas adicionando stream para eficiência futura)
     const table = new dynamodb.Table(this, 'CostGuardianTable', {
       partitionKey: { name: 'id', type: dynamodb.AttributeType.STRING }, // Chave primária para usuários, claims, etc.
@@ -49,6 +55,15 @@ export class CostGuardianStack extends cdk.Stack {
       partitionKey: { name: 'externalId', type: dynamodb.AttributeType.STRING },
       projectionType: dynamodb.ProjectionType.INCLUDE,
       nonKeyAttributes: ['id', 'status'],
+    });
+
+    // GSI para consultas por status (melhora performance para ingestor e automações)
+    table.addGlobalSecondaryIndex({
+      indexName: 'StatusIndex',
+      partitionKey: { name: 'status', type: dynamodb.AttributeType.STRING },
+      sortKey: { name: 'id', type: dynamodb.AttributeType.STRING },
+      projectionType: dynamodb.ProjectionType.INCLUDE,
+      nonKeyAttributes: ['sk', 'roleArn', 'automation'],
     });
     
     // GSI para consultar por cliente (ex: incidentes, claims)
@@ -82,10 +97,15 @@ export class CostGuardianStack extends cdk.Stack {
     });
 
     // Implantação do template do CloudFormation no bucket S3
+    // Publica apenas o arquivo `cost-guardian-template.yaml` e o renomeia para `template.yaml`
     new s3deploy.BucketDeployment(this, 'DeployCfnTemplate', {
-      sources: [s3deploy.Source.asset('../docs')],
-      destinationBucket: templateBucket,
+      sources: [s3deploy.Source.asset(path.join(__dirname, '../../../docs'))], // Aponta especificamente para o diretório docs
+      // Inclui apenas o template desejado
+      include: ['cost-guardian-template.yaml'],
+      // Renomeia o arquivo no S3 para a URL pública esperada
       destinationKeyPrefix: '',
+      rename: (key) => 'template.yaml',
+      destinationBucket: templateBucket,
     });
 
 
@@ -121,6 +141,7 @@ export class CostGuardianStack extends cdk.Stack {
       environment: {
         DYNAMODB_TABLE: table.tableName,
         STRIPE_SECRET_ARN: stripeSecret.secretArn,
+        STRIPE_WEBHOOK_SECRET_ARN: stripeWebhookSecret.secretArn,
         USER_POOL_ID: userPool.userPoolId,
         USER_POOL_CLIENT_ID: userPoolClient.userPoolClientId,
         PLATFORM_ACCOUNT_ID: this.account || process.env.CDK_DEFAULT_ACCOUNT,
@@ -128,6 +149,8 @@ export class CostGuardianStack extends cdk.Stack {
     });
     table.grantReadWriteData(apiHandlerLambda);
     stripeSecret.grantRead(apiHandlerLambda);
+    // Grant the API handler permission to read the webhook secret
+    stripeWebhookSecret.grantRead(apiHandlerLambda);
 
     // 2. Lambda para o EventBridge (Correlacionar Eventos Health)
     const healthEventHandlerLambda = new NodejsFunction(this, 'HealthEventHandler', {
@@ -190,6 +213,8 @@ export class CostGuardianStack extends cdk.Stack {
     });
     table.grantReadWriteData(slaGenerateReportLambda);
     stripeSecret.grantRead(slaGenerateReportLambda);
+  // Grant the report generator Lambda access to the webhook secret if needed
+  stripeWebhookSecret.grantRead(slaGenerateReportLambda);
 
     // Criar bucket S3 para armazenar relatórios PDF gerados pela Lambda
     const reportsBucket = new s3.Bucket(this, 'ReportsBucket', {
@@ -230,12 +255,22 @@ export class CostGuardianStack extends cdk.Stack {
     // Obter o event bus padrão da plataforma
     const eventBus = events.EventBus.fromEventBusName(this, 'DefaultBus', 'default');
 
-    // Política segura para o Event Bus que permite apenas eventos específicos
+    // Política para o Event Bus: restringe quem pode chamar PutEvents.
+    // Em vez de deixar 'Principal' aberto, exigimos que o principal seja
+    // a IAM Role que o cliente cria no template (nome: EventBusRole).
+    // Isso mantém a capacidade cross-account (conta variável) mas evita
+    // que contas arbitrárias enviem eventos ao barramento.
     new events.CfnEventBusPolicy(this, 'EventBusPolicy', {
       eventBusName: eventBus.eventBusName,
       statementId: 'AllowClientHealthEvents',
       action: 'events:PutEvents',
-      principal: '*', // Necessário para cross-account
+      principal: '*', // Mantém cross-account, mas a condição abaixo restringe a role
+      condition: {
+        Type: 'StringEquals',
+        Key: 'aws:PrincipalArn',
+        // Ajuste o sufixo da role aqui se alterar o nome usado no template do cliente
+        Value: 'arn:aws:iam::*:role/EventBusRole',
+      },
     });
 
     // --- INÍCIO DA CORREÇÃO ---
@@ -258,6 +293,106 @@ export class CostGuardianStack extends cdk.Stack {
       },
       eventBus,
       targets: [new targets.LambdaFunction(healthEventHandlerLambda)],
+    });
+
+    // --- Bloco 2: Ingestão diária de custos (Fase 1: Visibilidade) ---
+    // 4.1. Crie um novo Lambda para ingestão diária de custos
+    const costIngestorLambda = new NodejsFunction(this, 'CostIngestor', {
+      runtime: lambda.Runtime.NODEJS_18_X,
+      entry: path.join(__dirname, '../../backend/functions/ingest-costs.js'),
+      handler: 'handler',
+      timeout: cdk.Duration.minutes(5),
+      bundling: { externalModules: ['aws-sdk'] },
+      environment: {
+        DYNAMODB_TABLE: table.tableName,
+      },
+      role: new iam.Role(this, 'CostIngestorRole', {
+        assumedBy: new iam.ServicePrincipal('lambda.amazonaws.com'),
+        managedPolicies: [
+          iam.ManagedPolicy.fromAwsManagedPolicyName('service-role/AWSLambdaBasicExecutionRole')
+        ],
+        inlinePolicies: {
+          DynamoAndAssumePolicy: new iam.PolicyDocument({
+            statements: [
+              new iam.PolicyStatement({
+                actions: ['dynamodb:Scan'],
+                resources: [table.tableArn, `${table.tableArn}/index/*`],
+              }),
+              new iam.PolicyStatement({
+                actions: ['sts:AssumeRole'],
+                resources: ['arn:aws:iam::*:role/CostGuardianDelegatedRole'],
+              }),
+            ]
+          })
+        }
+      })
+    });
+    table.grantReadData(costIngestorLambda);
+
+    // 4.2. Crie uma regra do EventBridge para acionar o ingestor diariamente
+    new events.Rule(this, 'DailyCostIngestionRule', {
+      schedule: events.Schedule.cron({ minute: '0', hour: '5' }), // Todo dia às 05:00 UTC
+      targets: [new targets.LambdaFunction(costIngestorLambda)],
+    });
+
+    // --- Bloco 3: Automação Ativa (Fase 2) ---
+    // 7.1. Lambdas para tarefas de automação
+    const stopIdleInstancesLambda = new NodejsFunction(this, 'StopIdleInstances', {
+      runtime: lambda.Runtime.NODEJS_18_X,
+      entry: path.join(__dirname, '../../backend/functions/stop-idle-instances.js'),
+      handler: 'handler',
+      timeout: cdk.Duration.minutes(5),
+      bundling: { externalModules: ['aws-sdk'] },
+      environment: { DYNAMODB_TABLE: table.tableName },
+      role: new iam.Role(this, 'StopIdleRole', {
+        assumedBy: new iam.ServicePrincipal('lambda.amazonaws.com'),
+        managedPolicies: [iam.ManagedPolicy.fromAwsManagedPolicyName('service-role/AWSLambdaBasicExecutionRole')],
+        inlinePolicies: {
+          DynamoPolicy: new iam.PolicyDocument({ statements: [
+            new iam.PolicyStatement({ actions: ['dynamodb:Query','dynamodb:Scan','dynamodb:GetItem'], resources: [table.tableArn, `${table.tableArn}/index/*`] }),
+            new iam.PolicyStatement({ actions: ['sts:AssumeRole'], resources: ['arn:aws:iam::*:role/CostGuardianDelegatedRole'] }),
+          ]})
+        }
+      })
+    });
+    table.grantReadData(stopIdleInstancesLambda);
+
+    const deleteUnusedEbsLambda = new NodejsFunction(this, 'DeleteUnusedEbs', {
+      runtime: lambda.Runtime.NODEJS_18_X,
+      entry: path.join(__dirname, '../../backend/functions/delete-unused-ebs.js'),
+      handler: 'handler',
+      timeout: cdk.Duration.minutes(5),
+      bundling: { externalModules: ['aws-sdk'] },
+      environment: { DYNAMODB_TABLE: table.tableName },
+      role: new iam.Role(this, 'DeleteEbsRole', {
+        assumedBy: new iam.ServicePrincipal('lambda.amazonaws.com'),
+        managedPolicies: [iam.ManagedPolicy.fromAwsManagedPolicyName('service-role/AWSLambdaBasicExecutionRole')],
+        inlinePolicies: {
+          DynamoPolicy: new iam.PolicyDocument({ statements: [
+            new iam.PolicyStatement({ actions: ['dynamodb:Query','dynamodb:Scan','dynamodb:GetItem'], resources: [table.tableArn, `${table.tableArn}/index/*`] }),
+            new iam.PolicyStatement({ actions: ['sts:AssumeRole'], resources: ['arn:aws:iam::*:role/CostGuardianDelegatedRole'] }),
+          ]})
+        }
+      })
+    });
+    table.grantReadData(deleteUnusedEbsLambda);
+
+    // 7.2 - 7.3 Step Function de automação (executa tasks em paralelo)
+    const stopIdleTask = new sfn_tasks.LambdaInvoke(this, 'StopIdleResources', { lambdaFunction: stopIdleInstancesLambda, outputPath: '$.Payload' });
+    const deleteEbsTask = new sfn_tasks.LambdaInvoke(this, 'DeleteUnusedVolumes', { lambdaFunction: deleteUnusedEbsLambda, outputPath: '$.Payload' });
+
+    const automationDefinition = new stepfunctions.Parallel(this, 'RunAllAutomations')
+      .branch(stopIdleTask)
+      .branch(deleteEbsTask);
+
+    const automationSfn = new stepfunctions.StateMachine(this, 'AutomationWorkflow', {
+      definitionBody: stepfunctions.DefinitionBody.fromChainable(automationDefinition),
+    });
+
+    // 7.4. Regra semanal para disparar a State Machine
+    new events.Rule(this, 'WeeklyAutomationRule', {
+      schedule: events.Schedule.cron({ weekDay: 'SUN', hour: '3', minute: '0' }), // Domingo 03:00 UTC
+      targets: [new targets.SfnStateMachine(automationSfn)],
     });
 
     // Step Functions SLA (Usando os Lambdas corretos)
@@ -307,9 +442,23 @@ export class CostGuardianStack extends cdk.Stack {
     const onboard = apiRoot.addResource('onboard');
     onboard.addMethod('POST', apiIntegration); // Webhook, sem auth
 
+  // Stripe webhook (public endpoint, sem authorizer)
+  const stripeApi = apiRoot.addResource('stripe');
+  stripeApi.addResource('webhook').addMethod('POST', apiIntegration);
+
     // Novo endpoint para gerar config de onboarding
     const onboardInit = apiRoot.addResource('onboard-init');
     onboardInit.addMethod('GET', apiIntegration, { authorizer: auth });
+
+  // Dashboard API para o frontend: GET /api/dashboard/costs (protegido)
+  const dashboardApi = apiRoot.addResource('dashboard');
+  dashboardApi.addResource('costs').addMethod('GET', apiIntegration, { authorizer: auth });
+
+  // Settings API: GET/POST /api/settings/automation
+  const settingsApi = apiRoot.addResource('settings');
+  const automationApi = settingsApi.addResource('automation');
+  automationApi.addMethod('GET', apiIntegration, { authorizer: auth });
+  automationApi.addMethod('POST', apiIntegration, { authorizer: auth });
 
     const incidents = apiRoot.addResource('incidents');
     incidents.addMethod('GET', apiIntegration, { authorizer: auth });

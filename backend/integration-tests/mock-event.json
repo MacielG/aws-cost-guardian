@@ -1,0 +1,17 @@
+{
+  "version": "0",
+  "id": "evt-123",
+  "detail-type": "AWS Health Event Test",
+  "source": "aws.health",
+  "account": "123456789012",
+  "time": "2025-10-26T12:00:00Z",
+  "region": "us-east-1",
+  "detail": {
+    "id": "health-1",
+    "affectedAccount": "111122223333",
+    "service": "EC2",
+    "startTime": "2025-10-26T10:00:00Z",
+    "endTime": "2025-10-26T11:00:00Z",
+    "resources": ["arn:aws:ec2:us-east-1:111122223333:instance/i-1234567890abcdef0"]
+  }
+}
