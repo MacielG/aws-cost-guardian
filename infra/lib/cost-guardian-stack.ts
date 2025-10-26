@@ -16,6 +16,7 @@ import * as stepfunctions from 'aws-cdk-lib/aws-stepfunctions';
 import * as sfn_tasks from 'aws-cdk-lib/aws-stepfunctions-tasks';
 import * as secretsmanager from 'aws-cdk-lib/aws-secretsmanager';
 import * as iam from 'aws-cdk-lib/aws-iam';
+import * as sns from 'aws-cdk-lib/aws-sns';
 
 export class CostGuardianStack extends cdk.Stack {
   constructor(scope: Construct, id: string, props?: cdk.StackProps) {
@@ -49,6 +50,22 @@ export class CostGuardianStack extends cdk.Stack {
       nonKeyAttributes: ['id'], // Projetar o 'id' (nosso Customer ID)
     });
 
+    // GSI para buscar clientes ativos eficientemente (otimização de scan -> query)
+    table.addGlobalSecondaryIndex({
+      indexName: 'ActiveCustomerIndex',
+      partitionKey: { name: 'sk', type: dynamodb.AttributeType.STRING },
+      sortKey: { name: 'status', type: dynamodb.AttributeType.STRING },
+      projectionType: dynamodb.ProjectionType.INCLUDE,
+      nonKeyAttributes: [
+        'id',
+        'roleArn',
+        'automationSettings',
+        'subscriptionStatus',
+        'supportLevel',
+        'exclusionTags'
+      ],
+    });
+
     // GSI para o callback do onboarding via ExternalId
     table.addGlobalSecondaryIndex({
       indexName: 'ExternalIdIndex',
@@ -80,6 +97,14 @@ export class CostGuardianStack extends cdk.Stack {
       sortKey: { name: 'createdAt', type: dynamodb.AttributeType.STRING },
       projectionType: dynamodb.ProjectionType.INCLUDE,
       nonKeyAttributes: ['status', 'creditAmount', 'reportUrl', 'incidentId', 'awsAccountId', 'stripeInvoiceId', 'caseId', 'submissionError', 'reportError', 'commissionAmount'],
+    });
+
+    // GSI para consultas de recomendações
+    table.addGlobalSecondaryIndex({
+      indexName: 'RecommendationsIndex',
+      partitionKey: { name: 'id', type: dynamodb.AttributeType.STRING },
+      sortKey: { name: 'sk', type: dynamodb.AttributeType.STRING },
+      projectionType: dynamodb.ProjectionType.ALL,
     });
 
     // S3 Bucket para hospedar o template do CloudFormation
@@ -164,6 +189,30 @@ export class CostGuardianStack extends cdk.Stack {
       },
     });
     table.grantReadWriteData(healthEventHandlerLambda);
+
+    // Lambda para execução de recomendações
+    const executeRecommendationLambda = new NodejsFunction(this, 'ExecuteRecommendation', {
+      runtime: lambda.Runtime.NODEJS_18_X,
+      handler: 'handler',
+      entry: path.join(__dirname, '../../backend/functions/execute-recommendation.js'),
+      timeout: cdk.Duration.minutes(5),
+      memorySize: 256,
+      environment: {
+        DYNAMODB_TABLE: table.tableName,
+      },
+      bundling: { externalModules: ['aws-sdk'] },
+    });
+
+    // Permissões para o Lambda de recomendações
+    table.grantReadWriteData(executeRecommendationLambda);
+    executeRecommendationLambda.addToRolePolicy(new iam.PolicyStatement({
+      actions: ['sts:AssumeRole'],
+      resources: ['*'], // O Lambda precisa poder assumir a role do cliente
+    }));
+
+    // Dar ao ApiHandler o ARN do lambda de execução e permitir invocação
+    apiHandlerLambda.addEnvironment('EXECUTE_RECOMMENDATION_LAMBDA_ARN', executeRecommendationLambda.functionArn);
+    executeRecommendationLambda.grantInvoke(apiHandlerLambda);
 
     // 3. Lambdas para as Tarefas do Step Functions
     const slaCalculateImpactLambda = new NodejsFunction(this, 'SlaCalculateImpact', {
@@ -295,7 +344,9 @@ export class CostGuardianStack extends cdk.Stack {
       targets: [new targets.LambdaFunction(healthEventHandlerLambda)],
     });
 
-    // --- Bloco 2: Ingestão diária de custos (Fase 1: Visibilidade) ---
+  // --- Bloco 2: Ingestão diária de custos (Fase 1: Visibilidade) ---
+  // Topic SNS para alertas de anomalia (Fase 7)
+  const anomalyAlertsTopic = new sns.Topic(this, 'AnomalyAlertsTopic');
     // 4.1. Crie um novo Lambda para ingestão diária de custos
     const costIngestorLambda = new NodejsFunction(this, 'CostIngestor', {
       runtime: lambda.Runtime.NODEJS_18_X,
@@ -305,6 +356,7 @@ export class CostGuardianStack extends cdk.Stack {
       bundling: { externalModules: ['aws-sdk'] },
       environment: {
         DYNAMODB_TABLE: table.tableName,
+        SNS_TOPIC_ARN: anomalyAlertsTopic.topicArn,
       },
       role: new iam.Role(this, 'CostIngestorRole', {
         assumedBy: new iam.ServicePrincipal('lambda.amazonaws.com'),
@@ -328,6 +380,9 @@ export class CostGuardianStack extends cdk.Stack {
       })
     });
     table.grantReadData(costIngestorLambda);
+
+  // Permitir que o ingestor publique alertas no tópico SNS
+  anomalyAlertsTopic.grantPublish(costIngestorLambda);
 
     // 4.2. Crie uma regra do EventBridge para acionar o ingestor diariamente
     new events.Rule(this, 'DailyCostIngestionRule', {

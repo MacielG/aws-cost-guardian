@@ -11,7 +11,7 @@ interface Claim {
   id: string; // customerId
   sk: string; // CLAIM#... ou INCIDENT#...
   // Status possíveis para uma claim (inclui REPORT_FAILED para compatibilidade)
-  status: 'READY_TO_SUBMIT' | 'SUBMITTED' | 'SUBMISSION_FAILED' | 'REPORT_FAILED' | 'PAID' | 'REFUNDED' | 'NO_VIOLATION' | 'NO_RESOURCES_LISTED';
+  status: 'READY_TO_SUBMIT' | 'SUBMITTED' | 'SUBMISSION_FAILED' | 'REPORT_FAILED' | 'PAID' | 'REFUNDED' | 'NO_VIOLATION' | 'NO_RESOURCES_LISTED' | 'PENDING_MANUAL_SUBMISSION';
   creditAmount: number;
   reportUrl?: string;
   incidentId: string;
@@ -26,7 +26,7 @@ const getStatusVariant = (status: Claim['status']) => {
   switch (status) { // Mapeamento de cor para o Badge
     case 'PAID': case 'REFUNDED': return 'success';
     case 'SUBMITTED': return 'default';
-    case 'READY_TO_SUBMIT': return 'secondary';
+    case 'READY_TO_SUBMIT': case 'PENDING_MANUAL_SUBMISSION': return 'secondary';
     case 'SUBMISSION_FAILED': case 'REPORT_FAILED': return 'destructive';
     case 'NO_VIOLATION': case 'NO_RESOURCES_LISTED': return 'outline';
     default: return 'default';
@@ -92,6 +92,28 @@ export default function SLAClaims() {
                     {claim.caseId && <p>{t('slaClaims.supportCaseId', 'ID do Caso de Suporte AWS')}: <span className="font-medium">{claim.caseId}</span></p>}
                     {claim.stripeInvoiceId && <p>{t('slaClaims.stripeInvoiceId', 'ID da Fatura Stripe')}: <span className="font-medium">{claim.stripeInvoiceId}</span></p>}
                     {claim.submissionError && <p className="text-red-500">{t('slaClaims.submissionError', 'Erro no Envio')}: {claim.submissionError}</p>}
+                    
+                    {claim.status === 'PENDING_MANUAL_SUBMISSION' && (
+                      <Card className="mt-4 bg-yellow-50 border-yellow-300">
+                        <CardHeader>
+                          <CardTitle>{t('slaClaims.actionRequired', 'Ação Requerida')}</CardTitle>
+                          <CardDescription>
+                            {t('slaClaims.manualSubmissionInstructions', 'Seu plano AWS Support não permite a abertura automática de tickets. Por favor, siga os passos abaixo para enviar manualmente:')}
+                          </CardDescription>
+                        </CardHeader>
+                        <CardContent className="font-mono text-sm bg-gray-100 rounded p-4 space-y-2">
+                          <p>1. {t('slaClaims.manualStep1', 'Abra o Console AWS e navegue até AWS Support Center')}</p>
+                          <p>2. {t('slaClaims.manualStep2', 'Clique em "Criar Caso" e selecione "Faturamento"')}</p>
+                          <p>3. {t('slaClaims.manualStep3', 'Use o assunto e descrição abaixo:')}</p>
+                          <div className="mt-2 p-3 bg-white rounded">
+                            <p className="font-bold">{t('slaClaims.subject', 'Assunto')}:</p>
+                            <p>[Cost Guardian] {t('slaClaims.slaClaimTitle', `Reivindicação de Crédito SLA - ${claim.incidentId.replace('INCIDENT#', '')}`)}</p>
+                            <p className="font-bold mt-2">{t('slaClaims.description', 'Descrição')}:</p>
+                            <p>{t('slaClaims.requestCredit', 'Solicito crédito de SLA no valor de')} ${claim.creditAmount?.toFixed(2)} {t('slaClaims.forIncident', 'para o incidente')}: {claim.incidentId.replace('INCIDENT#', '')}</p>
+                          </div>
+                        </CardContent>
+                      </Card>
+                    )}
 
                     <div className="mt-4 space-x-2">
                       {claim.reportUrl && (

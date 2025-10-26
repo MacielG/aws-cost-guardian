@@ -60,11 +60,16 @@ async function getAssumedClients(roleArn, region = 'us-east-1') {
  */
 exports.calculateImpact = async (event) => {
   console.log('calculateImpact event:', event);
-  const { awsAccountId, healthEvent, incidentId } = event;
+  const { awsAccountId, healthEvent, incidentId, customerId } = event;
   const affectedResources = healthEvent.resources || [];
   
   // O nome da role é o que o cliente cria a partir do seu template CFN
-  const roleToAssume = `arn:aws:iam::${awsAccountId}:role/CostGuardianDelegatedRole`; 
+  const roleToAssume = `arn:aws:iam::${awsAccountId}:role/CostGuardianDelegatedRole`;
+
+  // Buscar a configuração do cliente para verificar o nível de suporte
+  const configKey = { id: customerId, sk: 'CONFIG#ONBOARD' };
+  const configData = await dynamoDb.get({ TableName: DYNAMODB_TABLE, Key: configKey }).promise();
+  const supportLevel = configData.Item?.supportLevel || 'basic'; 
 
   // Se o evento do Health não listou ARNs de recursos, não podemos calcular o impacto.
   if (affectedResources.length === 0) {
@@ -77,7 +82,7 @@ exports.calculateImpact = async (event) => {
         ExpressionAttributeNames: { '#status': 'status' },
         ExpressionAttributeValues: { ':status': 'NO_RESOURCES_LISTED' }
     }).promise();
-    return { ...event, impactedCost: 0, status: 'NO_RESOURCES' };
+    return { ...event, impactedCost: 0, status: 'NO_RESOURCES', supportLevel };
   }
 
   try {
@@ -234,15 +239,73 @@ exports.generateReport = async (event) => {
   }
   console.log(`Relatório gerado e salvo em: ${reportUrl}`);
 
-  // 2. Criar a Fatura (Invoice) no Stripe para a comissão de 30%
-  // REMOVER OU COMENTAR ESTE BLOCO INTEIRO (Lógica de criação de fatura movida para endpoint de admin)
-  // let invoiceId = null;
-  // try {
-  //   const commissionAmount = Math.round(credit * 0.30 * 100); // Em centavos (30% de comissão)
+  // Verificar se o cliente possui assinatura ativa
+  const userConfigKey = { id: customerId, sk: 'CONFIG#ONBOARD' };
+  const userConfig = await dynamoDb.get({ TableName: DYNAMODB_TABLE, Key: userConfigKey }).promise();
+  const config = userConfig.Item;
+  
+  let invoiceId = null;
+  const hasActivePlan = config?.subscriptionStatus === 'active';
+
+  // Criar a Fatura (Invoice) no Stripe para a comissão de 30% apenas se NÃO for plano Pro
+  if (!hasActivePlan) {
+    try {
+      const commissionAmount = Math.round(credit * 0.30 * 100); // Em centavos (30% de comissão)
+      
+      if (commissionAmount > 50) { // Stripe tem um valor mínimo de cobrança (ex: $0.50)
+        // Obter ou criar o ID do cliente no Stripe
+        let stripeCustomerId = config?.stripeCustomerId;
  
-  //   if (commissionAmount > 50) { // Stripe tem um valor mínimo de cobrança (ex: $0.50)
-  //     // 1. Obter ou criar o Stripe Customer ID
-  //     const userConfigKey = { id: customerId, sk: 'CONFIG#ONBOARD' };
+        if (!stripeCustomerId) {
+          const customer = await stripe.customers.create({
+            description: `AWS Cost Guardian Customer ${customerId}`,
+            metadata: { costGuardianUserId: customerId }
+          });
+          stripeCustomerId = customer.id;
+ 
+          await dynamoDb.update({
+            TableName: DYNAMODB_TABLE,
+            Key: userConfigKey,
+            UpdateExpression: 'SET stripeCustomerId = :sid',
+            ExpressionAttributeValues: { ':sid': stripeCustomerId }
+          }).promise();
+        }
+
+        // Criar o item de fatura
+        const invoiceItem = await stripe.invoiceItems.create({
+          customer: stripeCustomerId,
+          amount: commissionAmount,
+          currency: 'usd',
+          description: `Comissão de 30% sobre crédito SLA de $${credit.toFixed(2)} (Incidente: ${incidentId})`,
+        });
+
+        // Criar e finalizar a fatura
+        const invoice = await stripe.invoices.create({
+          customer: stripeCustomerId,
+          collection_method: 'charge_automatically',
+          auto_advance: true,
+          metadata: {
+            claimId: incidentId.replace('INCIDENT#', ''),
+            customerId: customerId,
+          },
+        });
+        invoiceId = invoice.id;
+      }
+    } catch (stripeError) {
+      console.error(`[generateReport] Erro ao criar fatura no Stripe para o cliente ${customerId} e incidente ${incidentId}:`, stripeError);
+      try {
+        const tmpClaimId = `CLAIM#${incidentId.replace('INCIDENT#', '')}`;
+        await dynamoDb.update({
+          TableName: DYNAMODB_TABLE,
+          Key: { id: customerId, sk: tmpClaimId },
+          UpdateExpression: 'SET stripeError = :err',
+          ExpressionAttributeValues: { ':err': String(stripeError.stack || stripeError.message) }
+        }).promise();
+      } catch (dbErr) {
+        console.error('Erro ao gravar stripeError no DynamoDB:', dbErr);
+      }
+    }
+  }
   //     const userConfig = await dynamoDb.get({ TableName: DYNAMODB_TABLE, Key: userConfigKey }).promise();
  
   //     let stripeCustomerId = userConfig.Item?.stripeCustomerId;
@@ -340,7 +403,20 @@ exports.generateReport = async (event) => {
  */
 exports.submitSupportTicket = async (event) => {
   console.log('submitSupportTicket event:', event);
-  const { customerId, awsAccountId, claimId, credit, healthEvent, durationMinutes } = event;
+  const { customerId, awsAccountId, claimId, credit, healthEvent, durationMinutes, supportLevel } = event;
+  
+  // Se o cliente está no plano Basic, atualizar status para submissão manual
+  if (supportLevel === 'basic') {
+    console.log(`Cliente ${customerId} está no plano Basic. Requer ação manual.`);
+    await dynamoDb.update({
+      TableName: DYNAMODB_TABLE,
+      Key: { id: customerId, sk: claimId },
+      UpdateExpression: 'SET #status = :status',
+      ExpressionAttributeNames: { '#status': 'status' },
+      ExpressionAttributeValues: { ':status': 'PENDING_MANUAL_SUBMISSION' }
+    }).promise();
+    return { ...event, status: 'manual-submission-required' };
+  }
 
   // Se não houver claimId, algo deu errado.
   if (!claimId) {

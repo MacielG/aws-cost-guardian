@@ -4,6 +4,7 @@ const sts = new AWS.STS();
 const CostExplorer = AWS.CostExplorer;
 
 const DYNAMODB_TABLE = process.env.DYNAMODB_TABLE;
+const sns = new AWS.SNS();
 
 // Helper: assume role do cliente e retorna um client CostExplorer configurado
 async function getAssumedCostExplorer(roleArn) {
@@ -32,27 +33,22 @@ async function getAssumedCostExplorer(roleArn) {
 exports.handler = async () => {
   console.log('Iniciando ingestão diária de custos');
 
-  // 1. Paginar scan para encontrar clientes com sk = CONFIG#ONBOARD e status = ACTIVE
-  // Use Query on StatusIndex to efficiently fetch ACTIVE configs (then filter by sk)
-  const queryParamsBase = {
+  // 1. Usar o novo GSI ActiveCustomerIndex para buscar clientes ativos eficientemente
+  const queryParams = {
     TableName: DYNAMODB_TABLE,
-    IndexName: 'StatusIndex',
-    KeyConditionExpression: '#status = :status',
+    IndexName: 'ActiveCustomerIndex',
+    KeyConditionExpression: 'sk = :sk AND #status = :status',
     ExpressionAttributeNames: { '#status': 'status' },
-    ExpressionAttributeValues: { ':status': 'ACTIVE', ':sk': 'CONFIG#ONBOARD' },
-    FilterExpression: 'sk = :sk',
-    ProjectionExpression: 'id, roleArn',
+    ExpressionAttributeValues: { 
+      ':sk': 'CONFIG#ONBOARD',
+      ':status': 'ACTIVE'
+    },
+    ProjectionExpression: 'id, roleArn, automationSettings'
   };
 
-  let customers = [];
-  let ExclusiveStartKey;
-  do {
-    const p = Object.assign({}, queryParamsBase);
-    if (ExclusiveStartKey) p.ExclusiveStartKey = ExclusiveStartKey;
-    const resp = await dynamoDb.query(p).promise();
-    customers = customers.concat(resp.Items || []);
-    ExclusiveStartKey = resp.LastEvaluatedKey;
-  } while (ExclusiveStartKey);
+  // Usar uma única query para buscar todos os clientes ativos
+  const response = await dynamoDb.query(queryParams).promise();
+  const customers = response.Items || [];
 
   if (!customers || customers.length === 0) {
     console.log('Nenhum cliente ativo encontrado para ingestão de custos.');
@@ -95,6 +91,46 @@ exports.handler = async () => {
         },
       }).promise();
 
+      // 4.1 Detecção simples de anomalia (estatística) nos últimos 7 dias
+      try {
+        const results = costData.ResultsByTime || [];
+        const daily = results.map(r => parseFloat(r.Total?.UnblendedCost?.Amount || 0));
+        if (daily.length >= 2) {
+          const last7 = daily.slice(-7);
+          const mean = last7.reduce((s, v) => s + v, 0) / last7.length;
+          const variance = last7.reduce((s, v) => s + Math.pow(v - mean, 2), 0) / last7.length;
+          const stddev = Math.sqrt(variance);
+          const lastDayCost = daily[daily.length - 1];
+
+          const isAnomaly = lastDayCost > (mean + 3 * stddev);
+          if (isAnomaly) {
+            console.log(`ANOMALIA DETECTADA para ${customer.id}! Custo: ${lastDayCost} (média: ${mean.toFixed(2)}, stdev: ${stddev.toFixed(2)})`);
+
+            // Salvar alerta no DynamoDB
+            await dynamoDb.put({
+              TableName: DYNAMODB_TABLE,
+              Item: {
+                id: customer.id,
+                sk: `ALERT#ANOMALY#${new Date().toISOString()}`,
+                status: 'ACTIVE',
+                details: `Custo de ${lastDayCost.toFixed(2)} excedeu a média de ${mean.toFixed(2)} (stdev ${stddev.toFixed(2)}).`,
+                createdAt: new Date().toISOString(),
+              }
+            }).promise();
+
+            // Publicar no SNS (se configurado)
+            if (process.env.SNS_TOPIC_ARN) {
+              await sns.publish({
+                TopicArn: process.env.SNS_TOPIC_ARN,
+                Subject: `[Cost Guardian] Alerta de Anomalia de Custo Detectada para ${customer.id}`,
+                Message: `Detectamos um gasto anômalo de $${lastDayCost.toFixed(2)} para o cliente ${customer.id}. Média: ${mean.toFixed(2)}, stdev: ${stddev.toFixed(2)}.`
+              }).promise();
+            }
+          }
+        }
+      } catch (anErr) {
+        console.error(`Falha na detecção de anomalia para ${customer.id}:`, anErr);
+      }
       console.log(`Custos ingeridos para o cliente: ${customer.id}`);
     } catch (err) {
       console.error(`Falha ao ingerir custos para ${customer.id}:`, err);

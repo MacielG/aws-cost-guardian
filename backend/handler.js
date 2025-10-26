@@ -46,6 +46,150 @@ app.get('/api/health', (req, res) => {
   res.json({ status: 'ok', time: new Date().toISOString() });
 });
 
+// Rota para criar sessão de checkout do Stripe
+app.post('/api/billing/create-checkout-session', authenticateUser, async (req, res) => {
+  try {
+    const customerId = req.user.sub;
+    const { stripeCustomerId } = req.body;
+
+    if (!stripeCustomerId) {
+      return res.status(400).json({ error: 'stripeCustomerId é obrigatório' });
+    }
+
+    const stripe = await getStripe();
+    const session = await stripe.checkout.sessions.create({
+      payment_method_types: ['card'],
+      mode: 'subscription',
+      customer: stripeCustomerId,
+      line_items: [{
+        price: process.env.STRIPE_PRO_PLAN_PRICE_ID,
+        quantity: 1,
+      }],
+      success_url: `${process.env.FRONTEND_URL}/dashboard?session_id={CHECKOUT_SESSION_ID}`,
+      cancel_url: `${process.env.FRONTEND_URL}/billing`,
+      metadata: {
+        costGuardianCustomerId: customerId,
+      }
+    });
+
+    res.status(200).json({ sessionId: session.id });
+  } catch (error) {
+    console.error('Erro ao criar sessão de checkout:', error);
+    res.status(500).json({ error: 'Erro ao criar sessão de checkout' });
+  }
+});
+
+// Rota para obter status da assinatura
+app.get('/api/billing/subscription', authenticateUser, async (req, res) => {
+  try {
+    const customerId = req.user.sub;
+    const config = (await dynamoDb.get({ 
+      TableName: DYNAMODB_TABLE, 
+      Key: { id: customerId, sk: 'CONFIG#ONBOARD' } 
+    }).promise()).Item;
+
+    res.status(200).json({
+      status: config?.subscriptionStatus || 'inactive',
+      stripeCustomerId: config?.stripeCustomerId,
+      stripeSubscriptionId: config?.stripeSubscriptionId
+    });
+  } catch (error) {
+    console.error('Erro ao obter status da assinatura:', error);
+    res.status(500).json({ error: 'Erro ao obter status da assinatura' });
+  }
+});
+
+// Rota para listar recomendações
+app.get('/api/recommendations', authenticateUser, checkProPlan, async (req, res) => {
+  try {
+    const customerId = req.user.sub;
+    
+    // Buscar todas as recomendações do cliente
+    const recommendations = await dynamoDb.query({
+      TableName: DYNAMODB_TABLE,
+      KeyConditionExpression: 'id = :id AND begins_with(sk, :prefix)',
+      ExpressionAttributeValues: {
+        ':id': customerId,
+        ':prefix': 'REC#'
+      }
+    }).promise();
+
+    res.status(200).json(recommendations.Items);
+  } catch (error) {
+    console.error('Erro ao listar recomendações:', error);
+    res.status(500).json({ error: 'Erro ao listar recomendações' });
+  }
+});
+
+// Rota para executar uma recomendação
+app.post('/api/recommendations/:recommendationId/execute', authenticateUser, checkProPlan, async (req, res) => {
+  const lambdaClient = new AWS.Lambda();
+  const customerId = req.user.sub;
+  const { recommendationId } = req.params;
+
+  try {
+    // Chamar o Lambda de execução
+    const result = await lambdaClient.invoke({
+      FunctionName: process.env.EXECUTE_RECOMMENDATION_LAMBDA_ARN,
+      InvocationType: 'RequestResponse',
+      Payload: JSON.stringify({
+        requestContext: {
+          authorizer: {
+            claims: { sub: customerId }
+          }
+        },
+        pathParameters: {
+          recommendationId
+        }
+      })
+    }).promise();
+
+    const responsePayload = JSON.parse(result.Payload);
+    res.status(responsePayload.statusCode).json(JSON.parse(responsePayload.body));
+  } catch (error) {
+    console.error('Erro ao executar recomendação:', error);
+    res.status(500).json({ error: 'Erro ao executar recomendação' });
+  }
+});
+
+// Rotas protegidas pelo plano Pro
+app.get('/api/settings/automation', authenticateUser, checkProPlan, async (req, res) => {
+  try {
+    const customerId = req.user.sub;
+    const config = req.customerConfig; // Config já verificada pelo checkProPlan
+
+    res.status(200).json({
+      enabled: config.automationEnabled || false,
+      settings: config.automationSettings || {}
+    });
+  } catch (error) {
+    console.error('Erro ao obter configurações de automação:', error);
+    res.status(500).json({ error: 'Erro ao obter configurações de automação' });
+  }
+});
+
+app.put('/api/settings/automation', authenticateUser, checkProPlan, async (req, res) => {
+  try {
+    const customerId = req.user.sub;
+    const { enabled, settings } = req.body;
+
+    await dynamoDb.update({
+      TableName: DYNAMODB_TABLE,
+      Key: { id: customerId, sk: 'CONFIG#ONBOARD' },
+      UpdateExpression: 'SET automationEnabled = :enabled, automationSettings = :settings',
+      ExpressionAttributeValues: {
+        ':enabled': enabled,
+        ':settings': settings
+      }
+    }).promise();
+
+    res.status(200).json({ message: 'Configurações de automação atualizadas com sucesso' });
+  } catch (error) {
+    console.error('Erro ao atualizar configurações de automação:', error);
+    res.status(500).json({ error: 'Erro ao atualizar configurações de automação' });
+  }
+});
+
 // Middleware de autenticação
 const jwt = require('jsonwebtoken');
 const jwksClient = require('jwks-rsa');
@@ -87,6 +231,19 @@ const verifyJwt = (req) => {
   }
 };
 
+// Helper function para atualizar status da assinatura
+async function updateSubscriptionStatus(customerId, status, subscriptionId) {
+  await dynamoDb.update({
+    TableName: DYNAMODB_TABLE,
+    Key: { id: customerId, sk: 'CONFIG#ONBOARD' },
+    UpdateExpression: 'SET subscriptionStatus = :status, stripeSubscriptionId = :subId',
+    ExpressionAttributeValues: {
+      ':status': status,
+      ':subId': subscriptionId,
+    }
+  }).promise();
+}
+
 const authenticateUser = (req, res, next) => {
   try {
     // If API Gateway authorizer populated claims, use them
@@ -122,12 +279,117 @@ const authorizeAdmin = (req, res, next) => {
   res.status(403).json({ message: 'Acesso negado. Requer privilégios de administrador.' });
 };
 
+// Helper functions and middleware
+async function updateSubscriptionStatus(customerId, status, subscriptionId) {
+  await dynamoDb.update({
+    TableName: DYNAMODB_TABLE,
+    Key: { id: customerId, sk: 'CONFIG#ONBOARD' },
+    UpdateExpression: 'SET subscriptionStatus = :status, stripeSubscriptionId = :subId',
+    ExpressionAttributeValues: {
+      ':status': status,
+      ':subId': subscriptionId,
+    }
+  }).promise();
+}
+
+// Middleware para verificar plano Pro
+const checkProPlan = async (req, res, next) => {
+  const customerId = req.user.sub;
+  const config = (await dynamoDb.get({ TableName: DYNAMODB_TABLE, Key: { id: customerId, sk: 'CONFIG#ONBOARD' } }).promise()).Item;
+
+  if (config && config.subscriptionStatus === 'active') {
+    req.customerConfig = config; // Passa a config para a próxima rota
+    return next(); // Permite o acesso
+  }
+
+  res.status(403).send({ 
+    error: 'Acesso negado. Esta funcionalidade requer um plano Pro.' 
+  });
+};
+
 // Para adicionar um usuário ao grupo 'Admins', use o Console da AWS ou a AWS CLI:
 // aws cognito-idp admin-add-user-to-group --user-pool-id <user-pool-id> --username <user-sub> --group-name Admins
 
+// POST /api/admin/claims/{customerId}/{claimId}/retry
+app.post('/api/admin/claims/:customerId/:claimId/retry', authenticateUser, authorizeAdmin, async (req, res) => {
+  const { customerId, claimId } = req.params;
+  const claimSk = `CLAIM#${claimId.replace('CLAIM#', '')}`;
+
+  try {
+    // 1. Obter a claim para encontrar o incidente original
+    const claim = (await dynamoDb.get({ TableName: DYNAMODB_TABLE, Key: { id: customerId, sk: claimSk } }).promise()).Item;
+    if (!claim || !claim.incidentId) {
+      return res.status(404).send({ error: 'Incidente original não encontrado.' });
+    }
+
+    // 2. Obter o incidente original para o payload do evento
+    const incident = (await dynamoDb.get({ TableName: DYNAMODB_TABLE, Key: { id: customerId, sk: claim.incidentId } }).promise()).Item;
+    if (!incident || !incident.details) {
+      return res.status(404).send({ error: 'Payload do evento original não encontrado.' });
+    }
+
+    // 3. Re-iniciar a SFN
+    await sfn.startExecution({
+      stateMachineArn: process.env.SFN_ARN,
+      input: JSON.stringify({
+        customerId: customerId,
+        awsAccountId: incident.awsAccountId,
+        healthEvent: incident.details, // Payload original
+        incidentId: claim.incidentId,
+      }),
+    }).promise();
+
+    // 4. Resetar o status da claim
+    await dynamoDb.update({
+      TableName: DYNAMODB_TABLE,
+      Key: { id: customerId, sk: claimSk },
+      UpdateExpression: 'SET #status = :status',
+      ExpressionAttributeNames: { '#status': 'status' },
+      ExpressionAttributeValues: { ':status': 'RETRYING' }
+    }).promise();
+
+    res.status(200).send({ message: 'Fluxo de SLA reiniciado.' });
+  } catch (err) {
+    console.error('Erro ao reiniciar fluxo de SLA:', err);
+    res.status(500).send({ error: err.message });
+  }
+});
 
 // GET /api/onboard-init
 // NOTE: handler foi movido mais abaixo para incluir verificação de termos aceitos
+
+// POST /api/billing/create-checkout-session
+app.post('/api/billing/create-checkout-session', authenticateUser, async (req, res) => {
+  try {
+    const customerId = req.user.sub;
+    const { stripeCustomerId } = req.body;
+
+    if (!stripeCustomerId) {
+      return res.status(400).json({ error: 'stripeCustomerId é obrigatório' });
+    }
+
+    const stripe = await getStripe();
+    const session = await stripe.checkout.sessions.create({
+      payment_method_types: ['card'],
+      mode: 'subscription',
+      customer: stripeCustomerId,
+      line_items: [{
+        price: process.env.STRIPE_PRO_PLAN_PRICE_ID,
+        quantity: 1,
+      }],
+      success_url: `${process.env.FRONTEND_URL}/dashboard?session_id={CHECKOUT_SESSION_ID}`,
+      cancel_url: `${process.env.FRONTEND_URL}/billing`,
+      metadata: {
+        costGuardianCustomerId: customerId,
+      }
+    });
+
+    res.status(200).json({ sessionId: session.id });
+  } catch (error) {
+    console.error('Erro ao criar sessão de checkout:', error);
+    res.status(500).json({ error: 'Erro ao criar sessão de checkout' });
+  }
+});
 
 // POST /api/onboard
 app.post('/api/onboard', async (req, res) => {
@@ -149,20 +411,37 @@ app.post('/api/onboard', async (req, res) => {
         const pk = customerId;
         const sk = 'CONFIG#ONBOARD';
 
-        const params = {
-          TableName: process.env.DYNAMODB_TABLE,
-          Item: {
-            id: pk,
-            sk: sk,
-            awsAccountId: awsAccountIdVal,
-            roleArn: roleArnVal,
-            externalId: externalIdVal,
-            status: 'ACTIVE',
-            createdAt: new Date().toISOString(),
-          },
-        };
+        // Verificar o nível de suporte AWS
+      let supportLevel = 'basic';
+      try {
+        const { support } = await getAssumedClients(roleArnVal, 'us-east-1');
+        await support.describeSeverityLevels().promise();
+        supportLevel = 'business'; // Se não lançar erro, é business ou enterprise
+      } catch (err) {
+        if (err.name === 'SubscriptionRequiredException') {
+          console.log(`Cliente ${customerId} está no plano Basic/Developer.`);
+          supportLevel = 'basic';
+        } else {
+          console.error('Erro ao verificar nível de suporte:', err);
+          // Continue como 'basic' em caso de erro
+        }
+      }
 
-        await dynamoDb.put(params).promise();
+      const params = {
+        TableName: process.env.DYNAMODB_TABLE,
+        Item: {
+          id: pk,
+          sk: sk,
+          awsAccountId: awsAccountIdVal,
+          roleArn: roleArnVal,
+          externalId: externalIdVal,
+          status: 'ACTIVE',
+          supportLevel: supportLevel,
+          createdAt: new Date().toISOString(),
+        },
+      };
+
+      await dynamoDb.put(params).promise();
         console.log(`Onboarding concluído para Cliente: ${customerId}, Conta AWS: ${awsAccountIdVal}`);
 
         // Responde ao CloudFormation que a criação foi bem-sucedida (se houver ResponseURL)
@@ -356,7 +635,15 @@ app.get('/api/settings/automation', authenticateUser, async (req, res) => {
     const params = { TableName: process.env.DYNAMODB_TABLE, Key: { id: userId, sk: 'CONFIG#ONBOARD' } };
     const data = await dynamoDb.get(params).promise();
     const item = data.Item || {};
-    return res.json({ automation: item.automation || {} });
+    const settings = item.automationSettings || {};
+
+    return res.json({ 
+      automation: {
+        stopIdle: !!settings.stopIdleInstances,
+        deleteUnusedEbs: !!settings.deleteUnusedEbs,
+        exclusionTags: settings.exclusionTags || '',
+      }
+    });
   } catch (err) {
     console.error('Erro ao buscar settings de automação:', err);
     return res.status(500).json({ error: 'Falha ao buscar configurações.' });
@@ -364,18 +651,31 @@ app.get('/api/settings/automation', authenticateUser, async (req, res) => {
 });
 
 // POST /api/settings/automation
-// Body: { automation: { stopIdle: true, deleteUnusedEbs: false } }
+// Body: { automation: { stopIdle: true, deleteUnusedEbs: false, exclusionTags?: string } }
 app.post('/api/settings/automation', authenticateUser, async (req, res) => {
   try {
     const userId = req.user.sub;
-    const automation = req.body?.automation;
-    if (!automation || typeof automation !== 'object') return res.status(400).json({ message: 'automation inválido' });
+    const { automation } = req.body;
+    if (!automation || typeof automation !== 'object') {
+      return res.status(400).json({ message: 'automation inválido' });
+    }
+
+    // Validar as tags de exclusão
+    if (automation.exclusionTags && typeof automation.exclusionTags !== 'string') {
+      return res.status(400).json({ message: 'exclusionTags deve ser uma string' });
+    }
 
     await dynamoDb.update({
       TableName: process.env.DYNAMODB_TABLE,
       Key: { id: userId, sk: 'CONFIG#ONBOARD' },
-      UpdateExpression: 'SET automation = :a',
-      ExpressionAttributeValues: { ':a': automation },
+      UpdateExpression: 'SET automationSettings = :a',
+      ExpressionAttributeValues: {
+        ':a': {
+          stopIdleInstances: !!automation.stopIdle,
+          deleteUnusedEbs: !!automation.deleteUnusedEbs,
+          exclusionTags: automation.exclusionTags || null,
+        },
+      },
     }).promise();
 
     return res.json({ success: true });
@@ -484,6 +784,24 @@ app.post('/api/stripe/webhook', express.raw({ type: 'application/json' }), async
     } catch (err) {
       console.warn(`Webhook Error: ${err.message}`);
       return res.status(400).send(`Webhook Error: ${err.message}`);
+    }
+
+    // Processar eventos de assinatura
+    if (event.type === 'checkout.session.completed') {
+      const data = event.data.object;
+      const customerId = data.metadata.costGuardianCustomerId;
+      const subscriptionId = data.subscription;
+      // Atualiza o usuário para ATIVO
+      await updateSubscriptionStatus(customerId, 'active', subscriptionId);
+    }
+
+    // Lida com renovações falhadas ou cancelamentos
+    if (event.type === 'customer.subscription.updated' || event.type === 'customer.subscription.deleted') {
+      const data = event.data.object;
+      const stripeCustomer = await (await getStripe()).customers.retrieve(data.customer);
+      const customerId = stripeCustomer.metadata.costGuardianCustomerId;
+      // Atualiza o usuário para CANCELED ou PAST_DUE
+      await updateSubscriptionStatus(customerId, data.status, data.id);
     }
 
     // Processar eventos de fatura

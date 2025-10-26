@@ -6,30 +6,44 @@ const cloudwatch = new AWS.CloudWatch();
 
 const DYNAMODB_TABLE = process.env.DYNAMODB_TABLE;
 
+// Helper para verificar se um recurso está excluído pelas tags
+function isExcluded(resourceTags, exclusionTagsString) {
+  if (!exclusionTagsString || !resourceTags?.length) return false;
+  const exclusionTags = exclusionTagsString.split(',').map(t => t.trim());
+  
+  for (const tag of resourceTags) {
+    const tagString = `${tag.Key}:${tag.Value}`;
+    if (exclusionTags.includes(tagString) || exclusionTags.includes(tag.Key)) {
+      return true;
+    }
+  }
+  return false;
+}
+
 exports.handler = async (event) => {
   console.log('Executando automação: Parar Instâncias Ociosas');
 
-  // 1. Recuperar clientes com CONFIG#ONBOARD onde automation.stopIdle = true
-  // Use Query on StatusIndex to efficiently fetch ACTIVE configs, then filter by automation.stopIdle
-  const queryParamsBase = {
+  // 1. Usar o novo GSI ActiveCustomerIndex para recuperar clientes com automação ativada
+  const queryParams = {
     TableName: DYNAMODB_TABLE,
-    IndexName: 'StatusIndex',
-    KeyConditionExpression: '#status = :status',
-    ExpressionAttributeNames: { '#status': 'status', '#automation': 'automation', '#stopIdle': 'stopIdle' },
-    ExpressionAttributeValues: { ':status': 'ACTIVE', ':sk': 'CONFIG#ONBOARD', ':trueVal': true },
-    FilterExpression: 'sk = :sk AND #automation.#stopIdle = :trueVal',
-    ProjectionExpression: 'id, roleArn',
+    IndexName: 'ActiveCustomerIndex',
+    KeyConditionExpression: 'sk = :sk AND #status = :status',
+    ExpressionAttributeNames: { 
+      '#status': 'status',
+      '#automationSettings': 'automationSettings',
+      '#stopIdleInstances': 'stopIdleInstances'
+    },
+    ExpressionAttributeValues: { 
+      ':sk': 'CONFIG#ONBOARD',
+      ':status': 'ACTIVE',
+      ':true': true
+    },
+    FilterExpression: '#automationSettings.#stopIdleInstances = :true',
+    ProjectionExpression: 'id, roleArn, automationSettings, exclusionTags'
   };
 
-  let items = [];
-  let ExclusiveStartKey;
-  do {
-    const p = Object.assign({}, queryParamsBase);
-    if (ExclusiveStartKey) p.ExclusiveStartKey = ExclusiveStartKey;
-    const resp = await dynamoDb.query(p).promise();
-    items = items.concat(resp.Items || []);
-    ExclusiveStartKey = resp.LastEvaluatedKey;
-  } while (ExclusiveStartKey);
+  const response = await dynamoDb.query(queryParams).promise();
+  const items = response.Items || [];
 
   if (!items.length) {
     console.log('Nenhum cliente com automação STOP_IDLE habilitada.');
@@ -76,11 +90,40 @@ exports.handler = async (event) => {
 
           const points = metric.Datapoints || [];
           const avg = points.reduce((s,p)=>s+(p.Average||0),0) / (points.length||1);
+          // Verificar se a instância está excluída pelas tags
+          if (isExcluded(inst.Tags, customer.automationSettings?.exclusionTags)) {
+            console.log(`Instância ${id} excluída por tags. Pulando...`);
+            continue;
+          }
+
           if (avg < 5) {
-            console.log(`Instância ${id} do cliente ${customer.id} está ociosa (CPU avg ${avg}). Parando...`);
-            // Aqui chamaria ec2Client.stopInstances({ InstanceIds: [id] })
-            // Comentado por segurança em ambiente de desenvolvimento
-            // await ec2Client.stopInstances({ InstanceIds: [id] }).promise();
+            // Em vez de parar automaticamente, gravamos uma recomendação para o Guardian Advisor
+            const recommendationId = `REC#EC2#${id}`;
+            // Estimativa simples de economia potencial (placeholder):
+            // assumimos uma economia mensal dependendo do tipo da instância (valor conservador)
+            const potentialSavings = parseFloat((inst.InstanceType && inst.InstanceType.includes('t3') ? 5.00 : 10.00).toFixed(2));
+
+            await dynamoDb.put({
+              TableName: DYNAMODB_TABLE,
+              Item: {
+                id: customer.id,
+                sk: recommendationId,
+                type: 'IDLE_INSTANCE',
+                status: 'RECOMMENDED',
+                potentialSavings: potentialSavings,
+                resourceArn: `arn:aws:ec2:${AWS.config.region}:${assume.AssumedRoleUser.Arn.split(':')[4]}:instance/${id}`,
+                details: {
+                  instanceId: id,
+                  instanceType: inst.InstanceType,
+                  launchTime: inst.LaunchTime,
+                  cpuAvg: avg,
+                  tags: inst.Tags || []
+                },
+                createdAt: new Date().toISOString(),
+              }
+            }).promise();
+
+            console.log(`Cliente ${customer.id}: Recomendação criada para instância ${id} (economia potencial: $${potentialSavings}/mês)`);
           }
         } catch (innerErr) {
           console.error('Erro ao avaliar instância:', innerErr);

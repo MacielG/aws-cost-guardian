@@ -13,6 +13,26 @@ const defaultOptions = {
   credentials: 'include' as RequestCredentials,
 };
 
+// Função para inicializar o Stripe
+export async function initializeStripe() {
+  if (!window.Stripe) {
+    throw new Error('Stripe.js não está carregado');
+  }
+
+  const key = process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY;
+  if (!key) {
+    throw new Error('STRIPE_PUBLISHABLE_KEY não está definida');
+  }
+
+  return window.Stripe(key);
+}
+
+declare global {
+  interface Window {
+    Stripe: (key: string) => any;
+  }
+}
+
 // Função helper para chamadas de API
 export async function api<T = any>(
   endpoint: string,

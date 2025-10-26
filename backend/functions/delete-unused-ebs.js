@@ -4,30 +4,44 @@ const sts = new AWS.STS();
 
 const DYNAMODB_TABLE = process.env.DYNAMODB_TABLE;
 
+// Helper para verificar se um recurso está excluído pelas tags
+function isExcluded(resourceTags, exclusionTagsString) {
+  if (!exclusionTagsString || !resourceTags?.length) return false;
+  const exclusionTags = exclusionTagsString.split(',').map(t => t.trim());
+  
+  for (const tag of resourceTags) {
+    const tagString = `${tag.Key}:${tag.Value}`;
+    if (exclusionTags.includes(tagString) || exclusionTags.includes(tag.Key)) {
+      return true;
+    }
+  }
+  return false;
+}
+
 exports.handler = async (event) => {
   console.log('Executando automação: Excluir Volumes EBS Órfãos');
 
-  // 1. Recuperar clientes que habilitaram DELETE_UNUSED_EBS
-  // Use Query on StatusIndex to efficiently fetch ACTIVE configs, then filter by automation.deleteUnusedEbs
-  const queryParamsBase = {
+  // 1. Usar o novo GSI ActiveCustomerIndex para buscar clientes que habilitaram DELETE_UNUSED_EBS
+  const queryParams = {
     TableName: DYNAMODB_TABLE,
-    IndexName: 'StatusIndex',
-    KeyConditionExpression: '#status = :status',
-    ExpressionAttributeNames: { '#status': 'status', '#automation': 'automation', '#deleteUnusedEbs': 'deleteUnusedEbs' },
-    ExpressionAttributeValues: { ':status': 'ACTIVE', ':sk': 'CONFIG#ONBOARD', ':trueVal': true },
-    FilterExpression: 'sk = :sk AND #automation.#deleteUnusedEbs = :trueVal',
-    ProjectionExpression: 'id, roleArn',
+    IndexName: 'ActiveCustomerIndex',
+    KeyConditionExpression: 'sk = :sk AND #status = :status',
+    ExpressionAttributeNames: { 
+      '#status': 'status',
+      '#automationSettings': 'automationSettings',
+      '#deleteUnusedEbs': 'deleteUnusedEbs'
+    },
+    ExpressionAttributeValues: { 
+      ':sk': 'CONFIG#ONBOARD',
+      ':status': 'ACTIVE',
+      ':true': true
+    },
+    FilterExpression: '#automationSettings.#deleteUnusedEbs = :true',
+    ProjectionExpression: 'id, roleArn, automationSettings, exclusionTags'
   };
 
-  let items = [];
-  let ExclusiveStartKey;
-  do {
-    const p = Object.assign({}, queryParamsBase);
-    if (ExclusiveStartKey) p.ExclusiveStartKey = ExclusiveStartKey;
-    const resp = await dynamoDb.query(p).promise();
-    items = items.concat(resp.Items || []);
-    ExclusiveStartKey = resp.LastEvaluatedKey;
-  } while (ExclusiveStartKey);
+  const response = await dynamoDb.query(queryParams).promise();
+  const items = response.Items || [];
 
   if (!items.length) {
     console.log('Nenhum cliente com automação DELETE_UNUSED_EBS habilitada.');
@@ -50,9 +64,38 @@ exports.handler = async (event) => {
       const volumes = resp.Volumes || [];
       for (const v of volumes) {
         try {
-          console.log(`Cliente ${customer.id}: excluir volume ${v.VolumeId} (estado ${v.State || v.Status})`);
-          // Por segurança, não executar delete em ambiente de desenvolvimento
-          // await ec2Client.deleteVolume({ VolumeId: v.VolumeId }).promise();
+          // Verificar se o volume está excluído pelas tags
+          if (isExcluded(v.Tags, customer.automationSettings?.exclusionTags)) {
+            console.log(`Volume ${v.VolumeId} excluído por tags. Pulando...`);
+            continue;
+          }
+
+          // Calcular economia potencial (preço médio por GB/mês é $0.10)
+          const potentialSavings = (v.Size * 0.10).toFixed(2);
+          const recommendationId = `REC#EBS#${v.VolumeId}`;
+
+          // Salvar recomendação no DynamoDB
+          await dynamoDb.put({
+            TableName: DYNAMODB_TABLE,
+            Item: {
+              id: customer.id,
+              sk: recommendationId,
+              type: 'UNUSED_EBS_VOLUME',
+              status: 'RECOMMENDED',
+              potentialSavings: parseFloat(potentialSavings),
+              resourceArn: `arn:aws:ec2:${AWS.config.region}:${assume.AssumedRoleUser.Arn.split(':')[4]}:volume/${v.VolumeId}`,
+              details: {
+                volumeId: v.VolumeId,
+                volumeSize: v.Size,
+                volumeType: v.VolumeType,
+                createTime: v.CreateTime,
+                tags: v.Tags || []
+              },
+              createdAt: new Date().toISOString(),
+            }
+          }).promise();
+          
+          console.log(`Cliente ${customer.id}: Recomendação criada para volume ${v.VolumeId} (economia potencial: $${potentialSavings}/mês)`);
         } catch (inner) {
           console.error('Erro ao deletar volume:', inner);
         }
