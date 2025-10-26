@@ -1,10 +1,9 @@
 import type { Metadata } from 'next';
 import { Inter } from 'next/font/google';
 import './globals.css';
-import { I18nextProvider } from 'react-i18next';
-import i18n from '@/i18n';
 import '@aws-amplify/ui-react/styles.css';
 import ConfigureAmplifyClientSide from '../components/ConfigureAmplifyClientSide';
+import { I18nClientProvider } from '@/components/I18nClientProvider';
 
 const inter = Inter({ subsets: ['latin'] });
 
@@ -18,7 +17,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     <html lang="en">
       <body className={inter.className}>
         <ConfigureAmplifyClientSide />
-        <I18nextProvider i18n={i18n}>{children}</I18nextProvider>
+        <I18nClientProvider>{children}</I18nClientProvider>
       </body>
     </html>
   );
