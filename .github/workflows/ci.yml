@@ -22,8 +22,20 @@ jobs:
     - name: Install dependencies
       run: npm run install:all
 
-    - name: Run tests
-      run: npm test
+    - name: Run Backend Tests
+      run: npm test --workspace=backend
+
+    - name: Run Frontend Tests
+      run: npm test --workspace=frontend
+
+    - name: Run Infrastructure Tests
+      run: npm test --workspace=infra
+
+    - name: Build Frontend
+      run: npm run build --workspace=frontend
+
+    - name: Synth CDK
+      run: npm run cdk synth --workspace=infra
 
     - name: Run tests with coverage
       run: npm run test:coverage

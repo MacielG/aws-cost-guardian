@@ -36,4 +36,9 @@ jest.mock('aws-amplify', () => ({
 }))
 
 // Global test utilities
-global.fetch = jest.fn()
+global.fetch = jest.fn(() =>
+  Promise.resolve({
+    json: () => Promise.resolve([]),
+    ok: true,
+  })
+)
