@@ -17,9 +17,21 @@ import * as sfn_tasks from 'aws-cdk-lib/aws-stepfunctions-tasks';
 import * as secretsmanager from 'aws-cdk-lib/aws-secretsmanager';
 import * as iam from 'aws-cdk-lib/aws-iam';
 import * as sns from 'aws-cdk-lib/aws-sns';
+import * as route53 from 'aws-cdk-lib/aws-route53';
+import * as acm from 'aws-cdk-lib/aws-certificatemanager';
+import * as amplify from '@aws-cdk/aws-amplify-alpha';
+import * as codebuild from 'aws-cdk-lib/aws-codebuild';
+
+export interface CostGuardianStackProps extends cdk.StackProps {
+  domainName: string;
+  hostedZoneId: string;
+  githubRepo: string;
+  githubBranch: string;
+  githubTokenSecretName: string;
+}
 
 export class CostGuardianStack extends cdk.Stack {
-  constructor(scope: Construct, id: string, props?: cdk.StackProps) {
+  constructor(scope: Construct, id: string, props: CostGuardianStackProps) {
     super(scope, id, props);
 
     // Secrets (Mantido)
@@ -546,15 +558,105 @@ export class CostGuardianStack extends cdk.Stack {
     // POST /api/admin/claims/{customerId}/{claimId}/create-invoice
     specificClaim.addResource('create-invoice').addMethod('POST', apiIntegration, { authorizer: auth });
 
-    // Outputs (Mantido)
-    new cdk.CfnOutput(this, 'APIUrl', { value: api.url });
-    new cdk.CfnOutput(this, 'UserPoolId', { value: userPool.userPoolId });
-    new cdk.CfnOutput(this, 'UserPoolClientId', { value: userPoolClient.userPoolClientId });
+    // Outputs com referências para Amplify
+    const apiUrl = new cdk.CfnOutput(this, 'APIUrl', { value: api.url });
+    const userPoolIdOutput = new cdk.CfnOutput(this, 'UserPoolId', { value: userPool.userPoolId });
+    const userPoolClientIdOutput = new cdk.CfnOutput(this, 'UserPoolClientId', { value: userPoolClient.userPoolClientId });
     new cdk.CfnOutput(this, 'TableName', { value: table.tableName });
     new cdk.CfnOutput(this, 'SFNArn', { value: sfn.stateMachineArn });
-    new cdk.CfnOutput(this, 'CfnTemplateUrl', {
+    const cfnTemplateUrlOutput = new cdk.CfnOutput(this, 'CfnTemplateUrl', {
       value: `${templateBucket.bucketWebsiteUrl}/template.yaml`,
       description: 'URL do template do CloudFormation para o onboarding do cliente. Use esta URL no frontend.',
     });
+
+    // Identity Pool para Amplify
+    const identityPool = new cognito.CfnIdentityPool(this, 'CostGuardianIdentityPool', {
+      allowUnauthenticatedIdentities: false,
+      cognitoIdentityProviders: [{
+        clientId: userPoolClient.userPoolClientId,
+        providerName: userPool.userPoolProviderName,
+      }],
+    });
+    const identityPoolIdOutput = new cdk.CfnOutput(this, 'IdentityPoolId', {
+      value: identityPool.ref,
+      description: 'Cognito Identity Pool ID',
+    });
+
+    // --- SEÇÃO DO FRONTEND (AMPLIFY APP AUTOMATIZADO) ---
+    const buildSpec = codebuild.BuildSpec.fromObjectToYaml({
+      version: '1.0',
+      frontend: {
+        phases: {
+          preBuild: {
+            commands: [
+              'cd frontend',
+              'npm ci',
+            ],
+          },
+          build: {
+            commands: [
+              `echo "NEXT_PUBLIC_AWS_REGION=${this.region}" >> .env.production`,
+              `echo "NEXT_PUBLIC_API_URL=${api.url}" >> .env.production`,
+              `echo "NEXT_PUBLIC_COGNITO_USER_POOL_ID=${userPool.userPoolId}" >> .env.production`,
+              `echo "NEXT_PUBLIC_COGNITO_USER_POOL_CLIENT_ID=${userPoolClient.userPoolClientId}" >> .env.production`,
+              `echo "NEXT_PUBLIC_COGNITO_IDENTITY_POOL_ID=${identityPool.ref}" >> .env.production`,
+              `echo "NEXT_PUBLIC_CFN_TEMPLATE_URL=${templateBucket.bucketWebsiteUrl}/template.yaml" >> .env.production`,
+              'npm run build',
+            ],
+          },
+        },
+        artifacts: {
+          baseDirectory: 'frontend/.next',
+          files: ['**/*'],
+        },
+        cache: {
+          paths: ['frontend/node_modules/**/*'],
+        },
+      },
+    });
+
+    const amplifyApp = new amplify.App(this, 'CostGuardianFrontend', {
+      appName: 'CostGuardianApp',
+      sourceCodeProvider: new amplify.GitHubSourceCodeProvider({
+        owner: props.githubRepo.split('/')[0],
+        repository: props.githubRepo.split('/')[1],
+        oauthToken: cdk.SecretValue.secretsManager(props.githubTokenSecretName, {
+          jsonField: 'github-token',
+        }),
+      }),
+      buildSpec: buildSpec,
+      environmentVariables: {
+        '_LIVE_UPDATES': '[{"pkg":"@aws-amplify/cli","type":"npm","version":"latest"}]',
+        'AMPLIFY_NODE_VERSION': '18'
+      },
+    });
+
+    const mainBranch = amplifyApp.addBranch(props.githubBranch, {
+      stage: 'PRODUCTION',
+      branchName: props.githubBranch,
+    });
+
+    // Domínio customizado
+    const hostedZone = route53.HostedZone.fromHostedZoneAttributes(this, 'HostedZone', {
+      hostedZoneId: props.hostedZoneId,
+      zoneName: props.domainName,
+    });
+
+    const certificate = new acm.Certificate(this, 'SslCertificate', {
+      domainName: props.domainName,
+      subjectAlternativeNames: [`www.${props.domainName}`],
+      validation: acm.CertificateValidation.fromDns(hostedZone),
+    });
+
+    const domain = amplifyApp.addDomain(props.domainName, {
+      enableAutoSubdomain: true,
+      subDomains: [
+        {
+          branch: mainBranch,
+          prefix: 'www',
+        },
+      ],
+    });
+    domain.mapRoot(mainBranch);
   }
 }

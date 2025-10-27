@@ -44,9 +44,48 @@ Arquitetura EDA: Desacoplada, resiliente. Custos: $0 no Free Tier até 100 clien
 
 ## 🚀 Quick Start
 
+### 📚 **NOVO: Documentação de Deploy Completa**
+
+Escolha seu guia de deploy:
+
+| Documento | Para Quem | O Que Tem |
+|-----------|-----------|-----------|
+| **[🚀 DEPLOY-NOW.md](./DEPLOY-NOW.md)** | Quer fazer deploy AGORA | Comandos prontos para copiar/colar |
+| **[📖 QUICK-START.md](./QUICK-START.md)** | Primeira vez com CDK/Amplify | Guia passo a passo detalhado |
+| **[✅ DEPLOY-CHECKLIST.md](./DEPLOY-CHECKLIST.md)** | Quer garantir que está tudo OK | Checklist completo + troubleshooting |
+| **[📋 SETUP-SUMMARY.md](./SETUP-SUMMARY.md)** | Quer entender o que foi feito | Resumo de toda arquitetura |
+
+### ⚡ Deploy em 5 Minutos
+
+```bash
+# 1. Validar configuração (Windows PowerShell)
+.\validate-setup.ps1
+
+# 2. Instalar dependências
+cd infra && npm install
+cd ../frontend && npm install
+
+# 3. Deploy!
+cd ../infra
+npm run build
+npm run cdk deploy -- --require-approval never
+
+# 4. Configurar ambiente local (após deploy)
+npm run export-outputs
+cd ../frontend && npm run dev
+```
+
+**Tempo total:** ~45-60 minutos (deploy) + ~5 minutos (config local)
+
+---
+
+### 📖 Clone e Setup Manual
+
 1. **Clone o Repo**:
-git clone https://github.com/guilherme-maciel/aws-cost-guardian.git
-   cd aws-cost-guardian
+```bash
+git clone https://github.com/MacielG/aws-cost-guardian.git
+cd aws-cost-guardian
+```
 
 2. **Setup Env** (crie `.env` baseado em `.env.example`):
 - AWS Account ID, Stripe Keys, ExternalId secrets.

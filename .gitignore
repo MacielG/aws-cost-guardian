@@ -5,6 +5,9 @@ node_modules/
 # Env
 .env
 .env.local
+.env.production
+frontend/.env.local
+frontend/.env.production
 
 # CDK
 cdk.out/
