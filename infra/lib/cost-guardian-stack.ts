@@ -405,23 +405,26 @@ export class CostGuardianStack extends cdk.Stack {
     // 7.1. Lambdas para tarefas de automação
     const stopIdleInstancesLambda = new NodejsFunction(this, 'StopIdleInstances', {
       runtime: lambda.Runtime.NODEJS_18_X,
-      entry: path.join(__dirname, '../../backend/functions/stop-idle-instances.js'),
+      entry: path.join(__dirname, '../../backend/functions/recommend-idle-instances.js'),
       handler: 'handler',
       timeout: cdk.Duration.minutes(5),
-      bundling: { externalModules: ['aws-sdk'] },
+      bundling: { 
+        format: aws_lambda_nodejs.OutputFormat.ESM,
+        minify: true,
+      },
       environment: { DYNAMODB_TABLE: table.tableName },
       role: new iam.Role(this, 'StopIdleRole', {
         assumedBy: new iam.ServicePrincipal('lambda.amazonaws.com'),
         managedPolicies: [iam.ManagedPolicy.fromAwsManagedPolicyName('service-role/AWSLambdaBasicExecutionRole')],
         inlinePolicies: {
           DynamoPolicy: new iam.PolicyDocument({ statements: [
-            new iam.PolicyStatement({ actions: ['dynamodb:Query','dynamodb:Scan','dynamodb:GetItem'], resources: [table.tableArn, `${table.tableArn}/index/*`] }),
+            new iam.PolicyStatement({ actions: ['dynamodb:Query','dynamodb:Scan','dynamodb:GetItem','dynamodb:PutItem'], resources: [table.tableArn, `${table.tableArn}/index/*`] }),
             new iam.PolicyStatement({ actions: ['sts:AssumeRole'], resources: ['arn:aws:iam::*:role/CostGuardianDelegatedRole'] }),
           ]})
         }
       })
     });
-    table.grantReadData(stopIdleInstancesLambda);
+    table.grantReadWriteData(stopIdleInstancesLambda);
 
     const deleteUnusedEbsLambda = new NodejsFunction(this, 'DeleteUnusedEbs', {
       runtime: lambda.Runtime.NODEJS_18_X,

@@ -85,6 +85,21 @@ module.exports = {
       backdropBlur: {
         'xs': '2px',
       },
+      keyframes: {
+        shimmer: {
+          '0%': { backgroundPosition: '-1000px 0' },
+          '100%': { backgroundPosition: '1000px 0' },
+        },
+        shake: {
+          '0%, 100%': { transform: 'translateX(0)' },
+          '10%, 30%, 50%, 70%, 90%': { transform: 'translateX(-3px)' },
+          '20%, 40%, 60%, 80%': { transform: 'translateX(3px)' },
+        },
+      },
+      animation: {
+        shimmer: 'shimmer 2s infinite linear',
+        shake: 'shake 0.4s ease-in-out',
+      },
     },
   },
   plugins: [],

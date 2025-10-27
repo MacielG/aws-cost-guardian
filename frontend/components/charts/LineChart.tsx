@@ -14,14 +14,14 @@ export default function LineChart({ data, xKey, yKey, loading, error, height = 3
   if (loading) return <Skeleton className="w-full h-[300px]" />;
   if (error) return <div className="text-destructive">Erro: {error}</div>;
   return (
-    <div className="bg-white rounded-md shadow-sm p-4">
+    <div className="bg-background-light rounded-md shadow-sm p-4">
       <ResponsiveContainer width="100%" height={height}>
         <ReLineChart data={data}>
           <CartesianGrid strokeDasharray="3 3" />
           <XAxis dataKey={xKey} />
           <YAxis />
           <Tooltip />
-          <Line type="monotone" dataKey={yKey} stroke="#2563eb" strokeWidth={2} dot={false} />
+          <Line type="monotone" dataKey={yKey} stroke="#2563eb" strokeWidth={2} dot={false} isAnimationActive={true} animationDuration={500} />
         </ReLineChart>
       </ResponsiveContainer>
     </div>

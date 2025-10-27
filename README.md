@@ -134,7 +134,7 @@ aws-cost-guardian/
 - Armazenamento: DynamoDB para custos granulares.
 
 ### Fase 2: Automação
-- Rightsizing/Limpeza: Lambda para parar instâncias ociosas (opt-in role).
+- Rightsizing/Limpeza: Lambda para **identificar e recomendar** desligamento de instâncias ociosas (via Dashboard).
 - Compromissos: Análise SP/RI com recomendações (Step Functions).
 
 ### Fase 3: Diferenciação

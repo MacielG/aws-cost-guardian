@@ -14,14 +14,14 @@ export default function BarChart({ data, xKey, yKey, loading, error, height = 30
   if (loading) return <Skeleton className="w-full h-[300px]" />;
   if (error) return <div className="text-destructive">Erro: {error}</div>;
   return (
-    <div className="bg-white rounded-md shadow-sm p-4">
+    <div className="bg-background-light rounded-md shadow-sm p-4">
       <ResponsiveContainer width="100%" height={height}>
         <ReBarChart data={data}>
           <CartesianGrid strokeDasharray="3 3" />
           <XAxis dataKey={xKey} />
           <YAxis />
           <Tooltip />
-          <Bar dataKey={yKey} fill="#2563eb" />
+          <Bar dataKey={yKey} fill="#2563eb" isAnimationActive={true} animationDuration={500} />
         </ReBarChart>
       </ResponsiveContainer>
     </div>

@@ -9,9 +9,14 @@
     "dev": "echo \"Backend dev script not implemented yet.\""
   },
   "dependencies": {
-    "@aws-sdk/client-cost-explorer": "^3.0.0",
-    "@aws-sdk/client-health": "^3.0.0",
-    "aws-sdk": "^2.1400.0",
+    "@aws-sdk/client-cost-explorer": "^3.585.0",
+    "@aws-sdk/client-health": "^3.585.0",
+    "@aws-sdk/client-dynamodb": "^3.585.0",
+    "@aws-sdk/lib-dynamodb": "^3.585.0",
+    "@aws-sdk/client-sts": "^3.585.0",
+    "@aws-sdk/client-ec2": "^3.585.0",
+    "@aws-sdk/client-cloudwatch": "^3.585.0",
+    "@aws-sdk/client-pricing": "^3.585.0",
     "express": "^4.18.2",
     "i18next": "^23.7.6",
     "jsonwebtoken": "^9.0.0",
