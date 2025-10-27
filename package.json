@@ -8,10 +8,11 @@
     "infra"
   ],
   "scripts": {
-    "install:all": "npm ci --workspaces",
-    "dev": "concurrently --kill-others-on-fail --names \"FRONT,BACK\" \"npm:dev --workspace=frontend\" \"npm:dev --workspace=backend\"",
-    "deploy": "./deploy-all.sh",
-    "test": "npm test --workspaces"
+  "install:all": "npm ci --workspaces",
+  "dev": "concurrently --kill-others-on-fail --names \"FRONT,BACK\" \"npm:dev --workspace=frontend\" \"npm:dev --workspace=backend\"",
+  "deploy": "./deploy-all.sh",
+  "test": "npm test --workspaces",
+    "test:coverage": "npm run test -- --coverage --coverageDirectory=./coverage --collectCoverageFrom='backend/**/*.js' --collectCoverageFrom='frontend/**/*.{ts,tsx}' --collectCoverageFrom='infra/**/*.ts'"
   },
   "devDependencies": {
     "concurrently": "^8.2.2",

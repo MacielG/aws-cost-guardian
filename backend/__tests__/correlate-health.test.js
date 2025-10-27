@@ -25,6 +25,12 @@ describe('correlate-health handler', () => {
     jest.clearAllMocks();
     process.env.DYNAMODB_TABLE = 'test-table';
     process.env.SFN_ARN = 'arn:aws:states:us-east-1:123456789012:stateMachine:test';
+    mockDdb.put.mockReturnValue({
+      promise: jest.fn().mockResolvedValue({})
+    });
+    mockDdb.query.mockReturnValue({
+      promise: jest.fn().mockResolvedValue({ Items: [] })
+    });
   });
 
   it('should query DynamoDB and start the Step Function with correct input', async () => {
@@ -39,11 +45,14 @@ describe('correlate-health handler', () => {
     };
 
     // Mock DynamoDB query to return a customer mapping
-    mockDdb.query().promise.mockResolvedValueOnce({ Items: [{ id: 'cust-abc' }] });
+    mockDdb.query.mockReturnValueOnce({
+      promise: jest.fn().mockResolvedValue({ Items: [{ id: 'cust-abc' }] })
+    });
 
-    // Mock DynamoDB put and SFN startExecution to resolve
-    mockDdb.put().promise.mockResolvedValueOnce({});
-    mockSfn.startExecution().promise.mockResolvedValueOnce({ executionArn: 'arn:exec' });
+    // Mock SFN startExecution to resolve
+    mockSfn.startExecution.mockReturnValueOnce({
+      promise: jest.fn().mockResolvedValue({ executionArn: 'arn:exec' })
+    });
 
     const result = await handler(event);
 

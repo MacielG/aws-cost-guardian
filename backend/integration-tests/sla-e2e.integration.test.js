@@ -1,12 +1,6 @@
 // SLA end-to-end integration test
 // WARNING: This test performs real AWS operations. It will only run when RUN_INTEGRATION=true
 
-if (!process.env.RUN_INTEGRATION) {
-  console.log('Skipping SLA E2E integration test (set RUN_INTEGRATION=true to enable)');
-  module.exports = {};
-  return;
-}
-
 const AWS = require('aws-sdk');
 const fs = require('fs');
 const path = require('path');
@@ -20,7 +14,9 @@ const dynamo = new AWS.DynamoDB.DocumentClient();
 
 const WAIT = (ms) => new Promise((r) => setTimeout(r, ms));
 
-describe('SLA Workflow E2E', () => {
+const describeIntegration = process.env.RUN_INTEGRATION ? describe : describe.skip;
+
+describeIntegration('SLA Workflow E2E', () => {
   jest.setTimeout(1000 * 60 * 30);
 
   it('should inject event and wait for SLA workflow completion and results', async () => {

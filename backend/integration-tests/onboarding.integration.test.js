@@ -1,12 +1,6 @@
 // Integration test for Onboarding flow
 // WARNING: This test performs real AWS operations. It will only run when RUN_INTEGRATION=true
 
-if (!process.env.RUN_INTEGRATION) {
-  console.log('Skipping onboarding integration test (set RUN_INTEGRATION=true to enable)');
-  module.exports = {};
-  return;
-}
-
 const AWS = require('aws-sdk');
 const axios = require('axios');
 const fs = require('fs');
@@ -38,7 +32,9 @@ const clientCfn = new AWS.CloudFormation({ region: CLIENT_REGION });
 // Helper: sleep
 const wait = (ms) => new Promise((r) => setTimeout(r, ms));
 
-describe('Onboarding Integration Flow', () => {
+const describeIntegration = process.env.RUN_INTEGRATION ? describe : describe.skip;
+
+describeIntegration('Onboarding Integration Flow', () => {
   jest.setTimeout(1000 * 60 * 30); // 30 minutes for slow operations
 
   it('should perform full onboarding from platform -> client stack deployment -> webhook', async () => {

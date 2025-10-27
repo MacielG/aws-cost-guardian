@@ -26,6 +26,45 @@ const getStripe = async () => {
 
 const app = express();
 
+// Middleware de autenticação e checkProPlan definidos antecipadamente para evitar erros de hoisting
+
+const authenticateUser = (req, res, next) => {
+  try {
+    // If API Gateway authorizer populated claims, use them
+    if (req.apiGateway?.event?.requestContext?.authorizer?.claims) {
+      req.user = req.apiGateway.event.requestContext.authorizer.claims;
+      return next();
+    }
+
+    // Otherwise attempt direct JWT verification
+    const claims = verifyJwt(req);
+    if (claims) {
+      req.user = claims;
+      return next();
+    }
+
+    res.status(401).json({ message: 'Não autenticado' });
+  } catch (error) {
+    console.error('authenticateUser error:', error);
+    res.status(401).json({ message: 'Token inválido' });
+  }
+};
+
+// Middleware para verificar plano Pro (definido antecipadamente para evitar erros de hoisting)
+const checkProPlan = async (req, res, next) => {
+  const customerId = req.user.sub;
+  const config = (await dynamoDb.get({ TableName: DYNAMODB_TABLE, Key: { id: customerId, sk: 'CONFIG#ONBOARD' } }).promise()).Item;
+
+  if (config && config.subscriptionStatus === 'active') {
+    req.customerConfig = config; // Passa a config para a próxima rota
+    return next(); // Permite o acesso
+  }
+
+  res.status(403).send({
+    error: 'Acesso negado. Esta funcionalidade requer um plano Pro.'
+  });
+};
+
 // Middleware para parsing JSON (exceto para webhook Stripe)
 app.use((req, res, next) => {
   if (req.originalUrl === '/api/stripe/webhook') {
@@ -244,28 +283,6 @@ async function updateSubscriptionStatus(customerId, status, subscriptionId) {
   }).promise();
 }
 
-const authenticateUser = (req, res, next) => {
-  try {
-    // If API Gateway authorizer populated claims, use them
-    if (req.apiGateway?.event?.requestContext?.authorizer?.claims) {
-      req.user = req.apiGateway.event.requestContext.authorizer.claims;
-      return next();
-    }
-
-    // Otherwise attempt direct JWT verification
-    const claims = verifyJwt(req);
-    if (claims) {
-      req.user = claims;
-      return next();
-    }
-
-    res.status(401).json({ message: 'Não autenticado' });
-  } catch (error) {
-    console.error('authenticateUser error:', error);
-    res.status(401).json({ message: 'Token inválido' });
-  }
-};
-
 // Valid statuses for admin updates
 const VALID_ADMIN_STATUSES = ['READY_TO_SUBMIT', 'SUBMITTED', 'SUBMISSION_FAILED', 'PAID', 'REFUNDED', 'NO_VIOLATION', 'NO_RESOURCES_LISTED', 'REPORT_FAILED'];
 
@@ -280,21 +297,6 @@ const authorizeAdmin = (req, res, next) => {
 };
 
 // Helper functions and middleware
-
-// Middleware para verificar plano Pro
-const checkProPlan = async (req, res, next) => {
-  const customerId = req.user.sub;
-  const config = (await dynamoDb.get({ TableName: DYNAMODB_TABLE, Key: { id: customerId, sk: 'CONFIG#ONBOARD' } }).promise()).Item;
-
-  if (config && config.subscriptionStatus === 'active') {
-    req.customerConfig = config; // Passa a config para a próxima rota
-    return next(); // Permite o acesso
-  }
-
-  res.status(403).send({ 
-    error: 'Acesso negado. Esta funcionalidade requer um plano Pro.' 
-  });
-};
 
 // Para adicionar um usuário ao grupo 'Admins', use o Console da AWS ou a AWS CLI:
 // aws cognito-idp admin-add-user-to-group --user-pool-id <user-pool-id> --username <user-sub> --group-name Admins

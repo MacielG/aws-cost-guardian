@@ -1,42 +1,61 @@
 const { calculateImpact, checkSLA, generateReport, submitSupportTicket } = require('../functions/sla-workflow');
 
-// Mock de todas as dependências externas
+// Mock AWS SDK
+jest.mock('aws-sdk', () => ({
+  STS: jest.fn().mockImplementation(() => ({
+    assumeRole: jest.fn().mockReturnValue({
+      promise: jest.fn().mockResolvedValue({
+        Credentials: {
+          AccessKeyId: 'test-key',
+          SecretAccessKey: 'test-secret',
+          SessionToken: 'test-token'
+        }
+      })
+    }),
+  })),
+  DynamoDB: {
+    DocumentClient: jest.fn().mockImplementation(() => ({
+      get: jest.fn().mockReturnValue({
+        promise: jest.fn().mockResolvedValue({ Item: { supportLevel: 'premium' } })
+      }),
+      put: jest.fn().mockReturnValue({
+        promise: jest.fn().mockResolvedValue({})
+      }),
+      update: jest.fn().mockReturnValue({
+        promise: jest.fn().mockResolvedValue({})
+      }),
+    })),
+  },
+  S3: jest.fn().mockImplementation(() => ({
+    putObject: jest.fn().mockReturnValue({
+      promise: jest.fn().mockResolvedValue({})
+    }),
+  })),
+  Support: jest.fn().mockImplementation(() => ({
+    createCase: jest.fn().mockReturnValue({
+      promise: jest.fn().mockResolvedValue({ caseId: 'test-case-id' })
+    }),
+  })),
+}));
+
+// Mock Cost Explorer
 jest.mock('@aws-sdk/client-cost-explorer', () => ({
   CostExplorerClient: jest.fn().mockImplementation(() => ({
-    send: jest.fn(),
+    send: jest.fn().mockResolvedValue({
+      ResultsByTime: [{ Total: { UnblendedCost: { Amount: '15.75' } } }],
+    }),
   })),
   GetCostAndUsageCommand: jest.fn(),
 }));
 
-jest.mock('aws-sdk', () => ({
-  STS: jest.fn().mockImplementation(() => ({
-    assumeRole: jest.fn().mockReturnThis(),
-    promise: jest.fn(),
-  })),
-  DynamoDB: {
-    DocumentClient: jest.fn().mockImplementation(() => ({
-      put: jest.fn().mockReturnThis(),
-      get: jest.fn().mockReturnThis(),
-      update: jest.fn().mockReturnThis(),
-      promise: jest.fn(),
-    })),
-  },
-  S3: jest.fn().mockImplementation(() => ({
-    putObject: jest.fn().mockReturnThis(),
-    promise: jest.fn(),
-  })),
-  Support: jest.fn().mockImplementation(() => ({
-    createCase: jest.fn().mockReturnThis(),
-    promise: jest.fn(),
-  })),
-}));
-
+// Mock Stripe
 jest.mock('stripe', () => jest.fn().mockImplementation(() => ({
   customers: { create: jest.fn() },
   invoiceItems: { create: jest.fn() },
   invoices: { create: jest.fn() },
 })));
 
+// Mock PDF-lib
 jest.mock('pdf-lib', () => ({
   PDFDocument: {
     create: jest.fn().mockResolvedValue({
@@ -55,6 +74,10 @@ jest.mock('pdf-lib', () => ({
   },
   rgb: jest.fn(),
 }));
+
+// Mock process.env
+process.env.DYNAMODB_TABLE = 'test-table';
+process.env.STRIPE_SECRET_KEY = 'test-key';
 
 const { CostExplorerClient } = require('@aws-sdk/client-cost-explorer');
 const AWS = require('aws-sdk');
@@ -87,13 +110,6 @@ describe('SLA Workflow Functions', () => {
     };
 
     it('should calculate impacted cost correctly', async () => {
-      mockSts.promise.mockResolvedValueOnce({
-        Credentials: { AccessKeyId: 'key', SecretAccessKey: 'secret', SessionToken: 'token' },
-      });
-      mockCostExplorer.send.mockResolvedValueOnce({
-        ResultsByTime: [{ Total: { UnblendedCost: { Amount: '15.75' } } }],
-      });
-
       const result = await calculateImpact(baseEvent);
 
       expect(mockSts.assumeRole).toHaveBeenCalled();
@@ -110,6 +126,17 @@ describe('SLA Workflow Functions', () => {
       }));
       expect(result.impactedCost).toBe(0);
       expect(result.status).toBe('NO_RESOURCES');
+    });
+
+    it('should use basic support level if not configured', async () => {
+      // Temporarily change the mock to return no Item
+      mockDynamoDb.get.mockReturnValueOnce({
+        promise: jest.fn().mockResolvedValue({}) // No Item
+      });
+
+      const result = await calculateImpact(baseEvent);
+
+      expect(result.supportLevel).toBe('basic');
     });
 
     it('should throw an error if assumeRole fails', async () => {
@@ -152,7 +179,10 @@ describe('SLA Workflow Functions', () => {
 
     it('should generate report and save claim without generating Stripe invoice', async () => {
       process.env.REPORTS_BUCKET_NAME = 'test-bucket';
-      mockDynamoDb.promise.mockResolvedValueOnce({ Item: {} });
+      // Temporarily change the mock to return an Item with subscription status
+      mockDynamoDb.get.mockReturnValueOnce({
+        promise: jest.fn().mockResolvedValue({ Item: { subscriptionStatus: 'active' } })
+      });
 
       const result = await generateReport(baseEvent);
 
@@ -196,31 +226,36 @@ describe('SLA Workflow Functions', () => {
     };
 
     it('should create a support case and update claim status', async () => {
-      mockSts.promise.mockResolvedValueOnce({
-        Credentials: { AccessKeyId: 'key', SecretAccessKey: 'secret', SessionToken: 'token' },
-      });
-      mockSupport.promise.mockResolvedValueOnce({ caseId: 'case-xyz-789' });
-
-      const result = await submitSupportTicket(baseEvent);
+      const result = await submitSupportTicket({ ...baseEvent, supportLevel: 'premium' });
 
       expect(mockSupport.createCase).toHaveBeenCalled();
       expect(mockDynamoDb.update).toHaveBeenCalledWith(expect.objectContaining({
-        ExpressionAttributeValues: { ':status': 'SUBMITTED', ':caseId': 'case-xyz-789' },
+        ExpressionAttributeValues: { ':status': 'SUBMITTED', ':caseId': 'test-case-id' },
       }));
       expect(result.status).toBe('submitted');
-      expect(result.caseId).toBe('case-xyz-789');
+      expect(result.caseId).toBe('test-case-id');
     });
 
     it('should handle ticket submission failure', async () => {
-      mockSts.promise.mockResolvedValueOnce({
-        Credentials: { AccessKeyId: 'key', SecretAccessKey: 'secret', SessionToken: 'token' },
+      // Temporarily change the mock to reject
+      mockSupport.createCase.mockReturnValueOnce({
+        promise: jest.fn().mockRejectedValue(new Error('CreateCase failed'))
       });
-      mockSupport.promise.mockRejectedValueOnce(new Error('CreateCase failed'));
 
-      await expect(submitSupportTicket(baseEvent)).rejects.toThrow('CreateCase failed');
+      await expect(submitSupportTicket({ ...baseEvent, supportLevel: 'premium' })).rejects.toThrow('CreateCase failed');
       expect(mockDynamoDb.update).toHaveBeenCalledWith(expect.objectContaining({
         ExpressionAttributeValues: { ':status': 'SUBMISSION_FAILED', ':error': 'CreateCase failed' },
       }));
+    });
+
+    it('should require manual submission for basic plan', async () => {
+      const result = await submitSupportTicket({ ...baseEvent, supportLevel: 'basic' });
+
+      expect(mockSupport.createCase).not.toHaveBeenCalled();
+      expect(mockDynamoDb.update).toHaveBeenCalledWith(expect.objectContaining({
+        ExpressionAttributeValues: { ':status': 'PENDING_MANUAL_SUBMISSION' },
+      }));
+      expect(result.status).toBe('manual-submission-required');
     });
   });
 });
