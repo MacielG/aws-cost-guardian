@@ -6,42 +6,86 @@ module.exports = {
     './app/**/*.{js,ts,jsx,tsx,mdx}',
   ],
   theme: {
-      extend: {
-        colors: {
-          primary: {
-            DEFAULT: '#2563eb', // azul profissional
-            dark: '#1e40af',
-            light: '#3b82f6',
-          },
-          secondary: {
-            DEFAULT: '#6b7280', // cinza
-            dark: '#374151',
-            light: '#d1d5db',
-          },
-          accent: {
-            green: '#22c55e',
-            yellow: '#facc15',
-            orange: '#fb923c',
-            red: '#ef4444',
-          },
-          status: {
-            success: '#22c55e',
-            warning: '#facc15',
-            destructive: '#ef4444',
-          },
+    extend: {
+      colors: {
+        // Design System Colors using CSS variables
+        primary: {
+          blue: 'var(--primary-blue)',
+          'blue-light': 'var(--primary-blue-light)',
+          'blue-dark': 'var(--primary-blue-dark)',
         },
-        fontFamily: {
-          sans: ['Inter', 'sans-serif'],
+        secondary: {
+          green: 'var(--secondary-green)',
+          red: 'var(--secondary-red)',
+          orange: 'var(--secondary-orange)',
         },
-        fontSize: {
-          h1: ['2.25rem', { lineHeight: '2.5rem', fontWeight: '700' }],
-          h2: ['1.5rem', { lineHeight: '2rem', fontWeight: '600' }],
-          h3: ['1.25rem', { lineHeight: '1.75rem', fontWeight: '500' }],
-          h4: ['1rem', { lineHeight: '1.5rem', fontWeight: '500' }],
-          paragraph: ['1rem', { lineHeight: '1.75rem', fontWeight: '400' }],
-          muted: ['0.875rem', { lineHeight: '1.25rem', fontWeight: '400', color: '#6b7280' }],
+        background: {
+          dark: 'var(--background-dark)',
+          light: 'var(--background-light)',
+        },
+        text: {
+          light: 'var(--text-light)',
+          medium: 'var(--text-medium)',
+          dark: 'var(--text-dark)',
+        },
+        border: {
+          color: 'var(--border-color)',
+        },
+        // Shadcn/ui compatible colors
+        card: {
+          DEFAULT: 'var(--background-light)',
+          foreground: 'var(--text-light)',
+        },
+        popover: {
+          DEFAULT: 'var(--background-light)',
+          foreground: 'var(--text-light)',
+        },
+        primary: {
+          DEFAULT: 'var(--primary-blue)',
+          foreground: 'var(--text-light)',
+        },
+        secondary: {
+          DEFAULT: 'var(--background-light)',
+          foreground: 'var(--text-medium)',
+        },
+        muted: {
+          DEFAULT: 'var(--text-medium)',
+          foreground: 'var(--text-dark)',
+        },
+        accent: {
+          DEFAULT: 'var(--primary-blue)',
+          foreground: 'var(--text-light)',
+        },
+        destructive: {
+          DEFAULT: 'var(--secondary-red)',
+          foreground: 'var(--text-light)',
+        },
+        input: {
+          DEFAULT: 'var(--background-light)',
+        },
+        ring: {
+          DEFAULT: 'var(--primary-blue)',
         },
       },
+      fontFamily: {
+        sans: ['Inter', 'sans-serif'],
+      },
+      fontSize: {
+        h1: ['2.5rem', { lineHeight: '2.5rem', fontWeight: '700' }],
+        h2: ['1.8rem', { lineHeight: '2rem', fontWeight: '600' }],
+        h3: ['1.4rem', { lineHeight: '1.75rem', fontWeight: '500' }],
+        h4: ['1rem', { lineHeight: '1.5rem', fontWeight: '500' }],
+        paragraph: ['1rem', { lineHeight: '1.75rem', fontWeight: '400' }],
+        muted: ['0.875rem', { lineHeight: '1.25rem', fontWeight: '400' }],
+      },
+      boxShadow: {
+        sm: 'var(--shadow-sm)',
+        md: 'var(--shadow-md)',
+      },
+      backdropBlur: {
+        'xs': '2px',
+      },
+    },
   },
   plugins: [],
 }

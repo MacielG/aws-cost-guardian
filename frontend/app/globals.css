@@ -2,26 +2,69 @@
 @tailwind components;
 @tailwind utilities;
 
-body {
-  font-family: Inter, sans-serif;
+@layer base {
+  :root {
+    /* Primary Colors */
+    --primary-blue: #2196F3;
+    --primary-blue-light: #64B5F6;
+    --primary-blue-dark: #1976D2;
+
+    /* Secondary Colors */
+    --secondary-green: #4CAF50;
+    --secondary-red: #F44336;
+    --secondary-orange: #FF9800;
+
+    /* Neutral Colors */
+    --background-dark: #181A20;
+    --background-light: #282C34;
+    --text-light: #E0E0E0;
+    --text-medium: #B0B0B0;
+    --text-dark: #757575;
+    --border-color: #3A3F47;
+
+    /* Effects */
+    --shadow-sm: 0 2px 5px rgba(0, 0, 0, 0.2);
+    --shadow-md: 0 5px 15px rgba(0, 0, 0, 0.3);
+    --glass-effect: rgba(255, 255, 255, 0.05);
+  }
+
+  body {
+    font-family: Inter, sans-serif;
+    background-color: var(--background-dark);
+    color: var(--text-light);
+  }
 }
 
-.heading-1 {
-  @apply text-h1 font-bold text-primary;
-}
-.heading-2 {
-  @apply text-h2 font-semibold text-primary;
-}
-.heading-3 {
-  @apply text-h3 font-medium text-primary;
-}
-.heading-4 {
-  @apply text-h4 font-medium text-primary;
-}
-.paragraph {
-  @apply text-paragraph text-secondary;
-}
-.muted {
-  @apply text-muted text-secondary;
+@layer components {
+  .heading-1 {
+    font-size: 2.5rem;
+    font-weight: 700;
+    color: var(--text-light);
+  }
+  .heading-2 {
+    font-size: 1.8rem;
+    font-weight: 600;
+    color: var(--text-light);
+  }
+  .heading-3 {
+    font-size: 1.4rem;
+    font-weight: 500;
+    color: var(--text-light);
+  }
+  .heading-4 {
+    font-size: 1rem;
+    font-weight: 500;
+    color: var(--text-light);
+  }
+  .paragraph {
+    font-size: 1rem;
+    font-weight: 400;
+    color: var(--text-light);
+  }
+  .muted {
+    font-size: 0.875rem;
+    font-weight: 400;
+    color: var(--text-medium);
+  }
 }
  

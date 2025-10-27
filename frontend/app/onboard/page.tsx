@@ -86,50 +86,80 @@ export default function Onboard() {
   };
 
   return (
-    <div className="max-w-2xl mx-auto py-8">
-      <h1 className="heading-2 mb-6">Onboarding AWS Cost Guardian</h1>
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
-        <div className={`flex flex-col items-center ${step >= 1 ? 'opacity-100' : 'opacity-50'}`}>
-          <div className={`rounded-full ${step === 1 ? 'bg-primary' : 'bg-gray-300'} text-white w-10 h-10 flex items-center justify-center font-bold mb-2`}>1</div>
-          <div className="font-semibold">Conectar AWS</div>
-        </div>
-        <div className={`flex flex-col items-center ${step >= 2 ? 'opacity-100' : 'opacity-50'}`}>
-          <div className={`rounded-full ${step === 2 ? 'bg-primary' : 'bg-gray-300'} text-white w-10 h-10 flex items-center justify-center font-bold mb-2`}>2</div>
-          <div className="font-semibold">Revisar Permissões</div>
-        </div>
-        <div className={`flex flex-col items-center ${step === 3 ? 'opacity-100' : 'opacity-50'}`}>
-          <div className={`rounded-full ${step === 3 ? 'bg-primary' : 'bg-gray-300'} text-white w-10 h-10 flex items-center justify-center font-bold mb-2`}>3</div>
-          <div className="font-semibold">Deploy</div>
-        </div>
+  <div className="min-h-screen bg-background-dark flex items-center justify-center p-6">
+  <div className="max-w-2xl w-full">
+    <div className="text-center mb-8">
+    <h1 className="heading-1 mb-2">Welcome to Cost Guardian</h1>
+  <p className="paragraph">Start optimizing your AWS costs in just a few steps</p>
+  </div>
+
+  <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
+  <div className={`flex flex-col items-center ${step >= 1 ? 'opacity-100' : 'opacity-50'}`}>
+    <div className={`rounded-full ${step === 1 ? 'bg-primary-blue text-text-light' : 'bg-border-color text-text-medium'} w-12 h-12 flex items-center justify-center font-bold mb-3 text-lg transition-all duration-200`}>
+        1
       </div>
-      <Card className="mb-6">
-        <CardHeader>
-          <CardTitle>Por que precisamos disso?</CardTitle>
-          <CardDescription>Para automatizar a recuperação de créditos e monitorar custos, precisamos de uma role AWS com permissões específicas. O <span className="font-mono bg-gray-100 px-2 py-1 rounded">ExternalId</span> garante segurança e rastreabilidade.</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <a href="/docs/deploy" className="text-primary underline">Ver documentação completa</a>
-        </CardContent>
-      </Card>
-      {loading ? (
-        <Skeleton className="w-full h-12 mb-4" />
-      ) : onboardingStatus === 'COMPLETED' ? (
-        <div className="mt-4 p-4 bg-green-100 text-green-800 rounded animate-fade-in">
-          <p>✅ Conexão com a AWS realizada com sucesso!</p>
-          <p>Você será redirecionado para o dashboard...</p>
+    <div className="font-medium text-text-light">Connect AWS</div>
+    <div className="text-xs text-text-medium text-center mt-1">Set up your AWS integration</div>
+    </div>
+      <div className={`flex flex-col items-center ${step >= 2 ? 'opacity-100' : 'opacity-50'}`}>
+        <div className={`rounded-full ${step === 2 ? 'bg-primary-blue text-text-light' : 'bg-border-color text-text-medium'} w-12 h-12 flex items-center justify-center font-bold mb-3 text-lg transition-all duration-200`}>
+        2
+    </div>
+    <div className="font-medium text-text-light">Review Permissions</div>
+      <div className="text-xs text-text-medium text-center mt-1">Check required access</div>
+    </div>
+  <div className={`flex flex-col items-center ${step === 3 ? 'opacity-100' : 'opacity-50'}`}>
+      <div className={`rounded-full ${step === 3 ? 'bg-primary-blue text-text-light' : 'bg-border-color text-text-medium'} w-12 h-12 flex items-center justify-center font-bold mb-3 text-lg transition-all duration-200`}>
+          3
         </div>
-      ) : (
-        <>
-          <Button onClick={handleConnect} className="mt-4" disabled={!cfnLink || isConnecting}>
-            {isConnecting ? 'Aguardando conexão...' : '1. Conectar AWS (Abrir CloudFormation)'}
-          </Button>
-          <p className="text-sm text-gray-600 mt-2">
-            {isConnecting
-              ? 'Após criar a stack no console da AWS, pode fechar a aba e voltar para cá. Estamos aguardando a confirmação automática.'
-              : 'Isto abrirá o console da AWS para você criar a role de acesso. É seguro e transparente.'}
-          </p>
-        </>
-      )}
+      <div className="font-medium text-text-light">Deploy</div>
+        <div className="text-xs text-text-medium text-center mt-1">Start monitoring costs</div>
+    </div>
+  </div>
+
+  <Card className="mb-6">
+      <CardHeader>
+      <CardTitle>Why do we need this?</CardTitle>
+    <CardDescription>
+    To automate credit recovery and monitor costs, we need an AWS role with specific permissions. The <code className="bg-background-light px-2 py-1 rounded text-sm">ExternalId</code> ensures security and traceability.
+    </CardDescription>
+  </CardHeader>
+  <CardContent>
+  <a href="/docs/deploy" className="text-primary-blue hover:text-primary-blue-light underline transition-colors">View complete documentation</a>
+  </CardContent>
+  </Card>
+
+    {loading ? (
+        <Skeleton className="w-full h-12 mb-4" />
+        ) : onboardingStatus === 'COMPLETED' ? (
+          <Card className="border-secondary-green">
+            <CardContent className="pt-6">
+              <div className="text-center">
+                <div className="w-16 h-16 bg-secondary-green rounded-full flex items-center justify-center mx-auto mb-4">
+                  <svg className="w-8 h-8 text-text-light" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                  </svg>
+                </div>
+                <h3 className="heading-3 mb-2">AWS Connection Successful!</h3>
+                <p className="text-muted">You will be redirected to the dashboard...</p>
+              </div>
+            </CardContent>
+          </Card>
+        ) : (
+          <Card>
+            <CardContent className="pt-6">
+              <Button onClick={handleConnect} className="w-full mb-4" disabled={!cfnLink || isConnecting}>
+                {isConnecting ? 'Waiting for connection...' : '1. Connect AWS (Open CloudFormation)'}
+              </Button>
+              <p className="text-sm text-text-medium text-center">
+                {isConnecting
+                  ? 'After creating the stack in AWS console, you can close the tab and return here. We're waiting for automatic confirmation.'
+                  : 'This will open the AWS console for you to create the access role. It's safe and transparent.'}
+              </p>
+            </CardContent>
+          </Card>
+        )}
+      </div>
     </div>
   );
 }

@@ -12,8 +12,12 @@ interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
 }
 
 export function Button({ className, variant = 'default', size = 'default', asChild = false, children, ...props }: ButtonProps) {
-  const base = 'inline-flex items-center justify-center rounded font-medium shadow-sm transition-colors duration-150';
-  const variantClass = variant === 'outline' ? 'border border-gray-300 bg-white text-gray-800' : variant === 'secondary' ? 'bg-gray-100 text-gray-800' : 'bg-blue-500 text-white';
+  const base = 'inline-flex items-center justify-center rounded-md font-medium shadow-sm transition-all duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-primary-blue focus:ring-offset-2 focus:ring-offset-background-dark';
+  const variantClass = variant === 'outline'
+    ? 'border border-border-color bg-transparent text-primary-blue hover:bg-background-light'
+    : variant === 'secondary'
+      ? 'bg-secondary text-text-medium hover:bg-background-light hover:text-text-light'
+      : 'bg-primary-blue text-text-light hover:bg-primary-blue-light shadow-md hover:shadow-lg';
   const sizeClass = size === 'sm' ? 'px-3 py-1.5 text-sm' : size === 'icon' ? 'p-2 text-sm' : 'px-4 py-2 text-base';
   const classes = cn(base, variantClass, sizeClass, className || '');
 
