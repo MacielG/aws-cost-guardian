@@ -2094,16 +2094,6 @@ eval("module.exports = __webpack_require__(/*! ./dist/client/link */ \"(ssr)/../
 
 /***/ }),
 
-/***/ "(ssr)/../node_modules/next/navigation.js":
-/*!******************************************!*\
-  !*** ../node_modules/next/navigation.js ***!
-  \******************************************/
-/***/ ((module, __unused_webpack_exports, __webpack_require__) => {
-
-eval("module.exports = __webpack_require__(/*! ./dist/client/components/navigation */ \"(ssr)/../node_modules/next/dist/client/components/navigation.js\")\n//# sourceURL=[module]\n//# sourceMappingURL=data:application/json;charset=utf-8;base64,eyJ2ZXJzaW9uIjozLCJmaWxlIjoiKHNzcikvLi4vbm9kZV9tb2R1bGVzL25leHQvbmF2aWdhdGlvbi5qcyIsIm1hcHBpbmdzIjoiQUFBQSxrSkFBK0QiLCJzb3VyY2VzIjpbIndlYnBhY2s6Ly9hd3MtY29zdC1ndWFyZGlhbi1mcm9udGVuZC8uLi9ub2RlX21vZHVsZXMvbmV4dC9uYXZpZ2F0aW9uLmpzPzhlYmEiXSwic291cmNlc0NvbnRlbnQiOlsibW9kdWxlLmV4cG9ydHMgPSByZXF1aXJlKCcuL2Rpc3QvY2xpZW50L2NvbXBvbmVudHMvbmF2aWdhdGlvbicpXG4iXSwibmFtZXMiOltdLCJzb3VyY2VSb290IjoiIn0=\n//# sourceURL=webpack-internal:///(ssr)/../node_modules/next/navigation.js\n");
-
-/***/ }),
-
 /***/ "(ssr)/../node_modules/next/node_modules/@swc/helpers/esm/_class_private_field_loose_base.js":
 /*!*********************************************************************************************!*\
   !*** ../node_modules/next/node_modules/@swc/helpers/esm/_class_private_field_loose_base.js ***!
