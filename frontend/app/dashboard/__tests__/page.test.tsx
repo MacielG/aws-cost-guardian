@@ -73,26 +73,28 @@ describe('DashboardPage', () => {
   });
 
   test('deve exibir dados iniciais corretamente', async () => {
-    const mockIncidents = [
-      { id: '1', service: 'EC2', impact: 100, confidence: 0.9, status: 'refunded' },
-    ];
+  const mockIncidents = [
+  { id: '1', service: 'EC2', impact: 100, confidence: 0.9, status: 'refunded' },
+  ];
 
-    const mockCosts = [
-      {
-        Groups: [
-          {
-            Keys: ['EC2'],
-            Metrics: { UnblendedCost: { Amount: '500' } }
-          }
-        ]
-      }
-    ];
+  const mockCosts = [
+  {
+  Groups: [
+  {
+  Keys: ['EC2'],
+  Metrics: { UnblendedCost: { Amount: '500' } }
+  }
+  ]
+  }
+  ];
 
-    const mockApiFetch = require('@/lib/api').apiFetch;
-    mockApiFetch
-      .mockImplementationOnce(() => Promise.resolve(mockIncidents))
-      .mockImplementationOnce(() => Promise.resolve({ accountType: 'PREMIUM' }))
-      .mockImplementationOnce(() => Promise.resolve(mockCosts));
+  const mockApiFetch = require('@/lib/api').apiFetch;
+  mockApiFetch.mockImplementation((url) => {
+  if (url === '/api/user/status') return Promise.resolve({ accountType: 'PREMIUM' });
+  if (url === '/api/incidents') return Promise.resolve(mockIncidents);
+  if (url === '/api/dashboard/costs') return Promise.resolve(mockCosts);
+  return Promise.resolve({});
+    });
 
     render(
       <TestWrapper>
@@ -111,9 +113,10 @@ describe('DashboardPage', () => {
   test('deve lidar com erro na API de custos', async () => {
     const mockApiFetch = require('@/lib/api').apiFetch;
     mockApiFetch
-      .mockImplementationOnce(() => Promise.resolve([]))
-      .mockImplementationOnce(() => Promise.resolve({ accountType: 'PREMIUM' }))
-      .mockImplementationOnce(() => Promise.reject(new Error('API Error')));
+      .mockImplementationOnce(() => Promise.resolve({ accountType: 'PREMIUM' })) // first /api/user/status
+      .mockImplementationOnce(() => Promise.resolve([])) // /api/incidents
+      .mockImplementationOnce(() => Promise.reject(new Error('API Error'))) // /api/dashboard/costs
+      .mockImplementationOnce(() => Promise.resolve({ accountType: 'PREMIUM' })) // second /api/user/status
 
     render(
       <TestWrapper>
@@ -133,11 +136,10 @@ describe('DashboardPage', () => {
 
     const mockApiFetch = require('@/lib/api').apiFetch;
     mockApiFetch
-      .mockImplementationOnce(() => Promise.resolve([]))
-      .mockImplementationOnce(() => Promise.resolve({ accountType: 'TRIAL' }));
-
-    // component also requests costs; provide a safe default
-    mockApiFetch.mockImplementationOnce(() => Promise.resolve([]));
+      .mockImplementationOnce(() => Promise.resolve({ accountType: 'TRIAL' })) // first /api/user/status
+      .mockImplementationOnce(() => Promise.resolve([])) // /api/incidents
+      .mockImplementationOnce(() => Promise.resolve([])) // /api/dashboard/costs
+      .mockImplementationOnce(() => Promise.resolve({ accountType: 'TRIAL' })) // second /api/user/status
 
     render(
       <TestWrapper>
@@ -158,9 +160,10 @@ describe('DashboardPage', () => {
 
     const mockApiFetch = require('@/lib/api').apiFetch;
     mockApiFetch
-      .mockImplementationOnce(() => Promise.resolve(mockIncidents))
-      .mockImplementationOnce(() => Promise.resolve({ accountType: 'PREMIUM' }))
-      .mockImplementationOnce(() => Promise.resolve([]));
+      .mockImplementationOnce(() => Promise.resolve({ accountType: 'PREMIUM' })) // first /api/user/status
+      .mockImplementationOnce(() => Promise.resolve(mockIncidents)) // /api/incidents
+      .mockImplementationOnce(() => Promise.resolve([])) // /api/dashboard/costs
+      .mockImplementationOnce(() => Promise.resolve({ accountType: 'PREMIUM' })) // second /api/user/status
 
     render(
       <TestWrapper>
@@ -180,26 +183,27 @@ describe('DashboardPage', () => {
   });
 
   test('deve calcular estatísticas corretamente', async () => {
-    const mockIncidents = [
-      { id: '1', service: 'EC2', impact: 100, confidence: 0.9, status: 'refunded' },
-      { id: '2', service: 'RDS', impact: 50, confidence: 0.8, status: 'submitted' },
-      { id: '3', service: 'Lambda', impact: 25, confidence: 0.7, status: 'detected' },
-    ];
+  const mockIncidents = [
+  { id: '1', service: 'EC2', impact: 100, confidence: 0.9, status: 'refunded' },
+  { id: '2', service: 'RDS', impact: 50, confidence: 0.8, status: 'submitted' },
+  { id: '3', service: 'Lambda', impact: 25, confidence: 0.7, status: 'detected' },
+  ];
 
-    const mockCosts = [
-      {
-        Groups: [
-          { Keys: ['EC2'], Metrics: { UnblendedCost: { Amount: '200' } } },
-          { Keys: ['RDS'], Metrics: { UnblendedCost: { Amount: '150' } } }
-        ]
-      }
-    ];
+  const mockCosts = [
+  {
+  Groups: [
+  { Keys: ['EC2'], Metrics: { UnblendedCost: { Amount: '200' } } },
+  { Keys: ['RDS'], Metrics: { UnblendedCost: { Amount: '150' } } }
+  ]
+  }
+  ];
 
-    const mockApiFetch = require('@/lib/api').apiFetch;
-    mockApiFetch
-      .mockImplementationOnce(() => Promise.resolve(mockIncidents))
-      .mockImplementationOnce(() => Promise.resolve({ accountType: 'PREMIUM' }))
-      .mockImplementationOnce(() => Promise.resolve(mockCosts));
+  const mockApiFetch = require('@/lib/api').apiFetch;
+  mockApiFetch
+  .mockImplementationOnce(() => Promise.resolve({ accountType: 'PREMIUM' })) // first /api/user/status
+  .mockImplementationOnce(() => Promise.resolve(mockIncidents)) // /api/incidents
+  .mockImplementationOnce(() => Promise.resolve(mockCosts)) // /api/dashboard/costs
+  .mockImplementationOnce(() => Promise.resolve({ accountType: 'PREMIUM' })) // second /api/user/status
 
     render(
       <TestWrapper>
@@ -218,9 +222,10 @@ describe('DashboardPage', () => {
   test('deve renderizar sem erros', () => {
     const mockApiFetch = require('@/lib/api').apiFetch;
     mockApiFetch
-      .mockImplementationOnce(() => Promise.resolve([]))
-      .mockImplementationOnce(() => Promise.resolve({ accountType: 'PREMIUM' }))
-      .mockImplementationOnce(() => Promise.resolve([]));
+      .mockImplementationOnce(() => Promise.resolve({ accountType: 'PREMIUM' })) // first /api/user/status
+      .mockImplementationOnce(() => Promise.resolve([])) // /api/incidents
+      .mockImplementationOnce(() => Promise.resolve([])) // /api/dashboard/costs
+      .mockImplementationOnce(() => Promise.resolve({ accountType: 'PREMIUM' })) // second /api/user/status
 
     expect(() =>
       render(
@@ -234,9 +239,10 @@ describe('DashboardPage', () => {
   test('deve lidar com dados vazios', async () => {
     const mockApiFetch = require('@/lib/api').apiFetch;
     mockApiFetch
-      .mockImplementationOnce(() => Promise.resolve([]))
-      .mockImplementationOnce(() => Promise.resolve({ accountType: 'PREMIUM' }))
-      .mockImplementationOnce(() => Promise.resolve([]));
+      .mockImplementationOnce(() => Promise.resolve({ accountType: 'PREMIUM' })) // first /api/user/status
+      .mockImplementationOnce(() => Promise.resolve([])) // /api/incidents
+      .mockImplementationOnce(() => Promise.resolve([])) // /api/dashboard/costs
+      .mockImplementationOnce(() => Promise.resolve({ accountType: 'PREMIUM' })) // second /api/user/status
 
     render(
       <TestWrapper>

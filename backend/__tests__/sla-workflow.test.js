@@ -5,6 +5,7 @@ const mockStsAssumeRole = jest.fn();
 const mockDynamoGet = jest.fn();
 const mockDynamoPut = jest.fn();
 const mockDynamoUpdate = jest.fn();
+const mockDynamoQuery = jest.fn();
 const mockS3PutObject = jest.fn();
 const mockSupportCreateCase = jest.fn();
 
@@ -29,10 +30,10 @@ jest.mock('aws-sdk', () => ({
         promise: jest.fn().mockResolvedValue({})
       }),
       update: mockDynamoUpdate.mockReturnValue({
-        promise: jest.fn().mockResolvedValue({})
+      promise: jest.fn().mockResolvedValue({})
       }),
-      query: jest.fn().mockReturnValue({
-        promise: jest.fn().mockResolvedValue({ Items: [] })
+      query: mockDynamoQuery.mockReturnValue({
+      promise: jest.fn().mockResolvedValue({ Items: [] })
       }),
     })),
   },

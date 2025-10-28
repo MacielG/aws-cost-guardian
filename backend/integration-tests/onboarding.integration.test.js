@@ -11,7 +11,6 @@ jest.mock('aws-sdk');
 jest.mock('axios');
 
 const mockAxios = require('axios');
-const AWS = require('aws-sdk');
 
 // Mock implementations
 mockAxios.get.mockResolvedValue({ data: { success: true } });

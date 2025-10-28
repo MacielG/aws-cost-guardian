@@ -1,4 +1,5 @@
 const mockStsAssumeRole = jest.fn();
+const mockDynamoScan = jest.fn();
 const mockEc2DescribeVolumes = jest.fn();
 const mockEc2DeleteVolume = jest.fn();
 const mockEc2DescribeInstances = jest.fn();
@@ -14,6 +15,13 @@ jest.mock('aws-sdk', () => {
         })
       })
     })),
+    DynamoDB: {
+      DocumentClient: jest.fn().mockImplementation(() => ({
+        scan: mockDynamoScan.mockReturnValue({
+          promise: jest.fn().mockResolvedValue({ Items: [] })
+        })
+      }))
+    },
     EC2: jest.fn().mockImplementation(() => ({
       describeVolumes: mockEc2DescribeVolumes.mockReturnValue({
         promise: jest.fn().mockResolvedValue({ Volumes: [] })

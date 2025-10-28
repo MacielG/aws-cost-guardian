@@ -1,6 +1,7 @@
 // Tests for API endpoints using supertest
 const request = require('supertest');
 
+const mockStsAssumeRole = jest.fn();
 const mockDynamoGet = jest.fn();
 const mockDynamoPut = jest.fn();
 const mockDynamoQuery = jest.fn();
@@ -8,6 +9,17 @@ const mockDynamoUpdate = jest.fn();
 const mockSecretsGetSecretValue = jest.fn();
 
 jest.mock('aws-sdk', () => ({
+  STS: jest.fn().mockImplementation(() => ({
+    assumeRole: mockStsAssumeRole.mockReturnValue({
+      promise: jest.fn().mockResolvedValue({
+        Credentials: {
+          AccessKeyId: 'mockAccessKeyId',
+          SecretAccessKey: 'mockSecretAccessKey',
+          SessionToken: 'mockSessionToken',
+        }
+      })
+    })
+  })),
   DynamoDB: {
     DocumentClient: jest.fn().mockImplementation(() => ({
       get: mockDynamoGet.mockReturnValue({
