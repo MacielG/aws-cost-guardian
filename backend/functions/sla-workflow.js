@@ -12,6 +12,14 @@ const s3 = new AWS.S3();
 
 const DYNAMODB_TABLE = process.env.DYNAMODB_TABLE;
 
+// Simplified SLA table (MVP)
+const slaTable = {
+  'EC2': { uptime: 0.999, creditPercent: 0.1 }, // 99.9% uptime, 10% credit
+  'RDS': { uptime: 0.999, creditPercent: 0.1 },
+  'S3': { uptime: 0.999, creditPercent: 0.1 },
+  // Add more services as needed
+};
+
 /**
  * Função helper para assumir a role do cliente
  * Retorna clientes de serviços da AWS autenticados com as credenciais da role assumida.
@@ -118,11 +126,40 @@ exports.calculateImpact = async (event) => {
 
     console.log(`Custo impactado calculado para ${awsAccountId} (Incidente ${incidentId}): $${impactedCost}`);
 
-    // Retorna o evento original enriquecido com o custo
+    // Calculate potential credit using SLA
+    let potentialCredit = 0;
+    const service = healthEvent.service.toUpperCase();
+    const sla = slaTable[service];
+    if (sla) {
+      const startTime = new Date(healthEvent.startTime).getTime();
+      const endTime = new Date(healthEvent.endTime || new Date()).getTime();
+      const durationMs = endTime - startTime;
+      const durationMinutes = durationMs / 60000;
+      const monthlyAllowedDowntime = (1.0 - sla.uptime) * 30 * 24 * 60;
+      const violation = durationMinutes > monthlyAllowedDowntime;
+      if (violation) {
+        potentialCredit = impactedCost * sla.creditPercent;
+        console.log(`SLA violation for ${service}: duration ${durationMinutes.toFixed(2)} min > ${monthlyAllowedDowntime.toFixed(2)} min allowed. Potential credit: $${potentialCredit.toFixed(2)}`);
+      } else {
+        console.log(`No SLA violation for ${service}: duration ${durationMinutes.toFixed(2)} min <= ${monthlyAllowedDowntime.toFixed(2)} min allowed.`);
+      }
+    } else {
+      console.warn(`No SLA data for service ${service}`);
+    }
+
+    // Save potentialCredit to DB
+    await dynamoDb.update({
+      TableName: DYNAMODB_TABLE,
+      Key: { id: customerId, sk: incidentId },
+      UpdateExpression: 'SET potentialCredit = :potentialCredit, impactedCost = :impactedCost',
+      ExpressionAttributeValues: { ':potentialCredit': potentialCredit, ':impactedCost': impactedCost }
+    }).promise();
+
+    // Retorna o evento original enriquecido
     return {
       ...event,
       impactedCost: impactedCost,
-      slaThreshold: 0.001, // 99.9% (Simulado - Idealmente, puxe de uma config por serviço)
+      potentialCredit: potentialCredit,
     };
 
   } catch (err) {

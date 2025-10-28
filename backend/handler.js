@@ -1458,8 +1458,99 @@ app.get('/api/sla-claims/:claimId/report', authenticateUser, async (req, res) =>
   }
 });
 
+// POST /api/sla-claims/:claimId/confirm - Confirmar recuperação de crédito SLA
+app.post('/api/sla-claims/:claimId/confirm', authenticateUser, async (req, res) => {
+  try {
+    const userId = req.user.sub;
+    const { claimId } = req.params;
+    const { recoveredAmount } = req.body;
+
+    if (!recoveredAmount || recoveredAmount <= 0) {
+      return res.status(400).json({ message: 'recoveredAmount deve ser um valor positivo' });
+    }
+
+    // Atualizar claim
+    const updateParams = {
+      TableName: process.env.DYNAMODB_TABLE,
+      Key: {
+        id: userId,
+        sk: claimId,
+      },
+      UpdateExpression: 'SET #status = :status, recoveredAmount = :recoveredAmount, confirmedAt = :confirmedAt',
+      ExpressionAttributeNames: {
+        '#status': 'status',
+      },
+      ExpressionAttributeValues: {
+        ':status': 'RECOVERED',
+        ':recoveredAmount': recoveredAmount,
+        ':confirmedAt': new Date().toISOString(),
+      },
+    };
+
+    await dynamoDb.update(updateParams).promise();
+
+    res.json({ message: 'Claim confirmado com sucesso' });
+  } catch (err) {
+    console.error('Erro ao confirmar claim SLA:', err);
+    res.status(500).json({ message: 'Erro ao confirmar claim' });
+  }
+});
+
+// GET /api/billing - Histórico de cobrança
+app.get('/api/billing', authenticateUser, async (req, res) => {
+  try {
+    const userId = req.user.sub;
+
+    // Buscar SAVING# metrificados
+    const savingsParams = {
+      TableName: process.env.DYNAMODB_TABLE,
+      KeyConditionExpression: 'id = :id AND begins_with(sk, :prefix)',
+      FilterExpression: 'attribute_exists(meteredAt)',
+      ExpressionAttributeValues: {
+        ':id': userId,
+        ':prefix': 'SAVING#',
+      },
+    };
+
+    const savingsResult = await dynamoDb.query(savingsParams).promise();
+    const savings = (savingsResult.Items || []).map(item => ({
+      id: item.sk,
+      type: 'SAVING',
+      amount: item.amountPerHour, // For display, but actually it's the realized
+      meteredAt: item.meteredAt,
+    }));
+
+    // Buscar CLAIM#RECOVERED metrificados
+    const claimsParams = {
+      TableName: process.env.DYNAMODB_TABLE,
+      KeyConditionExpression: 'id = :id AND begins_with(sk, :prefix)',
+      FilterExpression: '#status = :status AND attribute_exists(meteredAt)',
+      ExpressionAttributeNames: { '#status': 'status' },
+      ExpressionAttributeValues: {
+        ':id': userId,
+        ':prefix': 'CLAIM#',
+        ':status': 'RECOVERED',
+      },
+    };
+
+    const claimsResult = await dynamoDb.query(claimsParams).promise();
+    const claims = (claimsResult.Items || []).map(item => ({
+      id: item.sk,
+      type: 'CLAIM',
+      amount: item.recoveredAmount,
+      meteredAt: item.meteredAt,
+    }));
+
+    const billingHistory = [...savings, ...claims].sort((a, b) => new Date(b.meteredAt) - new Date(a.meteredAt));
+
+    res.json({ billingHistory });
+  } catch (err) {
+    console.error('Erro ao buscar histórico de cobrança:', err);
+    res.status(500).json({ message: 'Erro ao buscar histórico de cobrança' });
+  }
+});
+
 // POST /api/upgrade - Upgrade de Trial para Active
-app.post('/api/upgrade', authenticateUser, async (req, res) => {
   try {
     const userId = req.user.sub;
 

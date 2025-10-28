@@ -101,25 +101,30 @@ exports.handler = async (event) => {
           if (avg < 5) {
             // Em vez de parar automaticamente, gravamos uma recomendação para o Guardian Advisor
             const recommendationId = `REC#EC2#${id}`;
-            // Estimativa de economia potencial baseada no preço horário via AWS Pricing (fallback para heurística simples)
-            let potentialSavings = null;
-            try {
-              const instanceType = inst.InstanceType;
-              // Tentar obter preço horário via Pricing API
-              const price = await getEc2HourlyPrice(instanceType, 'us-east-1');
-              if (price != null) {
-                // Calcular horas restantes do mês (aprox.)
-                const now = new Date();
-                const daysInMonth = new Date(now.getFullYear(), now.getMonth()+1, 0).getDate();
-                const hoursRemaining = (daysInMonth - now.getDate()) * 24;
-                potentialSavings = parseFloat((price * hoursRemaining).toFixed(2));
-              }
-            } catch (psErr) {
-              console.warn('Falha ao calcular preço EC2 via Pricing API, usando fallback heurístico:', psErr);
-            }
+            const operatingSystem = inst.Platform === 'windows' ? 'Windows' : 'Linux';
 
-            if (potentialSavings == null) {
-              potentialSavings = parseFloat((inst.InstanceType && inst.InstanceType.includes('t3') ? 5.00 : 10.00).toFixed(2));
+            // Check if instance is covered by Reserved Instances
+            const isCoveredByRI = await isInstanceCoveredByRI(ec2Client, inst.InstanceType);
+
+            // Estimativa de economia potencial baseada no preço horário via AWS Pricing
+            let potentialSavings = 0;
+            if (!isCoveredByRI) {
+              try {
+                const instanceType = inst.InstanceType;
+                // Tentar obter preço horário via Pricing API
+                const price = await getEc2HourlyPrice(instanceType, 'us-east-1', operatingSystem);
+                if (price != null) {
+                  // Calcular horas restantes do mês (aprox.)
+                  const now = new Date();
+                  const daysInMonth = new Date(now.getFullYear(), now.getMonth()+1, 0).getDate();
+                  const hoursRemaining = (daysInMonth - now.getDate()) * 24;
+                  potentialSavings = parseFloat((price * hoursRemaining).toFixed(2));
+                }
+              } catch (psErr) {
+                console.warn('Falha ao calcular preço EC2 via Pricing API:', psErr);
+              }
+            } else {
+              console.log(`Instance ${id} is covered by RI, potential savings set to 0`);
             }
 
             await dynamoDb.put({
@@ -157,46 +162,78 @@ exports.handler = async (event) => {
   return { status: 'completed' };
 };
 
-// Tenta consultar o preço horário de uma instância EC2 via API Pricing (caso não disponível, lançar erro)
-async function getEc2HourlyPrice(instanceType, regionCode) {
+// Tenta consultar o preço horário de uma instância EC2 via API Pricing
+async function getEc2HourlyPrice(instanceType, regionCode, operatingSystem) {
   // Mapeamento simples de regionCode para nome usado no Pricing
   const regionNameMap = {
     'us-east-1': 'US East (N. Virginia)',
     'us-east-2': 'US East (Ohio)',
     'us-west-2': 'US West (Oregon)',
-    'eu-west-1': 'EU (Ireland)'
+    'eu-west-1': 'EU (Ireland)',
+    // Add more regions as needed
   };
-  const location = regionNameMap[regionCode] || 'US East (N. Virginia)';
+  const location = regionNameMap[regionCode] || regionCode; // Fallback to regionCode if not mapped
 
   const filters = [
     { Type: 'TERM_MATCH', Field: 'instanceType', Value: instanceType },
     { Type: 'TERM_MATCH', Field: 'location', Value: location },
-    { Type: 'TERM_MATCH', Field: 'operatingSystem', Value: 'Linux' },
+    { Type: 'TERM_MATCH', Field: 'operatingSystem', Value: operatingSystem },
     { Type: 'TERM_MATCH', Field: 'tenancy', Value: 'Shared' }
   ];
 
-  const resp = await pricing.getProducts({ ServiceCode: 'AmazonEC2', Filters: filters, MaxResults: 100 }).promise();
-  const priceList = resp.PriceList || [];
-  for (const p of priceList) {
+  const maxRetries = 3;
+  let lastError = null;
+
+  for (let attempt = 0; attempt < maxRetries; attempt++) {
     try {
-      const prod = JSON.parse(p);
-      const onDemandTerms = prod.terms && prod.terms.OnDemand;
-      if (!onDemandTerms) continue;
-      for (const termKey of Object.keys(onDemandTerms)) {
-        const term = onDemandTerms[termKey];
-        const priceDimensions = term.priceDimensions || {};
-        for (const pdKey of Object.keys(priceDimensions)) {
-          const pd = priceDimensions[pdKey];
-          const pricePerUnit = pd.pricePerUnit && pd.pricePerUnit.USD;
-          if (pricePerUnit) {
-            return parseFloat(pricePerUnit);
+      const resp = await pricing.getProducts({ ServiceCode: 'AmazonEC2', Filters: filters, MaxResults: 100 }).promise();
+      const priceList = resp.PriceList || [];
+      for (const p of priceList) {
+        try {
+          const prod = JSON.parse(p);
+          const onDemandTerms = prod.terms && prod.terms.OnDemand;
+          if (!onDemandTerms) continue;
+          for (const termKey of Object.keys(onDemandTerms)) {
+            const term = onDemandTerms[termKey];
+            const priceDimensions = term.priceDimensions || {};
+            for (const pdKey of Object.keys(priceDimensions)) {
+              const pd = priceDimensions[pdKey];
+              const pricePerUnit = pd.pricePerUnit && pd.pricePerUnit.USD;
+              if (pricePerUnit) {
+                return parseFloat(pricePerUnit);
+              }
+            }
           }
+        } catch (e) {
+          console.warn('Error parsing pricing data:', e);
         }
       }
-    } catch (e) {
-      // ignorar parse errors e continuar
+      return null; // No price found
+    } catch (error) {
+      lastError = error;
+      console.warn(`Attempt ${attempt + 1} failed for getEc2HourlyPrice:`, error);
+      if (attempt < maxRetries - 1) {
+        const delay = Math.pow(2, attempt) * 1000; // Exponential backoff: 1s, 2s, 4s
+        await new Promise(resolve => setTimeout(resolve, delay));
+      }
     }
   }
-  // Se não foi possível, retornar null para permitir fallback
+  console.error('All attempts failed for getEc2HourlyPrice:', lastError);
   return null;
+}
+
+async function isInstanceCoveredByRI(ec2Client, instanceType) {
+  try {
+    const resp = await ec2Client.describeReservedInstances({
+      Filters: [
+        { Name: 'instance-type', Values: [instanceType] },
+        { Name: 'state', Values: ['active'] }
+      ]
+    }).promise();
+    // If there are active RIs for this type, assume it's covered
+    return (resp.ReservedInstances || []).length > 0;
+  } catch (err) {
+    console.warn('Error checking RI coverage:', err);
+    return false;
+  }
 }

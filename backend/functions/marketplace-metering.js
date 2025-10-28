@@ -38,16 +38,15 @@ export const handler = async (event) => {
 
       const lastMeteringAt = customer.lastMeteringAt || '2020-01-01T00:00:00.000Z'; // Antigo se não existir
 
-      // Buscar SAVING# items desde lastMeteringAt
+      // Buscar SAVING# items não metrificados
       const savingsParams = {
-        TableName: DYNAMODB_TABLE,
-        KeyConditionExpression: 'id = :id AND begins_with(sk, :prefix)',
-        FilterExpression: 'timestamp > :last',
-        ExpressionAttributeValues: {
-          ':id': customerId,
-          ':prefix': 'SAVING#',
-          ':last': lastMeteringAt,
-        },
+      TableName: DYNAMODB_TABLE,
+      KeyConditionExpression: 'id = :id AND begins_with(sk, :prefix)',
+      FilterExpression: 'attribute_not_exists(meteredAt)',
+      ExpressionAttributeValues: {
+      ':id': customerId,
+      ':prefix': 'SAVING#',
+      },
       };
 
       const savingsResult = await dynamoDb.send(new QueryCommand(savingsParams));
@@ -61,18 +60,17 @@ export const handler = async (event) => {
         totalSavingsValue += saving.amountPerHour * hours;
       }
 
-      // Buscar CLAIM#RECOVERED items desde lastMeteringAt
+      // Buscar CLAIM#RECOVERED não metrificados
       const claimsParams = {
-        TableName: DYNAMODB_TABLE,
-        KeyConditionExpression: 'id = :id AND begins_with(sk, :prefix)',
-        FilterExpression: '#status = :status AND recoveredAt > :last',
-        ExpressionAttributeNames: { '#status': 'status' },
-        ExpressionAttributeValues: {
-          ':id': customerId,
-          ':prefix': 'CLAIM#',
-          ':status': 'RECOVERED',
-          ':last': lastMeteringAt,
-        },
+      TableName: DYNAMODB_TABLE,
+      KeyConditionExpression: 'id = :id AND begins_with(sk, :prefix)',
+      FilterExpression: '#status = :status AND attribute_not_exists(meteredAt)',
+      ExpressionAttributeNames: { '#status': 'status' },
+      ExpressionAttributeValues: {
+      ':id': customerId,
+      ':prefix': 'CLAIM#',
+      ':status': 'RECOVERED',
+      },
       };
 
       const claimsResult = await dynamoDb.send(new QueryCommand(claimsParams));
@@ -98,6 +96,26 @@ export const handler = async (event) => {
 
         await metering.send(meterCommand);
         console.log(`Metered ${totalValue} for customer ${marketplaceCustomerId}`);
+
+        // Marcar savings como metrificados
+          for (const saving of savings) {
+            await dynamoDb.send(new UpdateCommand({
+            TableName: DYNAMODB_TABLE,
+            Key: { id: saving.id, sk: saving.sk },
+            UpdateExpression: 'SET meteredAt = :now',
+            ExpressionAttributeValues: { ':now': now.toISOString() },
+            }));
+        }
+
+        // Marcar claims como metrificados
+        for (const claim of claims) {
+          await dynamoDb.send(new UpdateCommand({
+            TableName: DYNAMODB_TABLE,
+            Key: { id: claim.id, sk: claim.sk },
+            UpdateExpression: 'SET meteredAt = :now',
+            ExpressionAttributeValues: { ':now': now.toISOString() },
+          }));
+        }
       }
 
       // Atualizar lastMeteringAt
