@@ -1,9 +1,11 @@
-const { handler } = require('../functions/correlate-health');
-
+// Primeiro, declare todos os mocks antes de qualquer jest.mock
 const mockDynamoQuery = jest.fn();
 const mockDynamoPut = jest.fn();
 const mockSfnStartExecution = jest.fn();
 
+const { handler } = require('../functions/correlate-health');
+
+// Mock AWS SDK depois das declarações
 jest.mock('aws-sdk', () => ({
   DynamoDB: {
     DocumentClient: jest.fn().mockImplementation(() => ({

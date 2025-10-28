@@ -23,6 +23,23 @@ function DashboardContent() {
   const [costs, setCosts] = useState<any[]>([]);
   const [loadingCosts, setLoadingCosts] = useState(true);
   const [accountType, setAccountType] = useState<string>('TRIAL');
+  const [error, setError] = useState<string | null>(null);
+
+  const isValidIncident = (inc: any): inc is Incident => {
+    return (
+      typeof inc === 'object' &&
+      inc !== null &&
+      typeof inc.id === 'string' &&
+      typeof inc.service === 'string' &&
+      typeof inc.impact === 'number' &&
+      typeof inc.confidence === 'number' &&
+      ['detected', 'submitted', 'refunded'].includes(inc.status) &&
+      typeof inc.region === 'string' &&
+      typeof inc.timestamp === 'string'
+    );
+  };
+
+  const validIncidents = incidents.filter(isValidIncident);
 
   const loadUserStatus = async () => {
     try {
@@ -31,14 +48,13 @@ function DashboardContent() {
       if (data.accountType === 'TRIAL') {
         router.push('/trial');
       }
+      setError(null);
     } catch (err: any) {
       console.error('Erro ao carregar status do usuário:', err);
+      setError(t('dashboard.error.auth'));
     }
   };
 
-  useEffect(() => {
-    loadUserStatus();
-  }, [router]);
 
   // NOTE: call order matters for tests that mock `apiFetch` with sequential
   // mockImplementationOnce calls. Ensure incidents are requested first so
@@ -50,21 +66,37 @@ function DashboardContent() {
         // mock apiFetch and return an object or error; normalize to [] so
         // downstream callers (filter, slice, map) are safe.
         setIncidents(Array.isArray(d) ? d : []);
+        setError(null);
       })
       .catch(err => {
         console.error('Erro ao buscar incidentes:', err);
         setIncidents([]);
+        setError(t('dashboard.error.network'));
       });
   }, []);
 
   useEffect(() => {
     apiFetch('/api/dashboard/costs')
       .then((d) => {
-        setCosts(Array.isArray(d) ? d : []);
+        // Normaliza resposta: se o mock/endpoint retornar um único objeto
+        // com grupos (caso de testes), converte para um array de um dia.
+        if (Array.isArray(d)) {
+          setCosts(d);
+        } else if (d && typeof d === 'object') {
+          setCosts([d]);
+        } else {
+          setCosts([]);
+        }
+        setError(null);
       })
       .catch((err) => {
         console.error('Erro ao buscar custos:', err);
         setCosts([]);
+        if (err.message === 'Request timeout') {
+          setError(t('dashboard.error.timeout'));
+        } else {
+          setError(t('dashboard.error.network'));
+        }
       })
       .finally(() => setLoadingCosts(false));
   }, []);
@@ -78,8 +110,8 @@ function DashboardContent() {
 
   // Defensive: ensure incidents is an array before calling reduce. Some tests
   // or mocks may accidentally return an object; fall back to 0 in that case.
-  const totalEarnings = Array.isArray(incidents)
-    ? incidents.reduce((sum, inc) => sum + (inc.status === 'refunded' ? inc.impact * 0.7 : 0), 0)
+  const totalEarnings = Array.isArray(validIncidents)
+    ? validIncidents.reduce((sum, inc) => sum + (inc.status === 'refunded' ? inc.impact * 0.7 : 0), 0)
     : 0;
   const totalCost = costs.reduce((sum, day) => {
     if (day && day.Groups) {
@@ -90,6 +122,12 @@ function DashboardContent() {
 
   return (
     <MainLayout title={t('dashboard')}>
+      {error && (
+        <div className="mb-4 p-4 bg-red-100 border border-red-400 text-red-700 rounded">
+          {error}
+        </div>
+      )}
+      <div data-testid="dashboard-content">
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
         <Card>
         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
@@ -123,9 +161,9 @@ function DashboardContent() {
         <AlertCircle className="h-4 w-4 text-secondary-orange" />
         </CardHeader>
         <CardContent>
-        <div className="heading-2 text-text-light">{incidents.filter(inc => inc.status !== 'refunded').length}</div>
+        <div className="heading-2 text-text-light">{validIncidents.filter(inc => inc.status !== 'refunded').length}</div>
         <p className="text-xs text-text-medium">
-        {incidents.filter(inc => inc.status === 'detected').length} {t('dashboard.detected')}
+        {validIncidents.filter(inc => inc.status === 'detected').length} {t('dashboard.detected')}
         </p>
         </CardContent>
         </Card>
@@ -137,11 +175,11 @@ function DashboardContent() {
         <CardTitle>{t('dashboard.recentIncidents')}</CardTitle>
         </CardHeader>
         <CardContent>
-        {incidents.length === 0 ? (
+        {validIncidents.length === 0 ? (
         <p className="text-muted">{t('dashboard.noIncidents')}</p>
         ) : (
         <div className="space-y-4">
-        {incidents.slice(0, 5).map(inc => (
+        {validIncidents.slice(0, 5).map(inc => (
         <div key={inc.id} className="flex items-center justify-between">
         <div className="flex items-center space-x-3">
         <AlertCircle className="w-5 h-5 text-secondary-red" />
@@ -202,6 +240,7 @@ function DashboardContent() {
         )}
         </CardContent>
         </Card>
+      </div>
       </div>
     </MainLayout>
   );

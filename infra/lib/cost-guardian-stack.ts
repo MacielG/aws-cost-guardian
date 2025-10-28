@@ -28,6 +28,11 @@ export interface CostGuardianStackProps extends cdk.StackProps {
   githubRepo?: string;
   githubBranch?: string;
   githubTokenSecretName?: string;
+  /**
+   * Se true, desativa recursos que dependem de assets físicos durante os testes.
+   * @default false
+   */
+  isTestEnvironment?: boolean;
 }
 
 export class CostGuardianStack extends cdk.Stack {
@@ -719,11 +724,20 @@ export class CostGuardianStack extends cdk.Stack {
       },
     });
 
+    if (!props.githubRepo || !props.githubTokenSecretName || !props.githubBranch) {
+      throw new Error('Os parâmetros githubRepo, githubTokenSecretName e githubBranch são obrigatórios para configurar o Amplify com GitHub');
+    }
+
+    const [owner, repository] = props.githubRepo.split('/');
+    if (!owner || !repository) {
+      throw new Error('O githubRepo deve estar no formato "owner/repository"');
+    }
+
     const amplifyApp = new amplify.App(this, 'CostGuardianFrontend', {
       appName: 'CostGuardianApp',
       sourceCodeProvider: new amplify.GitHubSourceCodeProvider({
-        owner: props.githubRepo.split('/')[0],
-        repository: props.githubRepo.split('/')[1],
+        owner,
+        repository,
         oauthToken: cdk.SecretValue.secretsManager(props.githubTokenSecretName, {
           jsonField: 'github-token',
         }),

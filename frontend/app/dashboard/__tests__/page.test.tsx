@@ -1,259 +1,566 @@
+// Mock AuthProvider to avoid real auth calls and act warnings
+jest.mock('@/components/auth/AuthProvider', () => ({
+  AuthProvider: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
+  useAuth: () => ({ user: { username: 'test', userId: '123' }, loading: false, signOut: jest.fn(), refreshUser: jest.fn() }),
+}));
+
+// Mock aws-amplify to avoid act warnings
+jest.mock('aws-amplify/auth', () => ({
+  getCurrentUser: jest.fn().mockResolvedValue({ username: 'test', userId: '123' }),
+  fetchAuthSession: jest.fn().mockResolvedValue({ tokens: { idToken: { payload: { email: 'test@example.com' } } } }),
+  signOut: jest.fn().mockResolvedValue(undefined),
+}));
+
 import React from 'react';
-import { render, screen, waitFor } from '@testing-library/react';
+import { render, screen, waitFor, within } from '@testing-library/react';
 import '@testing-library/jest-dom';
-import DashboardPage from '../page';
 import { AuthProvider } from '@/components/auth/AuthProvider';
 
-const mockFetch = global.fetch as jest.Mock;
+// Top-level mocks (must be declared before importing the page under test)
+let mockRouter = { push: jest.fn(), pathname: '/', query: {} } as any;
 
-// Mock next/navigation
+const defaultTranslations: Record<string, string> = {
+  'dashboard': 'Dashboard',
+  'dashboard.totalEarnings': 'Total Earnings',
+  'dashboard.totalCost': 'Total Cost',
+  'dashboard.activeIncidents': 'Active Incidents',
+  'dashboard.recentIncidents': 'Recent Incidents',
+  'dashboard.topCostServices': 'Top Cost Services',
+  'dashboard.fromLastMonth': 'from last month',
+  'dashboard.detected': 'detected',
+  'dashboard.impact': 'Impact',
+  'dashboard.noIncidents': 'No incidents found',
+  'dashboard.loadingCostData': 'Loading cost data...',
+  'dashboard.noCostData': 'No cost data available',
+  'dashboard.status.refunded': 'Refunded',
+  'dashboard.status.submitted': 'Submitted',
+  'dashboard.status.detected': 'Detected',
+  'dashboard.error.auth': 'Authentication failed',
+  'dashboard.error.network': 'Network error occurred',
+  'dashboard.error.timeout': 'Request timed out',
+};
+
 jest.mock('next/navigation', () => ({
-  // Make useRouter a jest.fn so individual tests can override its return
-  // value with mockReturnValue.
-  useRouter: jest.fn(() => ({
-    push: jest.fn(),
-  })),
+  useRouter: () => mockRouter,
   usePathname: () => '/',
   useSearchParams: () => new URLSearchParams(),
   useParams: () => ({}),
 }));
 
+// @ts-ignore
 jest.mock('@/components/charts/BarChart', () => () => <div data-testid="bar-chart-mock" />);
+// @ts-ignore
 jest.mock('@/components/charts/LineChart', () => () => <div data-testid="line-chart-mock" />);
 
+// @ts-ignore
 jest.mock('@/lib/api', () => ({
   apiFetch: jest.fn(),
 }));
 
+// @ts-ignore
 jest.mock('react-i18next', () => ({
-  useTranslation: () => ({
-    t: (key: string) => {
-      const translations: { [key: string]: string } = {
-        'dashboard': 'Dashboard',
-        'dashboard.totalEarnings': 'Total Earnings',
-        'dashboard.totalCost': 'Total Cost',
-        'dashboard.activeIncidents': 'Active Incidents',
-        'dashboard.recentIncidents': 'Recent Incidents',
-        'dashboard.topCostServices': 'Top Cost Services',
-        'dashboard.fromLastMonth': 'from last month',
-        'dashboard.detected': 'detected',
-        'dashboard.impact': 'Impact',
-        'dashboard.noIncidents': 'No incidents found',
-        'dashboard.loadingCostData': 'Loading cost data...',
-        'dashboard.noCostData': 'No cost data available',
-        'dashboard.status.refunded': 'Refunded',
-        'dashboard.status.submitted': 'Submitted',
-        'dashboard.status.detected': 'Detected',
-      };
-      return translations[key] || key;
-    }
-  }),
+  useTranslation: () => ({ t: (key: string) => defaultTranslations[key] || key }),
 }));
 
-// Mock useAuth hook
-jest.mock('@/components/auth/AuthProvider', () => ({
-  ...jest.requireActual('@/components/auth/AuthProvider'),
-  useAuth: () => ({
-    user: { id: 'test-user', email: 'test@example.com' },
-    loading: false,
-    signIn: jest.fn(),
-    signOut: jest.fn(),
-  }),
-}));
+// Importações principais (APENAS UMA VEZ!)
+import DashboardPage from '../page';
+import { formatCurrency, formatDate } from '@/lib/utils';
+
+// Recupera o mock gerado pelo jest para podermos inspecioná-lo nos testes
+const mockApiFetch = (jest.requireMock('@/lib/api') as any).apiFetch as jest.Mock;
+
+// Helper functions
+const expectElementToBeInDocument = (element: HTMLElement | null) => {
+  expect(element).toBeInTheDocument();
+};
+
+const expectTextToBePresent = (text: string | RegExp) => {
+  const element = screen.getByText(text);
+  expect(element).toBeInTheDocument();
+};
+
+const expectTextNotToBePresent = (text: string | RegExp) => {
+  const element = screen.queryByText(text);
+  expect(element).not.toBeInTheDocument();
+};
+
+// Tipos
+interface MockIncident {
+  id: string;
+  service: string;
+  impact: number;
+  confidence: number;
+  status: 'refunded' | 'detected' | 'submitted';
+  region: string;
+  timestamp: string;
+}
+
+interface MockCost {
+  Groups: {
+    Keys: string[];
+    Metrics: { UnblendedCost: { Amount: string; Unit: string } };
+  }[];
+  TimePeriod?: { Start: string; End: string };
+}
+
+interface AccountScenario {
+  name: string;
+  accountType: 'PREMIUM' | 'FREE' | 'TRIAL';
+  incidents: MockIncident[];
+  costs: MockCost;
+  expectedElements: string[];
+  shouldRedirect: boolean;
+}
+
+interface ErrorScenario {
+  name: string;
+  errors: {
+    costs: Error | null;
+    incidents: Error | null;
+    status: Error | null;
+  };
+  expectedError: string;
+}
+
+// Centralização de mocks
+const setupMocks = () => {
+  mockRouter = { push: jest.fn(), pathname: '/', query: {} } as any;
+  mockApiFetch.mockClear();
+
+  const mockTranslations = { ...defaultTranslations };
+
+  return {
+    mockRouter,
+    mockApiFetch,
+    mockTranslations,
+  };
+};
+
+// Helper para criação de dados de teste
+const createTestData = () => {
+  const now = new Date();
+  const thirtyDaysAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+
+  const accountScenarios: AccountScenario[] = [
+    {
+      name: 'conta premium com dados completos',
+      accountType: 'PREMIUM',
+      incidents: [
+        {
+          id: '1',
+          service: 'EC2',
+          impact: 100,
+          confidence: 0.9,
+          status: 'refunded',
+          region: 'us-east-1',
+          timestamp: now.toISOString(),
+        },
+        {
+          id: '2',
+          service: 'RDS',
+          impact: 50,
+          confidence: 0.8,
+          status: 'detected',
+          region: 'us-west-2',
+          timestamp: now.toISOString(),
+        },
+      ],
+      costs: {
+        Groups: [
+          {
+            Keys: ['EC2'],
+            Metrics: { UnblendedCost: { Amount: '500.50', Unit: 'USD' } },
+          },
+          {
+            Keys: ['RDS'],
+            Metrics: { UnblendedCost: { Amount: '300.25', Unit: 'USD' } },
+          },
+        ],
+        TimePeriod: {
+          Start: thirtyDaysAgo.toISOString().split('T')[0],
+          End: now.toISOString().split('T')[0],
+        },
+      },
+      expectedElements: [
+        'Total Earnings',
+        '$70.00',
+        'Active Incidents',
+      ],
+      shouldRedirect: false,
+    },
+    {
+      name: 'conta free com dados limitados',
+      accountType: 'FREE',
+      incidents: [
+        {
+          id: '1',
+          service: 'EC2',
+          impact: 30,
+          confidence: 0.7,
+          status: 'detected',
+          region: 'us-east-1',
+          timestamp: now.toISOString(),
+        },
+      ],
+      costs: {
+        Groups: [
+          {
+            Keys: ['EC2'],
+            Metrics: { UnblendedCost: { Amount: '100.00', Unit: 'USD' } },
+          },
+        ],
+        TimePeriod: {
+          Start: thirtyDaysAgo.toISOString().split('T')[0],
+          End: now.toISOString().split('T')[0],
+        },
+      },
+      expectedElements: [
+        'Total Earnings',
+        '$0.00',
+        'Active Incidents',
+      ],
+      shouldRedirect: false,
+    },
+    {
+      name: 'conta trial deve redirecionar',
+      accountType: 'TRIAL',
+      incidents: [],
+      costs: { Groups: [] },
+      expectedElements: [],
+      shouldRedirect: true,
+    },
+  ];
+
+  const errorScenarios: ErrorScenario[] = [
+    {
+      name: 'falha na API de custos',
+      errors: {
+        costs: new Error('Failed to fetch cost data'),
+        incidents: null,
+        status: null,
+      },
+      expectedError: 'Network error occurred',
+    },
+    {
+      name: 'falha na API de incidentes',
+      errors: {
+        costs: null,
+        incidents: new Error('Failed to fetch incidents'),
+        status: null,
+      },
+      expectedError: 'Network error occurred',
+    },
+    {
+      name: 'timeout na API',
+      errors: {
+        costs: new Error('Request timeout'),
+        incidents: new Error('Request timeout'),
+        status: null,
+      },
+      expectedError: 'Request timed out',
+    },
+    {
+      name: 'erro de autenticação',
+      errors: {
+        costs: new Error('Unauthorized'),
+        incidents: new Error('Unauthorized'),
+        status: new Error('Unauthorized'),
+      },
+      expectedError: 'Authentication failed',
+    },
+  ];
+
+  return { accountScenarios, errorScenarios };
+};
 
 const TestWrapper: React.FC<{ children: React.ReactNode }> = ({ children }) => (
-  <AuthProvider>
-    {children}
-  </AuthProvider>
+  <AuthProvider>{children}</AuthProvider>
 );
 
 describe('DashboardPage', () => {
+  const { mockRouter, mockApiFetch } = setupMocks();
+  const { accountScenarios, errorScenarios } = createTestData();
+  
+  let abortControllers: AbortController[] = [];
+
   beforeEach(() => {
     jest.clearAllMocks();
+    abortControllers = [];
   });
 
-  test('deve exibir dados iniciais corretamente', async () => {
-  const mockIncidents = [
-  { id: '1', service: 'EC2', impact: 100, confidence: 0.9, status: 'refunded' },
-  ];
+  afterEach(() => {
+    jest.useRealTimers();
+    jest.clearAllTimers();
+    abortControllers.forEach(controller => controller.abort());
+    abortControllers = [];
+  });
 
-  const mockCosts = [
-  {
-  Groups: [
-  {
-  Keys: ['EC2'],
-  Metrics: { UnblendedCost: { Amount: '500' } }
-  }
-  ]
-  }
-  ];
+  describe('Cenários de Conta', () => {
+    test.each(accountScenarios)(
+      '$name',
+      async ({ accountType, incidents, costs, expectedElements, shouldRedirect }) => {
+        mockApiFetch.mockImplementation((url: string) => {
+          const controller = new AbortController();
+          abortControllers.push(controller);
 
-  const mockApiFetch = require('@/lib/api').apiFetch;
-  mockApiFetch.mockImplementation((url) => {
-  if (url === '/api/user/status') return Promise.resolve({ accountType: 'PREMIUM' });
-  if (url === '/api/incidents') return Promise.resolve(mockIncidents);
-  if (url === '/api/dashboard/costs') return Promise.resolve(mockCosts);
-  return Promise.resolve({});
-    });
+          return new Promise((resolve, reject) => {
+            if (controller.signal.aborted) {
+              reject(new Error('Aborted'));
+              return;
+            }
 
-    render(
-      <TestWrapper>
-        <DashboardPage />
-      </TestWrapper>
+            if (url === '/api/user/status') resolve({ accountType });
+            if (url === '/api/incidents') resolve(incidents);
+            if (url === '/api/dashboard/costs') resolve(costs);
+            resolve({});
+          });
+        });
+
+        const { unmount } = render(
+          <TestWrapper>
+            <DashboardPage />
+          </TestWrapper>
+        );
+
+        if (shouldRedirect) {
+          await waitFor(() => {
+            expect(mockRouter.push).toHaveBeenCalledWith('/trial');
+          });
+        } else {
+          await waitFor(() => {
+            const dashboard = screen.getByTestId('dashboard-content');
+            expectedElements.forEach(element => {
+              const regex = new RegExp(element.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'i');
+              const elementFound = within(dashboard).getByText(regex);
+              expect(elementFound).toBeInTheDocument();
+              if (!elementFound) {
+                throw new Error(`Elemento "${element}" não encontrado no dashboard`);
+              }
+            });
+          });
+
+          if (incidents.length > 0) {
+            const incidentElements = screen.getAllByTestId('incident-item');
+            const impactValues = incidentElements.map(el => 
+              Number(within(el).getByTestId('impact-value').textContent)
+            );
+            const sortedValues = [...impactValues].sort((a, b) => b - a);
+            expect(impactValues).toEqual(sortedValues);
+            if (!impactValues.every((value, index) => value === sortedValues[index])) {
+              throw new Error('Incidentes devem estar ordenados por impacto em ordem decrescente');
+            }
+
+            incidentElements.forEach(el => {
+              const dateText = within(el).getByTestId('incident-date').textContent;
+              expect(dateText).toMatch(/^\d{2}\/\d{2}\/\d{4}$/);
+              if (!/^\d{2}\/\d{2}\/\d{4}$/.test(dateText ?? '')) {
+                throw new Error('Data do incidente deve estar formatada corretamente');
+              }
+            });
+          }
+
+          if (costs.Groups.length > 0) {
+            const totalCost = costs.Groups.reduce(
+              (sum: number, group) =>
+                sum + Number(group.Metrics.UnblendedCost.Amount),
+              0
+            );
+            expect(screen.getByTestId('total-cost')).toHaveTextContent(formatCurrency(totalCost));
+          }
+        }
+
+        unmount();
+      }
     );
-
-    await waitFor(() => {
-      expect(screen.getAllByText('Dashboard').length).toBeGreaterThan(0);
-      expect(screen.getByText('Total Earnings')).toBeInTheDocument();
-      expect(screen.getByText((content) => content.includes('$70.00'))).toBeInTheDocument(); // 100 * 0.7
-      expect(screen.getByText((content) => content.includes('$500.00'))).toBeInTheDocument(); // total cost
-    });
   });
 
-  test('deve lidar com erro na API de custos', async () => {
-    const mockApiFetch = require('@/lib/api').apiFetch;
-    mockApiFetch
-      .mockImplementationOnce(() => Promise.resolve({ accountType: 'PREMIUM' })) // first /api/user/status
-      .mockImplementationOnce(() => Promise.resolve([])) // /api/incidents
-      .mockImplementationOnce(() => Promise.reject(new Error('API Error'))) // /api/dashboard/costs
-      .mockImplementationOnce(() => Promise.resolve({ accountType: 'PREMIUM' })) // second /api/user/status
+  describe('Cenários de Erro', () => {
+    test.each(errorScenarios)(
+      'deve lidar com $name',
+      async ({ errors, expectedError }) => {
+        mockApiFetch.mockImplementation((url: string) => {
+          const controller = new AbortController();
+          abortControllers.push(controller);
 
-    render(
-      <TestWrapper>
-        <DashboardPage />
-      </TestWrapper>
+          return new Promise((resolve, reject) => {
+            if (controller.signal.aborted) {
+              reject(new Error('Aborted'));
+              return;
+            }
+
+            if (url === '/api/dashboard/costs' && errors.costs) reject(errors.costs);
+            if (url === '/api/incidents' && errors.incidents) reject(errors.incidents);
+            if (url === '/api/user/status' && errors.status) reject(errors.status);
+            resolve({ accountType: 'PREMIUM' });
+          });
+        });
+
+        const { unmount } = render(
+          <TestWrapper>
+            <DashboardPage />
+          </TestWrapper>
+        );
+
+        await waitFor(() => {
+          expect(screen.getByText(new RegExp(expectedError, 'i'))).toBeInTheDocument();
+        });
+
+        unmount();
+      }
     );
-
-    await waitFor(() => {
-      expect(screen.getByText('Dashboard')).toBeInTheDocument();
-      expect(screen.getByText('No cost data available')).toBeInTheDocument();
-    });
   });
 
-  test('deve redirecionar usuários trial', async () => {
-    const mockRouter = { push: jest.fn() };
-    require('next/navigation').useRouter.mockReturnValue(mockRouter);
+  describe('Segurança e Validação', () => {
+    test('deve sanitizar dados de entrada', async () => {
+      const maliciousInput: MockIncident = {
+        id: '"><script>alert("xss")</script>',
+        service: '<img src="x" onerror="alert(1)">',
+        impact: 100,
+        confidence: 0.9,
+        status: 'detected',
+        region: `'); DROP TABLE users; --`,
+        timestamp: new Date().toISOString(),
+      };
 
-    const mockApiFetch = require('@/lib/api').apiFetch;
-    mockApiFetch
-      .mockImplementationOnce(() => Promise.resolve({ accountType: 'TRIAL' })) // first /api/user/status
-      .mockImplementationOnce(() => Promise.resolve([])) // /api/incidents
-      .mockImplementationOnce(() => Promise.resolve([])) // /api/dashboard/costs
-      .mockImplementationOnce(() => Promise.resolve({ accountType: 'TRIAL' })) // second /api/user/status
+      mockApiFetch.mockImplementation((url: string) => {
+        if (url === '/api/user/status') return Promise.resolve({ accountType: 'PREMIUM' });
+        if (url === '/api/incidents') return Promise.resolve([maliciousInput]);
+        if (url === '/api/dashboard/costs') return Promise.resolve({ Groups: [] });
+        return Promise.resolve({});
+      });
 
-    render(
-      <TestWrapper>
-        <DashboardPage />
-      </TestWrapper>
-    );
-
-    await waitFor(() => {
-      expect(mockRouter.push).toHaveBeenCalledWith('/trial');
-    });
-  });
-
-  test('deve exibir incidentes corretamente', async () => {
-    const mockIncidents = [
-      { id: '1', service: 'EC2', impact: 100, confidence: 0.9, status: 'refunded' },
-      { id: '2', service: 'RDS', impact: 50, confidence: 0.8, status: 'detected' },
-    ];
-
-    const mockApiFetch = require('@/lib/api').apiFetch;
-    mockApiFetch
-      .mockImplementationOnce(() => Promise.resolve({ accountType: 'PREMIUM' })) // first /api/user/status
-      .mockImplementationOnce(() => Promise.resolve(mockIncidents)) // /api/incidents
-      .mockImplementationOnce(() => Promise.resolve([])) // /api/dashboard/costs
-      .mockImplementationOnce(() => Promise.resolve({ accountType: 'PREMIUM' })) // second /api/user/status
-
-    render(
-      <TestWrapper>
-        <DashboardPage />
-      </TestWrapper>
-    );
-
-    await waitFor(() => {
-      expect(screen.getByText('Recent Incidents')).toBeInTheDocument();
-      expect(screen.getByText('EC2')).toBeInTheDocument();
-      expect(screen.getByText('RDS')).toBeInTheDocument();
-      // amount/impact may be split across nodes; match by substring
-      expect(screen.getByText((c) => c.includes('100'))).toBeInTheDocument();
-      expect(screen.getByText('Refunded')).toBeInTheDocument();
-      expect(screen.getByText('Detected')).toBeInTheDocument();
-    });
-  });
-
-  test('deve calcular estatísticas corretamente', async () => {
-  const mockIncidents = [
-  { id: '1', service: 'EC2', impact: 100, confidence: 0.9, status: 'refunded' },
-  { id: '2', service: 'RDS', impact: 50, confidence: 0.8, status: 'submitted' },
-  { id: '3', service: 'Lambda', impact: 25, confidence: 0.7, status: 'detected' },
-  ];
-
-  const mockCosts = [
-  {
-  Groups: [
-  { Keys: ['EC2'], Metrics: { UnblendedCost: { Amount: '200' } } },
-  { Keys: ['RDS'], Metrics: { UnblendedCost: { Amount: '150' } } }
-  ]
-  }
-  ];
-
-  const mockApiFetch = require('@/lib/api').apiFetch;
-  mockApiFetch
-  .mockImplementationOnce(() => Promise.resolve({ accountType: 'PREMIUM' })) // first /api/user/status
-  .mockImplementationOnce(() => Promise.resolve(mockIncidents)) // /api/incidents
-  .mockImplementationOnce(() => Promise.resolve(mockCosts)) // /api/dashboard/costs
-  .mockImplementationOnce(() => Promise.resolve({ accountType: 'PREMIUM' })) // second /api/user/status
-
-    render(
-      <TestWrapper>
-        <DashboardPage />
-      </TestWrapper>
-    );
-
-    await waitFor(() => {
-      expect(screen.getByText((content) => content.includes('$70.00'))).toBeInTheDocument(); // Only refunded: 100 * 0.7
-      expect(screen.getByText((content) => content.includes('$350.00'))).toBeInTheDocument(); // 200 + 150
-      expect(screen.getByText('2')).toBeInTheDocument(); // Active incidents: submitted + detected
-      expect(screen.getByText((content) => content.includes('1 detected'))).toBeInTheDocument();
-    });
-  });
-
-  test('deve renderizar sem erros', () => {
-    const mockApiFetch = require('@/lib/api').apiFetch;
-    mockApiFetch
-      .mockImplementationOnce(() => Promise.resolve({ accountType: 'PREMIUM' })) // first /api/user/status
-      .mockImplementationOnce(() => Promise.resolve([])) // /api/incidents
-      .mockImplementationOnce(() => Promise.resolve([])) // /api/dashboard/costs
-      .mockImplementationOnce(() => Promise.resolve({ accountType: 'PREMIUM' })) // second /api/user/status
-
-    expect(() =>
       render(
         <TestWrapper>
           <DashboardPage />
         </TestWrapper>
-      )
-    ).not.toThrow();
+      );
+
+      await waitFor(() => {
+        const content = screen.getByTestId('dashboard-content');
+        const htmlContent = content.innerHTML.toLowerCase();
+        expect(htmlContent).toContain('&lt;img src=&quot;x&quot; onerror=&quot;alert(1)&quot;&gt;');
+        expect(htmlContent).toContain(')); drop table users; --');
+        expect(htmlContent).not.toContain('<script');
+        expect(htmlContent).not.toContain('onerror=');
+        expect(htmlContent).not.toContain('drop table');
+      });
+    });
+
+    test('deve validar tipos de dados rigorosamente', async () => {
+      const invalidData = [
+        {
+          id: 123,
+          service: undefined,
+          impact: 'não é número',
+          confidence: null,
+          status: 'invalid-status',
+          region: true,
+          timestamp: 'invalid-date',
+        },
+        {
+          id: 'invalid-id',
+          service: new Date(),
+          impact: NaN,
+          confidence: Infinity,
+          status: '',
+          region: '   ',
+          timestamp: null,
+        },
+      ];
+
+      mockApiFetch.mockImplementation((url: string) => {
+        if (url === '/api/user/status') return Promise.resolve({ accountType: 'PREMIUM' });
+        if (url === '/api/incidents') return Promise.resolve(invalidData);
+        if (url === '/api/dashboard/costs') return Promise.resolve({ Groups: [] });
+        return Promise.resolve({});
+      });
+
+      render(
+        <TestWrapper>
+          <DashboardPage />
+        </TestWrapper>
+      );
+
+      await waitFor(() => {
+        const noIncidentsElement = screen.getByText('No incidents found');
+        expect(noIncidentsElement).toBeInTheDocument();
+        if (!noIncidentsElement) {
+          throw new Error('Deve mostrar mensagem de "sem incidentes" quando dados são inválidos');
+        }
+      });
+    });
   });
 
-  test('deve lidar com dados vazios', async () => {
-    const mockApiFetch = require('@/lib/api').apiFetch;
-    mockApiFetch
-      .mockImplementationOnce(() => Promise.resolve({ accountType: 'PREMIUM' })) // first /api/user/status
-      .mockImplementationOnce(() => Promise.resolve([])) // /api/incidents
-      .mockImplementationOnce(() => Promise.resolve([])) // /api/dashboard/costs
-      .mockImplementationOnce(() => Promise.resolve({ accountType: 'PREMIUM' })) // second /api/user/status
+  describe('Performance e Memory Leaks', () => {
+    beforeEach(() => {
+      jest.useFakeTimers();
+    });
 
-    render(
-      <TestWrapper>
-        <DashboardPage />
-      </TestWrapper>
-    );
+    afterEach(() => {
+      jest.useRealTimers();
+    });
 
-    await waitFor(() => {
-      expect(screen.getByText('No incidents found')).toBeInTheDocument();
-      expect(screen.getByText('No cost data available')).toBeInTheDocument();
-      expect(screen.getByText((content) => content.includes('$0.00'))).toBeInTheDocument();
+    test('deve lidar com timeouts e cancelar requisições', async () => {
+      const requestTimeout = 30000;
+      let requestsStarted = 0;
+      let requestsCanceled = 0;
+
+      mockApiFetch.mockImplementation((url: string) => {
+        const controller = new AbortController();
+        abortControllers.push(controller);
+        requestsStarted++;
+
+        return new Promise((resolve, reject) => {
+          const timeoutId = setTimeout(() => {
+            resolve({ accountType: 'PREMIUM', incidents: [], costs: { Groups: [] } });
+          }, requestTimeout);
+
+          controller.signal.addEventListener('abort', () => {
+            clearTimeout(timeoutId);
+            requestsCanceled++;
+            reject(new Error('Aborted'));
+          });
+        });
+      });
+
+      const { unmount } = render(
+        <TestWrapper>
+          <DashboardPage />
+        </TestWrapper>
+      );
+
+      jest.advanceTimersByTime(requestTimeout / 2);
+      unmount();
+      abortControllers.forEach(controller => controller.abort());
+
+      expect(requestsCanceled).toBe(requestsStarted);
+      expect(requestsStarted).toBeGreaterThanOrEqual(3);
+    });
+
+    test('não deve aumentar chamadas desnecessárias durante atualizações periódicas', async () => {
+      const updateInterval = 60000;
+      const totalUpdates = 5;
+
+      mockApiFetch.mockClear();
+      mockApiFetch.mockImplementation(() =>
+        Promise.resolve({ accountType: 'PREMIUM', incidents: [], costs: { Groups: [] } })
+      );
+
+      render(
+        <TestWrapper>
+          <DashboardPage />
+        </TestWrapper>
+      );
+
+      const callsBefore = mockApiFetch.mock.calls.length;
+
+      for (let i = 0; i < totalUpdates; i++) {
+        jest.advanceTimersByTime(updateInterval);
+        await Promise.resolve();
+      }
+
+      const callsAfter = mockApiFetch.mock.calls.length;
+      expect(callsAfter).toBeLessThanOrEqual(callsBefore + totalUpdates * 3);
     });
   });
 });

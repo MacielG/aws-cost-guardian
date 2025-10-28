@@ -1,6 +1,7 @@
 // Tests for API endpoints using supertest
 const request = require('supertest');
 
+// Primeiro, declare todos os mocks antes de qualquer require ou jest.mock
 const mockStsAssumeRole = jest.fn();
 const mockDynamoGet = jest.fn();
 const mockDynamoPut = jest.fn();
@@ -8,6 +9,7 @@ const mockDynamoQuery = jest.fn();
 const mockDynamoUpdate = jest.fn();
 const mockSecretsGetSecretValue = jest.fn();
 
+// Mock AWS SDK depois das declarações
 jest.mock('aws-sdk', () => ({
   STS: jest.fn().mockImplementation(() => ({
     assumeRole: mockStsAssumeRole.mockReturnValue({

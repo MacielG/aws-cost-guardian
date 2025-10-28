@@ -1,3 +1,4 @@
+// Primeiro, declare todos os mocks antes de qualquer require ou jest.mock
 const mockStsAssumeRole = jest.fn();
 const mockDynamoScan = jest.fn();
 const mockEc2DescribeVolumes = jest.fn();
@@ -6,6 +7,7 @@ const mockEc2DescribeInstances = jest.fn();
 const mockEc2StopInstances = jest.fn();
 const mockCwGetMetricData = jest.fn();
 
+// Mock AWS SDK depois das declarações
 jest.mock('aws-sdk', () => {
   return {
     STS: jest.fn().mockImplementation(() => ({

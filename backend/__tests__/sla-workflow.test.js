@@ -1,6 +1,6 @@
 const { calculateImpact, checkSLA, generateReport, submitSupportTicket } = require('../functions/sla-workflow');
 
-// Mock AWS SDK
+// Primeiro, declare todos os mocks antes de qualquer jest.mock
 const mockStsAssumeRole = jest.fn();
 const mockDynamoGet = jest.fn();
 const mockDynamoPut = jest.fn();
@@ -9,6 +9,29 @@ const mockDynamoQuery = jest.fn();
 const mockS3PutObject = jest.fn();
 const mockSupportCreateCase = jest.fn();
 
+// Mock AWS SDK com simulações de falha de rede e timeout
+const mockNetworkError = new Error('Network Error');
+mockNetworkError.code = 'NetworkingError';
+
+const mockTimeout = new Error('TimeoutError');
+mockTimeout.code = 'TimeoutError';
+
+// Mock Cost Explorer com cenários de erro
+const mockCostExplorerWithRetry = jest.fn()
+  .mockRejectedValueOnce(mockNetworkError)  // Primeira chamada falha
+  .mockRejectedValueOnce(mockTimeout)       // Segunda chamada timeout
+  .mockResolvedValueOnce({                  // Terceira chamada sucesso
+    ResultsByTime: [{ Total: { UnblendedCost: { Amount: '15.75' } } }],
+  });
+
+jest.mock('@aws-sdk/client-cost-explorer', () => ({
+  CostExplorerClient: jest.fn().mockImplementation(() => ({
+    send: mockCostExplorerWithRetry,
+  })),
+  GetCostAndUsageCommand: jest.fn(),
+}));
+
+// Mock AWS SDK com retry logic
 jest.mock('aws-sdk', () => ({
   STS: jest.fn().mockImplementation(() => ({
     assumeRole: mockStsAssumeRole.mockReturnValue({
