@@ -4,7 +4,35 @@ const AWS = require('aws-sdk');
 
 const dynamoDb = new AWS.DynamoDB.DocumentClient();
 const secretsManager = new AWS.SecretsManager();
+const sfn = new AWS.StepFunctions();
 const { randomBytes } = require('crypto');
+
+// Helper para assumir a role do cliente
+async function getAssumedClients(roleArn, region = 'us-east-1') {
+  const sts = new AWS.STS();
+  try {
+    const assumedRole = await sts.assumeRole({
+      RoleArn: roleArn,
+      RoleSessionName: 'GuardianAdvisorExecution',
+      DurationSeconds: 900,
+    }).promise();
+
+    const credentials = {
+      accessKeyId: assumedRole.Credentials.AccessKeyId,
+      secretAccessKey: assumedRole.Credentials.SecretAccessKey,
+      sessionToken: assumedRole.Credentials.SessionToken,
+    };
+
+    return {
+      ec2: new AWS.EC2({ ...credentials, region }),
+      rds: new AWS.RDS({ ...credentials, region }),
+      // Adicione outros serviços conforme necessário
+    };
+  } catch (err) {
+    console.error(`Falha ao assumir role ${roleArn}:`, err);
+    throw new Error(`STS AssumeRole failed: ${err.message}`);
+  }
+}
 
 const https = require('https');
 const url = require('url');
@@ -53,7 +81,7 @@ const authenticateUser = (req, res, next) => {
 // Middleware para verificar plano Pro (definido antecipadamente para evitar erros de hoisting)
 const checkProPlan = async (req, res, next) => {
   const customerId = req.user.sub;
-  const config = (await dynamoDb.get({ TableName: DYNAMODB_TABLE, Key: { id: customerId, sk: 'CONFIG#ONBOARD' } }).promise()).Item;
+  const config = (await dynamoDb.get({ TableName: process.env.DYNAMODB_TABLE, Key: { id: customerId, sk: 'CONFIG#ONBOARD' } }).promise()).Item;
 
   if (config && config.subscriptionStatus === 'active') {
     req.customerConfig = config; // Passa a config para a próxima rota
@@ -123,7 +151,7 @@ app.get('/api/billing/subscription', authenticateUser, async (req, res) => {
   try {
     const customerId = req.user.sub;
     const config = (await dynamoDb.get({ 
-      TableName: DYNAMODB_TABLE, 
+      TableName: process.env.DYNAMODB_TABLE, 
       Key: { id: customerId, sk: 'CONFIG#ONBOARD' } 
     }).promise()).Item;
 
@@ -145,7 +173,7 @@ app.get('/api/recommendations', authenticateUser, checkProPlan, async (req, res)
     
     // Buscar todas as recomendações do cliente
     const recommendations = await dynamoDb.query({
-      TableName: DYNAMODB_TABLE,
+      TableName: process.env.DYNAMODB_TABLE,
       KeyConditionExpression: 'id = :id AND begins_with(sk, :prefix)',
       ExpressionAttributeValues: {
         ':id': customerId,
@@ -213,7 +241,7 @@ app.put('/api/settings/automation', authenticateUser, checkProPlan, async (req, 
     const { enabled, settings } = req.body;
 
     await dynamoDb.update({
-      TableName: DYNAMODB_TABLE,
+      TableName: process.env.DYNAMODB_TABLE,
       Key: { id: customerId, sk: 'CONFIG#ONBOARD' },
       UpdateExpression: 'SET automationEnabled = :enabled, automationSettings = :settings',
       ExpressionAttributeValues: {
@@ -273,7 +301,7 @@ const verifyJwt = (req) => {
 // Helper function para atualizar status da assinatura
 async function updateSubscriptionStatus(customerId, status, subscriptionId) {
   await dynamoDb.update({
-    TableName: DYNAMODB_TABLE,
+    TableName: process.env.DYNAMODB_TABLE,
     Key: { id: customerId, sk: 'CONFIG#ONBOARD' },
     UpdateExpression: 'SET subscriptionStatus = :status, stripeSubscriptionId = :subId',
     ExpressionAttributeValues: {
@@ -308,13 +336,13 @@ app.post('/api/admin/claims/:customerId/:claimId/retry', authenticateUser, autho
 
   try {
     // 1. Obter a claim para encontrar o incidente original
-    const claim = (await dynamoDb.get({ TableName: DYNAMODB_TABLE, Key: { id: customerId, sk: claimSk } }).promise()).Item;
+    const claim = (await dynamoDb.get({ TableName: process.env.DYNAMODB_TABLE, Key: { id: customerId, sk: claimSk } }).promise()).Item;
     if (!claim || !claim.incidentId) {
       return res.status(404).send({ error: 'Incidente original não encontrado.' });
     }
 
     // 2. Obter o incidente original para o payload do evento
-    const incident = (await dynamoDb.get({ TableName: DYNAMODB_TABLE, Key: { id: customerId, sk: claim.incidentId } }).promise()).Item;
+    const incident = (await dynamoDb.get({ TableName: process.env.DYNAMODB_TABLE, Key: { id: customerId, sk: claim.incidentId } }).promise()).Item;
     if (!incident || !incident.details) {
       return res.status(404).send({ error: 'Payload do evento original não encontrado.' });
     }
@@ -332,7 +360,7 @@ app.post('/api/admin/claims/:customerId/:claimId/retry', authenticateUser, autho
 
     // 4. Resetar o status da claim
     await dynamoDb.update({
-      TableName: DYNAMODB_TABLE,
+      TableName: process.env.DYNAMODB_TABLE,
       Key: { id: customerId, sk: claimSk },
       UpdateExpression: 'SET #status = :status',
       ExpressionAttributeNames: { '#status': 'status' },
@@ -349,38 +377,7 @@ app.post('/api/admin/claims/:customerId/:claimId/retry', authenticateUser, autho
 // GET /api/onboard-init
 // NOTE: handler foi movido mais abaixo para incluir verificação de termos aceitos
 
-// POST /api/billing/create-checkout-session
-app.post('/api/billing/create-checkout-session', authenticateUser, async (req, res) => {
-  try {
-    const customerId = req.user.sub;
-    const { stripeCustomerId } = req.body;
 
-    if (!stripeCustomerId) {
-      return res.status(400).json({ error: 'stripeCustomerId é obrigatório' });
-    }
-
-    const stripe = await getStripe();
-    const session = await stripe.checkout.sessions.create({
-      payment_method_types: ['card'],
-      mode: 'subscription',
-      customer: stripeCustomerId,
-      line_items: [{
-        price: process.env.STRIPE_PRO_PLAN_PRICE_ID,
-        quantity: 1,
-      }],
-      success_url: `${process.env.FRONTEND_URL}/dashboard?session_id={CHECKOUT_SESSION_ID}`,
-      cancel_url: `${process.env.FRONTEND_URL}/billing`,
-      metadata: {
-        costGuardianCustomerId: customerId,
-      }
-    });
-
-    res.status(200).json({ sessionId: session.id });
-  } catch (error) {
-    console.error('Erro ao criar sessão de checkout:', error);
-    res.status(500).json({ error: 'Erro ao criar sessão de checkout' });
-  }
-});
 
 // POST /api/marketplace/webhook - Webhook do Marketplace SNS
 app.post('/api/marketplace/webhook', express.raw({ type: 'application/json' }), async (req, res) => {
@@ -407,7 +404,7 @@ app.post('/api/marketplace/webhook', express.raw({ type: 'application/json' }), 
 
       // Buscar usuário pelo marketplaceCustomerId
       const queryParams = {
-        TableName: DYNAMODB_TABLE,
+        TableName: process.env.DYNAMODB_TABLE,
         IndexName: 'MarketplaceCustomerIndex', // Assumindo que existe um GSI
         KeyConditionExpression: 'marketplaceCustomerId = :cid',
         ExpressionAttributeValues: { ':cid': customerIdentifier }
@@ -422,7 +419,7 @@ app.post('/api/marketplace/webhook', express.raw({ type: 'application/json' }), 
       if (action === 'subscribe-success') {
         // Atualizar status para ACTIVE
         await dynamoDb.update({
-          TableName: DYNAMODB_TABLE,
+          TableName: process.env.DYNAMODB_TABLE,
           Key: { id: userId, sk: 'CONFIG#ONBOARD' },
           UpdateExpression: 'SET subscriptionStatus = :status',
           ExpressionAttributeValues: { ':status': 'active' }
@@ -431,7 +428,7 @@ app.post('/api/marketplace/webhook', express.raw({ type: 'application/json' }), 
       } else if (action === 'unsubscribe-pending' || action === 'unsubscribe-success') {
         // Atualizar status para cancelled
         await dynamoDb.update({
-          TableName: DYNAMODB_TABLE,
+          TableName: process.env.DYNAMODB_TABLE,
           Key: { id: userId, sk: 'CONFIG#ONBOARD' },
           UpdateExpression: 'SET subscriptionStatus = :status',
           ExpressionAttributeValues: { ':status': 'cancelled' }
@@ -472,7 +469,7 @@ app.post('/api/marketplace/resolve', authenticateUser, async (req, res) => {
 
     // Armazenar marketplaceCustomerId no item do usuário
     await dynamoDb.update({
-      TableName: DYNAMODB_TABLE,
+      TableName: process.env.DYNAMODB_TABLE,
       Key: { id: userId, sk: 'CONFIG#ONBOARD' },
       UpdateExpression: 'SET marketplaceCustomerId = :mcid',
       ExpressionAttributeValues: { ':mcid': marketplaceCustomerId }
@@ -762,28 +759,7 @@ app.get('/api/dashboard/costs', authenticateUser, async (req, res) => {
   }
 });
 
-// GET /api/settings/automation
-// Retorna as preferências de automação do usuário (CONFIG#ONBOARD)
-app.get('/api/settings/automation', authenticateUser, async (req, res) => {
-  try {
-    const userId = req.user.sub;
-    const params = { TableName: process.env.DYNAMODB_TABLE, Key: { id: userId, sk: 'CONFIG#ONBOARD' } };
-    const data = await dynamoDb.get(params).promise();
-    const item = data.Item || {};
-    const settings = item.automationSettings || {};
 
-    return res.json({ 
-      automation: {
-        stopIdle: !!settings.stopIdleInstances,
-        deleteUnusedEbs: !!settings.deleteUnusedEbs,
-        exclusionTags: settings.exclusionTags || '',
-      }
-    });
-  } catch (err) {
-    console.error('Erro ao buscar settings de automação:', err);
-    return res.status(500).json({ error: 'Falha ao buscar configurações.' });
-  }
-});
 
 // POST /api/settings/automation
 // Body: { automation: { stopIdle: true, deleteUnusedEbs: false, exclusionTags?: string } }
@@ -1115,7 +1091,7 @@ app.post('/api/admin/users/:userId/status', authenticateUser, authorizeAdmin, as
 
   try {
     await dynamoDb.update({
-      TableName: DYNAMODB_TABLE,
+      TableName: process.env.DYNAMODB_TABLE,
       Key: { id: userId, sk: 'CONFIG#ONBOARD' },
       UpdateExpression: 'SET accountType = :status',
       ExpressionAttributeValues: { ':status': status },
@@ -1140,7 +1116,7 @@ app.put('/api/admin/claims/:customerId/:claimId/recover', authenticateUser, auth
 
   try {
     await dynamoDb.update({
-      TableName: DYNAMODB_TABLE,
+      TableName: process.env.DYNAMODB_TABLE,
       Key: { id: customerId, sk: fullClaimSk },
       UpdateExpression: 'SET #status = :status, recoveredAmount = :amount, recoveredAt = :now',
       ExpressionAttributeNames: { '#status': 'status' },
@@ -1343,67 +1319,9 @@ app.delete('/api/connections/:awsAccountId', authenticateUser, async (req, res) 
   }
 });
 
-// GET /api/recommendations - Buscar recomendações do usuário
-app.get('/api/recommendations', authenticateUser, async (req, res) => {
-  try {
-    const userId = req.user.sub;
 
-    const params = {
-      TableName: process.env.DYNAMODB_TABLE,
-      KeyConditionExpression: 'id = :userId AND begins_with(sk, :skPrefix)',
-      ExpressionAttributeValues: {
-        ':userId': userId,
-        ':skPrefix': 'REC#EC2#',
-      },
-    };
 
-    const result = await dynamoDb.query(params).promise();
-    const recommendations = (result.Items || []).map(item => ({
-      id: item.sk,
-      type: item.type,
-      status: item.status,
-      potentialSavings: item.potentialSavings,
-      resourceArn: item.resourceArn,
-      details: item.details,
-      createdAt: item.createdAt,
-    }));
-
-    res.json({ recommendations });
-  } catch (err) {
-    console.error('Erro ao buscar recomendações:', err);
-    res.status(500).json({ message: 'Erro ao buscar recomendações' });
-  }
-});
-
-// GET /api/sla-claims - Listar claims SLA
-app.get('/api/sla-claims', authenticateUser, async (req, res) => {
-  try {
-    const userId = req.user.sub;
-
-    const params = {
-      TableName: DYNAMODB_TABLE,
-      KeyConditionExpression: 'id = :userId AND begins_with(sk, :prefix)',
-      ExpressionAttributeValues: {
-        ':userId': userId,
-        ':prefix': 'CLAIM#'
-      }
-    };
-
-    const result = await dynamoDb.query(params).promise();
-    const claims = result.Items.map(item => ({
-      id: item.sk,
-      status: item.status,
-      creditAmount: item.creditAmount,
-      reportUrl: item.reportUrl || null,
-      createdAt: item.createdAt,
-    }));
-
-    res.json({ claims });
-  } catch (err) {
-    console.error('Erro ao buscar claims SLA:', err);
-    res.status(500).json({ message: 'Erro ao buscar claims SLA' });
-  }
-});
+// GET /api/sla-claims - Listar claims SLA (duplicate removed)
 
 // GET /api/sla-reports/:claimId - Download de relatório SLA
 app.get('/api/sla-claims/:claimId/report', authenticateUser, async (req, res) => {
@@ -1551,6 +1469,7 @@ app.get('/api/billing', authenticateUser, async (req, res) => {
 });
 
 // POST /api/upgrade - Upgrade de Trial para Active
+app.post('/api/upgrade', authenticateUser, async (req, res) => {
   try {
     const userId = req.user.sub;
 
@@ -1607,7 +1526,7 @@ app.get('/api/user/status', authenticateUser, async (req, res) => {
     const userId = req.user.sub;
 
     const params = {
-      TableName: DYNAMODB_TABLE,
+      TableName: process.env.DYNAMODB_TABLE,
       Key: { id: userId, sk: 'CONFIG#ONBOARD' },
     };
 
@@ -1628,7 +1547,7 @@ app.get('/api/billing/history', authenticateUser, async (req, res) => {
 
     // Buscar SAVING# items
     const savingsParams = {
-      TableName: DYNAMODB_TABLE,
+      TableName: process.env.DYNAMODB_TABLE,
       KeyConditionExpression: 'id = :userId AND begins_with(sk, :prefix)',
       ExpressionAttributeValues: {
         ':userId': userId,
@@ -1641,7 +1560,7 @@ app.get('/api/billing/history', authenticateUser, async (req, res) => {
 
     // Buscar CLAIM#RECOVERED items
     const claimsParams = {
-      TableName: DYNAMODB_TABLE,
+      TableName: process.env.DYNAMODB_TABLE,
       KeyConditionExpression: 'id = :userId AND begins_with(sk, :prefix)',
       FilterExpression: '#status = :status',
       ExpressionAttributeNames: { '#status': 'status' },

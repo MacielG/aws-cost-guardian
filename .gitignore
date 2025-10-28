@@ -13,6 +13,10 @@ frontend/.env.production
 cdk.out/
 amplify/
 
+# Next.js build artifacts
+frontend/.next/
+.next/
+
 # IDE
 .vscode/
 .idea/

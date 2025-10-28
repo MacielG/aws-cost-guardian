@@ -3,7 +3,7 @@
 import * as cdk from 'aws-cdk-lib';
 import { Construct } from 'constructs';
 import * as lambda from 'aws-cdk-lib/aws-lambda';
-import { NodejsFunction } from 'aws-cdk-lib/aws-lambda-nodejs';
+import * as lambda_nodejs from 'aws-cdk-lib/aws-lambda-nodejs';
 import * as path from 'path';
 import * as apigw from 'aws-cdk-lib/aws-apigateway';
 import * as dynamodb from 'aws-cdk-lib/aws-dynamodb';
@@ -23,16 +23,22 @@ import * as amplify from '@aws-cdk/aws-amplify-alpha';
 import * as codebuild from 'aws-cdk-lib/aws-codebuild';
 
 export interface CostGuardianStackProps extends cdk.StackProps {
-  domainName: string;
-  hostedZoneId: string;
-  githubRepo: string;
-  githubBranch: string;
-  githubTokenSecretName: string;
+  domainName?: string;
+  hostedZoneId?: string;
+  githubRepo?: string;
+  githubBranch?: string;
+  githubTokenSecretName?: string;
 }
 
 export class CostGuardianStack extends cdk.Stack {
   constructor(scope: Construct, id: string, props: CostGuardianStackProps) {
     super(scope, id, props);
+
+    const domainName = props.domainName || 'example.com';
+    const hostedZoneId = props.hostedZoneId || 'Z123456789';
+    const githubRepo = props.githubRepo || 'user/repo';
+    const githubBranch = props.githubBranch || 'main';
+    const githubTokenSecretName = props.githubTokenSecretName || 'github-token';
 
     // Secrets (Mantido)
     const stripeSecret = new secretsmanager.Secret(this, 'StripeSecret', {
@@ -183,7 +189,7 @@ export class CostGuardianStack extends cdk.Stack {
 
     // 1. Lambda para o API Gateway (Monolito Express)
     // Usamos NodejsFunction para empacotar apenas o necessário com esbuild
-    const apiHandlerLambda = new NodejsFunction(this, 'ApiHandler', {
+    const apiHandlerLambda = new lambda_nodejs.NodejsFunction(this, 'ApiHandler', {
       runtime: lambda.Runtime.NODEJS_18_X,
       entry: path.join(__dirname, '../../backend/handler.js'),
       handler: 'app', // export do express + serverless é exposto como 'app' no handler.js
@@ -207,7 +213,7 @@ export class CostGuardianStack extends cdk.Stack {
     stripeWebhookSecret.grantRead(apiHandlerLambda);
 
     // 2. Lambda para o EventBridge (Correlacionar Eventos Health)
-    const healthEventHandlerLambda = new NodejsFunction(this, 'HealthEventHandler', {
+    const healthEventHandlerLambda = new lambda_nodejs.NodejsFunction(this, 'HealthEventHandler', {
       runtime: lambda.Runtime.NODEJS_18_X,
       entry: path.join(__dirname, '../../backend/functions/correlate-health.js'),
       handler: 'handler',
@@ -220,17 +226,17 @@ export class CostGuardianStack extends cdk.Stack {
     table.grantReadWriteData(healthEventHandlerLambda);
 
     // Lambda para execução de recomendações
-    const executeRecommendationLambda = new NodejsFunction(this, 'ExecuteRecommendation', {
+    const executeRecommendationLambda = new lambda_nodejs.NodejsFunction(this, 'ExecuteRecommendation', {
       runtime: lambda.Runtime.NODEJS_18_X,
       handler: 'handler',
-      entry: path.join(__dirname, '../../backend/functions/execute-recommendation-v3.js'),
+      entry: path.join(__dirname, '../../backend/functions/execute-recommendation.js'),
       timeout: cdk.Duration.minutes(5),
       memorySize: 256,
       environment: {
         DYNAMODB_TABLE: table.tableName,
       },
-      bundling: { 
-        format: aws_lambda_nodejs.OutputFormat.ESM,
+      bundling: {
+        format: lambda_nodejs.OutputFormat.ESM,
         minify: true,
       },
     });
@@ -248,7 +254,7 @@ export class CostGuardianStack extends cdk.Stack {
     executeRecommendationLambda.grantInvoke(apiHandlerLambda);
 
     // 3. Lambdas para as Tarefas do Step Functions
-    const slaCalculateImpactLambda = new NodejsFunction(this, 'SlaCalculateImpact', {
+    const slaCalculateImpactLambda = new lambda_nodejs.NodejsFunction(this, 'SlaCalculateImpact', {
       runtime: lambda.Runtime.NODEJS_18_X,
       entry: path.join(__dirname, '../../backend/functions/sla-workflow.js'),
       handler: 'calculateImpact',
@@ -274,7 +280,7 @@ export class CostGuardianStack extends cdk.Stack {
   // Garantir permissões ao DynamoDB para a Lambda de cálculo de impacto
   table.grantReadWriteData(slaCalculateImpactLambda);
     
-    const slaCheckLambda = new NodejsFunction(this, 'SlaCheck', {
+    const slaCheckLambda = new lambda_nodejs.NodejsFunction(this, 'SlaCheck', {
       runtime: lambda.Runtime.NODEJS_18_X,
       entry: path.join(__dirname, '../../backend/functions/sla-workflow.js'),
       handler: 'checkSLA',
@@ -282,7 +288,7 @@ export class CostGuardianStack extends cdk.Stack {
       environment: { DYNAMODB_TABLE: table.tableName },
     });
 
-    const slaGenerateReportLambda = new NodejsFunction(this, 'SlaGenerateReport', {
+    const slaGenerateReportLambda = new lambda_nodejs.NodejsFunction(this, 'SlaGenerateReport', {
       runtime: lambda.Runtime.NODEJS_18_X,
       entry: path.join(__dirname, '../../backend/functions/sla-workflow.js'),
       handler: 'generateReport',
@@ -311,7 +317,7 @@ export class CostGuardianStack extends cdk.Stack {
     // Permissões necessárias para a Lambda escrever objetos no bucket
     reportsBucket.grantPut(slaGenerateReportLambda);
 
-    const slaSubmitTicketLambda = new NodejsFunction(this, 'SlaSubmitTicket', {
+    const slaSubmitTicketLambda = new lambda_nodejs.NodejsFunction(this, 'SlaSubmitTicket', {
       runtime: lambda.Runtime.NODEJS_18_X,
       entry: path.join(__dirname, '../../backend/functions/sla-workflow.js'),
       handler: 'submitSupportTicket',
@@ -381,7 +387,7 @@ export class CostGuardianStack extends cdk.Stack {
   // Topic SNS para alertas de anomalia (Fase 7)
   const anomalyAlertsTopic = new sns.Topic(this, 'AnomalyAlertsTopic');
     // 4.1. Crie um novo Lambda para ingestão diária de custos
-    const costIngestorLambda = new NodejsFunction(this, 'CostIngestor', {
+    const costIngestorLambda = new lambda_nodejs.NodejsFunction(this, 'CostIngestor', {
       runtime: lambda.Runtime.NODEJS_18_X,
       entry: path.join(__dirname, '../../backend/functions/ingest-costs.js'),
       handler: 'handler',
@@ -425,13 +431,13 @@ export class CostGuardianStack extends cdk.Stack {
 
     // --- Bloco 3: Automação Ativa (Fase 2) ---
     // 7.1. Lambdas para tarefas de automação
-    const stopIdleInstancesLambda = new NodejsFunction(this, 'StopIdleInstances', {
+    const stopIdleInstancesLambda = new lambda_nodejs.NodejsFunction(this, 'StopIdleInstances', {
       runtime: lambda.Runtime.NODEJS_18_X,
       entry: path.join(__dirname, '../../backend/functions/recommend-idle-instances.js'),
       handler: 'handler',
       timeout: cdk.Duration.minutes(5),
       bundling: {
-        format: aws_lambda_nodejs.OutputFormat.ESM,
+        format: lambda_nodejs.OutputFormat.ESM,
         minify: true,
       },
       environment: { DYNAMODB_TABLE: table.tableName },
@@ -448,7 +454,7 @@ export class CostGuardianStack extends cdk.Stack {
     });
     table.grantReadWriteData(stopIdleInstancesLambda);
 
-    const recommendRdsIdleLambda = new NodejsFunction(this, 'RecommendRdsIdle', {
+    const recommendRdsIdleLambda = new lambda_nodejs.NodejsFunction(this, 'RecommendRdsIdle', {
       runtime: lambda.Runtime.NODEJS_18_X,
       entry: path.join(__dirname, '../../backend/functions/recommend-rds-idle.js'),
       handler: 'handler',
@@ -470,7 +476,7 @@ export class CostGuardianStack extends cdk.Stack {
     });
     table.grantReadWriteData(recommendRdsIdleLambda);
 
-    const deleteUnusedEbsLambda = new NodejsFunction(this, 'DeleteUnusedEbs', {
+    const deleteUnusedEbsLambda = new lambda_nodejs.NodejsFunction(this, 'DeleteUnusedEbs', {
       runtime: lambda.Runtime.NODEJS_18_X,
       entry: path.join(__dirname, '../../backend/functions/delete-unused-ebs.js'),
       handler: 'handler',
@@ -511,7 +517,7 @@ export class CostGuardianStack extends cdk.Stack {
     });
 
     // Lambda de metering do Marketplace
-    const marketplaceMeteringLambda = new NodejsFunction(this, 'MarketplaceMetering', {
+    const marketplaceMeteringLambda = new lambda_nodejs.NodejsFunction(this, 'MarketplaceMetering', {
       runtime: lambda.Runtime.NODEJS_18_X,
       entry: path.join(__dirname, '../../backend/functions/marketplace-metering.js'),
       handler: 'handler',
@@ -731,17 +737,17 @@ export class CostGuardianStack extends cdk.Stack {
 
     // Domínio customizado
     const hostedZone = route53.HostedZone.fromHostedZoneAttributes(this, 'HostedZone', {
-      hostedZoneId: props.hostedZoneId,
-      zoneName: props.domainName,
+      hostedZoneId: hostedZoneId,
+      zoneName: domainName,
     });
 
     const certificate = new acm.Certificate(this, 'SslCertificate', {
-      domainName: props.domainName,
-      subjectAlternativeNames: [`www.${props.domainName}`],
+      domainName: domainName,
+      subjectAlternativeNames: [`www.${domainName}`],
       validation: acm.CertificateValidation.fromDns(hostedZone),
     });
 
-    const domain = amplifyApp.addDomain(props.domainName, {
+    const domain = amplifyApp.addDomain(domainName, {
       enableAutoSubdomain: true,
       subDomains: [
         {

@@ -1,20 +1,26 @@
 const { handler } = require('../functions/correlate-health');
 
-jest.mock('aws-sdk', () => {
-  const mDocumentClient = jest.fn();
-  mDocumentClient.prototype.query = jest.fn().mockReturnThis();
-  mDocumentClient.prototype.put = jest.fn().mockReturnThis();
-  mDocumentClient.prototype.promise = jest.fn();
+const mockDynamoQuery = jest.fn();
+const mockDynamoPut = jest.fn();
+const mockSfnStartExecution = jest.fn();
 
-  const mStepFunctions = jest.fn();
-  mStepFunctions.prototype.startExecution = jest.fn().mockReturnThis();
-  mStepFunctions.prototype.promise = jest.fn();
-
-  return {
-    DynamoDB: { DocumentClient: mDocumentClient },
-    StepFunctions: mStepFunctions,
-  };
-});
+jest.mock('aws-sdk', () => ({
+  DynamoDB: {
+    DocumentClient: jest.fn().mockImplementation(() => ({
+      query: mockDynamoQuery.mockReturnValue({
+        promise: jest.fn().mockResolvedValue({ Items: [] })
+      }),
+      put: mockDynamoPut.mockReturnValue({
+        promise: jest.fn().mockResolvedValue({})
+      })
+    }))
+  },
+  StepFunctions: jest.fn().mockImplementation(() => ({
+    startExecution: mockSfnStartExecution.mockReturnValue({
+      promise: jest.fn().mockResolvedValue({})
+    })
+  }))
+}));
 
 describe('correlate-health handler', () => {
   const AWS = require('aws-sdk');
@@ -25,12 +31,6 @@ describe('correlate-health handler', () => {
     jest.clearAllMocks();
     process.env.DYNAMODB_TABLE = 'test-table';
     process.env.SFN_ARN = 'arn:aws:states:us-east-1:123456789012:stateMachine:test';
-    mockDdb.put.mockReturnValue({
-      promise: jest.fn().mockResolvedValue({})
-    });
-    mockDdb.query.mockReturnValue({
-      promise: jest.fn().mockResolvedValue({ Items: [] })
-    });
   });
 
   it('should query DynamoDB and start the Step Function with correct input', async () => {
@@ -45,26 +45,26 @@ describe('correlate-health handler', () => {
     };
 
     // Mock DynamoDB query to return a customer mapping
-    mockDdb.query.mockReturnValueOnce({
+    mockDynamoQuery.mockReturnValue({
       promise: jest.fn().mockResolvedValue({ Items: [{ id: 'cust-abc' }] })
     });
 
     // Mock SFN startExecution to resolve
-    mockSfn.startExecution.mockReturnValueOnce({
+    mockSfnStartExecution.mockReturnValue({
       promise: jest.fn().mockResolvedValue({ executionArn: 'arn:exec' })
     });
 
     const result = await handler(event);
 
-    expect(mockDdb.query).toHaveBeenCalled();
-    expect(mockDdb.put).toHaveBeenCalledWith(expect.objectContaining({ TableName: 'test-table' }));
+    expect(mockDynamoQuery).toHaveBeenCalled();
+    expect(mockDynamoPut).toHaveBeenCalledWith(expect.objectContaining({ TableName: 'test-table' }));
 
-    expect(mockSfn.startExecution).toHaveBeenCalledWith(expect.objectContaining({
+    expect(mockSfnStartExecution).toHaveBeenCalledWith(expect.objectContaining({
       stateMachineArn: process.env.SFN_ARN,
       input: expect.any(String),
     }));
 
-    const calledInput = JSON.parse(mockSfn.startExecution.mock.calls[0][0].input);
+    const calledInput = JSON.parse(mockSfnStartExecution.mock.calls[0][0].input);
     expect(calledInput.customerId).toBe('cust-abc');
     expect(calledInput.awsAccountId).toBe('111122223333');
     expect(result.status).toBe('success');
@@ -73,7 +73,9 @@ describe('correlate-health handler', () => {
 
   it('should return error when no customer found', async () => {
     const event = { detail: { id: 'evt-2', affectedAccount: '999988887777', resources: [] } };
-    mockDdb.query().promise.mockResolvedValueOnce({ Items: [] });
+    mockDynamoQuery.mockReturnValue({
+      promise: jest.fn().mockResolvedValue({ Items: [] })
+    });
 
     const result = await handler(event);
     expect(result.status).toBe('error');

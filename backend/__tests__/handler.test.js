@@ -1,23 +1,40 @@
 // Tests for API endpoints using supertest
 const request = require('supertest');
 
-jest.mock('aws-sdk', () => {
-  const mDocumentClient = jest.fn();
-  mDocumentClient.prototype.get = jest.fn().mockReturnThis();
-  mDocumentClient.prototype.put = jest.fn().mockReturnThis();
-  mDocumentClient.prototype.query = jest.fn().mockReturnThis();
-  mDocumentClient.prototype.update = jest.fn().mockReturnThis();
-  mDocumentClient.prototype.promise = jest.fn();
+const mockDynamoGet = jest.fn();
+const mockDynamoPut = jest.fn();
+const mockDynamoQuery = jest.fn();
+const mockDynamoUpdate = jest.fn();
+const mockSecretsGetSecretValue = jest.fn();
 
-  const mSecrets = jest.fn();
-  mSecrets.prototype.getSecretValue = jest.fn().mockReturnThis();
-  mSecrets.prototype.promise = jest.fn();
-
-  return {
-    DynamoDB: { DocumentClient: mDocumentClient },
-    SecretsManager: mSecrets,
-  };
-});
+jest.mock('aws-sdk', () => ({
+  DynamoDB: {
+    DocumentClient: jest.fn().mockImplementation(() => ({
+      get: mockDynamoGet.mockReturnValue({
+        promise: jest.fn().mockResolvedValue({})
+      }),
+      put: mockDynamoPut.mockReturnValue({
+        promise: jest.fn().mockResolvedValue({})
+      }),
+      query: mockDynamoQuery.mockReturnValue({
+        promise: jest.fn().mockResolvedValue({ Items: [] })
+      }),
+      update: mockDynamoUpdate.mockReturnValue({
+        promise: jest.fn().mockResolvedValue({})
+      })
+    }))
+  },
+  SecretsManager: jest.fn().mockImplementation(() => ({
+    getSecretValue: mockSecretsGetSecretValue.mockReturnValue({
+      promise: jest.fn().mockResolvedValue({ SecretString: '{}' })
+    })
+  })),
+  StepFunctions: jest.fn().mockImplementation(() => ({
+    startExecution: jest.fn().mockReturnValue({
+      promise: jest.fn().mockResolvedValue({})
+    })
+  }))
+}));
 
 // Mock jsonwebtoken to bypass JWKS complexity in tests
 jest.mock('jsonwebtoken', () => ({
@@ -45,15 +62,19 @@ describe('API handler endpoints', () => {
 
   test('GET /api/onboard-init creates and returns externalId when none exists', async () => {
     // Simulate no existing item
-    mockDdb.get().promise.mockResolvedValueOnce({});
-    mockDdb.put().promise.mockResolvedValueOnce({});
+    mockDynamoGet.mockReturnValue({
+      promise: jest.fn().mockResolvedValue({})
+    });
+    mockDynamoPut.mockReturnValue({
+      promise: jest.fn().mockResolvedValue({})
+    });
 
     const res = await agent.get('/api/onboard-init').set('Authorization', 'Bearer faketoken');
     expect(res.status).toBe(200);
     expect(res.body).toHaveProperty('externalId');
     expect(res.body).toHaveProperty('platformAccountId', process.env.PLATFORM_ACCOUNT_ID);
     // Ensure we attempted to put the item
-    expect(mockDdb.put).toHaveBeenCalled();
+    expect(mockDynamoPut).toHaveBeenCalled();
   });
 
   test('POST /api/onboard with CFN ResourceProperties stores config', async () => {
@@ -66,16 +87,20 @@ describe('API handler endpoints', () => {
       }
     };
 
-    mockDdb.put().promise.mockResolvedValueOnce({});
+    mockDynamoPut.mockReturnValue({
+      promise: jest.fn().mockResolvedValue({})
+    });
 
     const res = await agent.post('/api/onboard').send(payload);
     expect(res.status).toBe(200);
-    expect(mockDdb.put).toHaveBeenCalledWith(expect.objectContaining({ TableName: process.env.DYNAMODB_TABLE }));
+    expect(mockDynamoPut).toHaveBeenCalledWith(expect.objectContaining({ TableName: process.env.DYNAMODB_TABLE }));
   });
 
   test('GET /api/dashboard/costs returns most recent cost data', async () => {
     const fakeData = { data: { total: 123.45 } };
-    mockDdb.query().promise.mockResolvedValueOnce({ Items: [fakeData] });
+    mockDynamoQuery.mockReturnValue({
+      promise: jest.fn().mockResolvedValue({ Items: [fakeData] })
+    });
 
     const res = await agent.get('/api/dashboard/costs').set('Authorization', 'Bearer faketoken');
     expect(res.status).toBe(200);
@@ -83,16 +108,20 @@ describe('API handler endpoints', () => {
   });
 
   test('POST /api/settings/automation saves automation preferences', async () => {
-    mockDdb.update().promise.mockResolvedValueOnce({});
+    mockDynamoUpdate.mockReturnValue({
+      promise: jest.fn().mockResolvedValue({})
+    });
 
     const payload = { automation: { stopIdle: true, deleteUnusedEbs: false } };
     const res = await agent.post('/api/settings/automation').set('Authorization', 'Bearer faketoken').send(payload);
     expect(res.status).toBe(200);
-    expect(mockDdb.update).toHaveBeenCalledWith(expect.objectContaining({ TableName: process.env.DYNAMODB_TABLE }));
+    expect(mockDynamoUpdate).toHaveBeenCalledWith(expect.objectContaining({ TableName: process.env.DYNAMODB_TABLE }));
   });
 
   test('GET /api/admin/claims requires admin and returns items', async () => {
-    mockDdb.query().promise.mockResolvedValueOnce({ Items: [{ id: 'cust-1', sk: 'CLAIM#1' }] });
+    mockDynamoQuery.mockReturnValue({
+      promise: jest.fn().mockResolvedValue({ Items: [{ id: 'cust-1', sk: 'CLAIM#1' }] })
+    });
 
     const res = await agent.get('/api/admin/claims').set('Authorization', 'Bearer faketoken');
     expect(res.status).toBe(200);
@@ -100,9 +129,11 @@ describe('API handler endpoints', () => {
   });
 
   test('PUT /api/admin/claims/:customerId/:claimId/status updates status', async () => {
-    mockDdb.update().promise.mockResolvedValueOnce({});
+    mockDynamoUpdate.mockReturnValue({
+      promise: jest.fn().mockResolvedValue({})
+    });
     const res = await agent.put('/api/admin/claims/cust-1/claim-1/status').set('Authorization', 'Bearer faketoken').send({ status: 'READY_TO_SUBMIT' });
     expect(res.status).toBe(200);
-    expect(mockDdb.update).toHaveBeenCalled();
+    expect(mockDynamoUpdate).toHaveBeenCalled();
   });
 });

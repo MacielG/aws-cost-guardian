@@ -1,12 +1,38 @@
-const mockSTS = jest.fn();
-const mockEC2 = jest.fn();
-const mockCloudWatch = jest.fn();
+const mockStsAssumeRole = jest.fn();
+const mockEc2DescribeVolumes = jest.fn();
+const mockEc2DeleteVolume = jest.fn();
+const mockEc2DescribeInstances = jest.fn();
+const mockEc2StopInstances = jest.fn();
+const mockCwGetMetricData = jest.fn();
 
 jest.mock('aws-sdk', () => {
   return {
-    STS: mockSTS,
-    EC2: mockEC2,
-    CloudWatch: mockCloudWatch,
+    STS: jest.fn().mockImplementation(() => ({
+      assumeRole: mockStsAssumeRole.mockReturnValue({
+        promise: jest.fn().mockResolvedValue({
+          Credentials: { AccessKeyId: 'key', SecretAccessKey: 'secret', SessionToken: 'token' }
+        })
+      })
+    })),
+    EC2: jest.fn().mockImplementation(() => ({
+      describeVolumes: mockEc2DescribeVolumes.mockReturnValue({
+        promise: jest.fn().mockResolvedValue({ Volumes: [] })
+      }),
+      deleteVolume: mockEc2DeleteVolume.mockReturnValue({
+        promise: jest.fn().mockResolvedValue({})
+      }),
+      describeInstances: mockEc2DescribeInstances.mockReturnValue({
+        promise: jest.fn().mockResolvedValue({ Reservations: [] })
+      }),
+      stopInstances: mockEc2StopInstances.mockReturnValue({
+        promise: jest.fn().mockResolvedValue({})
+      })
+    })),
+    CloudWatch: jest.fn().mockImplementation(() => ({
+      getMetricData: mockCwGetMetricData.mockReturnValue({
+        promise: jest.fn().mockResolvedValue({ MetricDataResults: [] })
+      })
+    })),
   };
 });
 
@@ -14,25 +40,8 @@ const { handler: deleteUnusedEbsHandler } = require('../functions/delete-unused-
 const { handler: stopIdleInstancesHandler } = require('../functions/stop-idle-instances');
 
 describe('Funções de Automação', () => {
-  let mockStsPromise;
-  let mockEc2Promise;
-  let mockCwPromise;
-
   beforeEach(() => {
     jest.clearAllMocks();
-
-    mockStsPromise = jest.fn().mockResolvedValue({
-      Credentials: { AccessKeyId: 'key', SecretAccessKey: 'secret', SessionToken: 'token' },
-    });
-    mockEc2Promise = jest.fn();
-    mockCwPromise = jest.fn();
-
-    mockSTS.prototype.assumeRole = jest.fn(() => ({ promise: mockStsPromise }));
-    mockEC2.prototype.describeVolumes = jest.fn(() => ({ promise: mockEc2Promise }));
-    mockEC2.prototype.deleteVolume = jest.fn(() => ({ promise: mockEc2Promise }));
-    mockEC2.prototype.describeInstances = jest.fn(() => ({ promise: mockEc2Promise }));
-    mockEC2.prototype.stopInstances = jest.fn(() => ({ promise: mockEc2Promise }));
-    mockCloudWatch.prototype.getMetricData = jest.fn(() => ({ promise: mockCwPromise }));
   });
 
   describe('delete-unused-ebs', () => {
@@ -43,29 +52,33 @@ describe('Funções de Automação', () => {
     };
 
     test('deve excluir volumes "available" e ignorar volumes "in-use"', async () => {
-      mockEc2Promise.mockResolvedValueOnce({
-        Volumes: [
-          { VolumeId: 'vol-available', State: 'available' },
-          { VolumeId: 'vol-in-use', State: 'in-use' },
+    mockEc2DescribeVolumes.mockReturnValue({
+    promise: jest.fn().mockResolvedValue({
+    Volumes: [
+      { VolumeId: 'vol-available', State: 'available' },
+        { VolumeId: 'vol-in-use', State: 'in-use' },
         ],
-      });
+        })
+    });
 
-      mockEc2Promise.mockResolvedValueOnce({});
+    mockEc2DeleteVolume.mockReturnValue({
+        promise: jest.fn().mockResolvedValue({})
+    });
 
-      await deleteUnusedEbsHandler(baseEvent);
+    await deleteUnusedEbsHandler(baseEvent);
 
-      expect(mockSTS.prototype.assumeRole).toHaveBeenCalledWith({
-        RoleArn: baseEvent.roleArn,
+      expect(mockStsAssumeRole).toHaveBeenCalledWith({
+      RoleArn: baseEvent.roleArn,
         RoleSessionName: 'CostGuardianDeleteEBS',
-      });
+    });
 
-      expect(mockEC2.prototype.describeVolumes).toHaveBeenCalled();
+    expect(mockEc2DescribeVolumes).toHaveBeenCalled();
 
-      expect(mockEC2.prototype.deleteVolume).toHaveBeenCalledWith({
-        VolumeId: 'vol-available',
-      });
+    expect(mockEc2DeleteVolume).toHaveBeenCalledWith({
+    VolumeId: 'vol-available',
+    });
 
-      expect(mockEC2.prototype.deleteVolume).not.toHaveBeenCalledWith({
+      expect(mockEc2DeleteVolume).not.toHaveBeenCalledWith({
         VolumeId: 'vol-in-use',
       });
     });
@@ -80,43 +93,49 @@ describe('Funções de Automação', () => {
     };
 
     test('deve parar instâncias ociosas baseado no uso de CPU', async () => {
-      mockEc2Promise.mockResolvedValueOnce({
-        Reservations: [
-          {
-            Instances: [
-              {
-                InstanceId: 'i-123',
-                State: { Name: 'running' },
-                Tags: [{ Key: 'Name', Value: 'Test Instance' }],
-              },
-            ],
-          },
-        ],
+      mockEc2DescribeInstances.mockReturnValue({
+        promise: jest.fn().mockResolvedValue({
+          Reservations: [
+            {
+              Instances: [
+                {
+                  InstanceId: 'i-123',
+                  State: { Name: 'running' },
+                  Tags: [{ Key: 'Name', Value: 'Test Instance' }],
+                },
+              ],
+            },
+          ],
+        })
       });
 
-      mockCwPromise.mockResolvedValueOnce({
-        MetricDataResults: [
-          {
-            Id: 'cpu_utilization',
-            Values: [2.5], // CPU abaixo do threshold
-          },
-        ],
+      mockCwGetMetricData.mockReturnValue({
+        promise: jest.fn().mockResolvedValue({
+          MetricDataResults: [
+            {
+              Id: 'cpu_utilization',
+              Values: [2.5], // CPU abaixo do threshold
+            },
+          ],
+        })
       });
 
-      mockEc2Promise.mockResolvedValueOnce({});
+      mockEc2StopInstances.mockReturnValue({
+        promise: jest.fn().mockResolvedValue({})
+      });
 
       await stopIdleInstancesHandler(baseEvent);
 
-      expect(mockSTS.prototype.assumeRole).toHaveBeenCalledWith({
+      expect(mockStsAssumeRole).toHaveBeenCalledWith({
         RoleArn: baseEvent.roleArn,
         RoleSessionName: 'CostGuardianStopIdle',
       });
 
-      expect(mockEC2.prototype.describeInstances).toHaveBeenCalled();
+      expect(mockEc2DescribeInstances).toHaveBeenCalled();
 
-      expect(mockCloudWatch.prototype.getMetricData).toHaveBeenCalled();
+      expect(mockCwGetMetricData).toHaveBeenCalled();
 
-      expect(mockEC2.prototype.stopInstances).toHaveBeenCalledWith({
+      expect(mockEc2StopInstances).toHaveBeenCalledWith({
         InstanceIds: ['i-123'],
       });
     });

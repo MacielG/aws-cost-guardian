@@ -1,0 +1,375 @@
+// Jest Snapshot v1, https://goo.gl/fbAQLP
+
+exports[`Home Page matches expected snapshot 1`] = `
+<main
+  class="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100"
+>
+  <div
+    class="container mx-auto px-6 py-16"
+  >
+    <div
+      class="max-w-4xl mx-auto text-center"
+    >
+      <h1
+        class="text-4xl md:text-6xl font-bold text-gray-900 mb-6"
+      >
+        AWS Cost Guardian
+      </h1>
+      <p
+        class="text-xl text-gray-600 mb-8 max-w-2xl mx-auto"
+      >
+        Economize automaticamente na sua conta AWS. Detectamos recursos ociosos, recuperamos créditos SLA e otimizamos seus custos de nuvem.
+      </p>
+      <div
+        class="flex flex-col sm:flex-row gap-4 justify-center mb-12"
+      >
+        <a
+          data-testid="link-/login?mode=trial"
+          href="/login?mode=trial"
+        >
+          <button
+            class="inline-flex items-center justify-center rounded-md font-medium transition-all duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-primary-blue focus:ring-offset-2 focus:ring-offset-background-dark bg-primary-blue text-text-light hover:bg-primary-blue-light shadow-md hover:shadow-lg px-8 py-3 text-lg"
+            tabindex="0"
+          >
+            Iniciar Análise Gratuita →
+          </button>
+        </a>
+      </div>
+    </div>
+    <div
+      class="max-w-6xl mx-auto mt-16"
+    >
+      <h2
+        class="text-3xl font-bold text-center text-gray-900 mb-12"
+      >
+        Por que escolher o AWS Cost Guardian?
+      </h2>
+      <div
+        class="grid md:grid-cols-3 gap-8 mb-16"
+      >
+        <div
+          class="bg-white p-8 rounded-lg shadow-lg text-center"
+        >
+          <svg
+            class="lucide lucide-dollar-sign w-12 h-12 text-green-500 mx-auto mb-4"
+            fill="none"
+            height="24"
+            stroke="currentColor"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            stroke-width="2"
+            viewBox="0 0 24 24"
+            width="24"
+            xmlns="http://www.w3.org/2000/svg"
+          >
+            <line
+              x1="12"
+              x2="12"
+              y1="2"
+              y2="22"
+            />
+            <path
+              d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"
+            />
+          </svg>
+          <h3
+            class="text-xl font-semibold mb-4"
+          >
+            Economia Garantida
+          </h3>
+          <p
+            class="text-gray-600"
+          >
+            Identificamos e desligamos instâncias EC2 ociosas, reduzindo sua fatura mensal em até 30%.
+          </p>
+        </div>
+        <div
+          class="bg-white p-8 rounded-lg shadow-lg text-center"
+        >
+          <svg
+            class="lucide lucide-award w-12 h-12 text-blue-500 mx-auto mb-4"
+            fill="none"
+            height="24"
+            stroke="currentColor"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            stroke-width="2"
+            viewBox="0 0 24 24"
+            width="24"
+            xmlns="http://www.w3.org/2000/svg"
+          >
+            <circle
+              cx="12"
+              cy="8"
+              r="6"
+            />
+            <path
+              d="M15.477 12.89 17 22l-5-3-5 3 1.523-9.11"
+            />
+          </svg>
+          <h3
+            class="text-xl font-semibold mb-4"
+          >
+            Créditos SLA Automáticos
+          </h3>
+          <p
+            class="text-gray-600"
+          >
+            Monitoramos interrupções de serviço e automaticamente reivindicamos créditos SLA da AWS por você.
+          </p>
+        </div>
+        <div
+          class="bg-white p-8 rounded-lg shadow-lg text-center"
+        >
+          <svg
+            class="lucide lucide-zap w-12 h-12 text-orange-500 mx-auto mb-4"
+            fill="none"
+            height="24"
+            stroke="currentColor"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            stroke-width="2"
+            viewBox="0 0 24 24"
+            width="24"
+            xmlns="http://www.w3.org/2000/svg"
+          >
+            <polygon
+              points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"
+            />
+          </svg>
+          <h3
+            class="text-xl font-semibold mb-4"
+          >
+            Sem Esforço
+          </h3>
+          <p
+            class="text-gray-600"
+          >
+            Uma vez configurado, tudo funciona automaticamente. Você apenas vê os resultados.
+          </p>
+        </div>
+      </div>
+      <div
+        class="bg-white p-8 rounded-lg shadow-lg mb-16"
+      >
+        <h2
+          class="text-2xl font-bold text-center mb-6"
+        >
+          Como Funciona Nosso Modelo
+        </h2>
+        <div
+          class="max-w-3xl mx-auto text-center"
+        >
+          <p
+            class="text-lg text-gray-600 mb-6"
+          >
+            Cobramos apenas quando você economiza. Nossa comissão é justa e transparente:
+          </p>
+          <div
+            class="bg-green-50 border-2 border-green-200 rounded-lg p-6"
+          >
+            <h3
+              class="text-2xl font-bold text-green-700 mb-2"
+            >
+              30% da Economia Recuperada
+            </h3>
+            <p
+              class="text-green-600"
+            >
+              Para cada dólar economizado através de nossas recomendações ou créditos SLA recuperados, retemos apenas 30 centavos. Você fica com 70% de todo o valor recuperado.
+            </p>
+          </div>
+          <p
+            class="text-sm text-gray-500 mt-4"
+          >
+            Sem taxas mensais, sem custos ocultos. Pague apenas pelo valor real que recuperamos para você.
+          </p>
+        </div>
+      </div>
+      <div
+        class="bg-white p-8 rounded-lg shadow-lg mb-16"
+      >
+        <h2
+          class="text-2xl font-bold text-center mb-8"
+        >
+          Recursos Principais
+        </h2>
+        <div
+          class="grid md:grid-cols-2 gap-8"
+        >
+          <div
+            class="flex items-start space-x-4"
+          >
+            <svg
+              class="lucide lucide-bar-chart3 w-8 h-8 text-blue-500 mt-1"
+              fill="none"
+              height="24"
+              stroke="currentColor"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2"
+              viewBox="0 0 24 24"
+              width="24"
+              xmlns="http://www.w3.org/2000/svg"
+            >
+              <path
+                d="M3 3v18h18"
+              />
+              <path
+                d="M18 17V9"
+              />
+              <path
+                d="M13 17V5"
+              />
+              <path
+                d="M8 17v-3"
+              />
+            </svg>
+            <div>
+              <h3
+                class="text-lg font-semibold mb-2"
+              >
+                Monitoramento em Tempo Real
+              </h3>
+              <p
+                class="text-gray-600"
+              >
+                Analisamos continuamente sua conta AWS para identificar oportunidades de economia.
+              </p>
+            </div>
+          </div>
+          <div
+            class="flex items-start space-x-4"
+          >
+            <svg
+              class="lucide lucide-shield w-8 h-8 text-green-500 mt-1"
+              fill="none"
+              height="24"
+              stroke="currentColor"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2"
+              viewBox="0 0 24 24"
+              width="24"
+              xmlns="http://www.w3.org/2000/svg"
+            >
+              <path
+                d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10"
+              />
+            </svg>
+            <div>
+              <h3
+                class="text-lg font-semibold mb-2"
+              >
+                Execução Segura
+              </h3>
+              <p
+                class="text-gray-600"
+              >
+                Todas as ações são executadas com permissões mínimas e reversíveis.
+              </p>
+            </div>
+          </div>
+          <div
+            class="flex items-start space-x-4"
+          >
+            <svg
+              class="lucide lucide-trending-down w-8 h-8 text-orange-500 mt-1"
+              fill="none"
+              height="24"
+              stroke="currentColor"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2"
+              viewBox="0 0 24 24"
+              width="24"
+              xmlns="http://www.w3.org/2000/svg"
+            >
+              <polyline
+                points="22 17 13.5 8.5 8.5 13.5 2 7"
+              />
+              <polyline
+                points="16 17 22 17 22 11"
+              />
+            </svg>
+            <div>
+              <h3
+                class="text-lg font-semibold mb-2"
+              >
+                Otimização Contínua
+              </h3>
+              <p
+                class="text-gray-600"
+              >
+                Identificamos padrões de uso e sugerimos melhorias para reduzir custos futuros.
+              </p>
+            </div>
+          </div>
+          <div
+            class="flex items-start space-x-4"
+          >
+            <svg
+              class="lucide lucide-award w-8 h-8 text-purple-500 mt-1"
+              fill="none"
+              height="24"
+              stroke="currentColor"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2"
+              viewBox="0 0 24 24"
+              width="24"
+              xmlns="http://www.w3.org/2000/svg"
+            >
+              <circle
+                cx="12"
+                cy="8"
+                r="6"
+              />
+              <path
+                d="M15.477 12.89 17 22l-5-3-5 3 1.523-9.11"
+              />
+            </svg>
+            <div>
+              <h3
+                class="text-lg font-semibold mb-2"
+              >
+                Relatórios Detalhados
+              </h3>
+              <p
+                class="text-gray-600"
+              >
+                Receba relatórios completos sobre interrupções e créditos SLA recuperados.
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div
+        class="text-center"
+      >
+        <h2
+          class="text-3xl font-bold text-gray-900 mb-4"
+        >
+          Pronto para começar a economizar?
+        </h2>
+        <p
+          class="text-lg text-gray-600 mb-8"
+        >
+          Cadastre-se gratuitamente e veja quanto você pode economizar na sua conta AWS.
+        </p>
+        <a
+          data-testid="link-/login?mode=trial"
+          href="/login?mode=trial"
+        >
+          <button
+            class="inline-flex items-center justify-center rounded-md font-medium transition-all duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-primary-blue focus:ring-offset-2 focus:ring-offset-background-dark text-text-light shadow-md hover:shadow-lg px-10 py-4 text-lg bg-green-600 hover:bg-green-700"
+            tabindex="0"
+          >
+            Iniciar Análise Gratuita →
+          </button>
+        </a>
+      </div>
+    </div>
+  </div>
+</main>
+`;

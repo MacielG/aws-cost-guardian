@@ -1,9 +1,16 @@
 const { calculateImpact, checkSLA, generateReport, submitSupportTicket } = require('../functions/sla-workflow');
 
 // Mock AWS SDK
+const mockStsAssumeRole = jest.fn();
+const mockDynamoGet = jest.fn();
+const mockDynamoPut = jest.fn();
+const mockDynamoUpdate = jest.fn();
+const mockS3PutObject = jest.fn();
+const mockSupportCreateCase = jest.fn();
+
 jest.mock('aws-sdk', () => ({
   STS: jest.fn().mockImplementation(() => ({
-    assumeRole: jest.fn().mockReturnValue({
+    assumeRole: mockStsAssumeRole.mockReturnValue({
       promise: jest.fn().mockResolvedValue({
         Credentials: {
           AccessKeyId: 'test-key',
@@ -15,25 +22,33 @@ jest.mock('aws-sdk', () => ({
   })),
   DynamoDB: {
     DocumentClient: jest.fn().mockImplementation(() => ({
-      get: jest.fn().mockReturnValue({
+      get: mockDynamoGet.mockReturnValue({
         promise: jest.fn().mockResolvedValue({ Item: { supportLevel: 'premium' } })
       }),
-      put: jest.fn().mockReturnValue({
+      put: mockDynamoPut.mockReturnValue({
         promise: jest.fn().mockResolvedValue({})
       }),
-      update: jest.fn().mockReturnValue({
+      update: mockDynamoUpdate.mockReturnValue({
         promise: jest.fn().mockResolvedValue({})
+      }),
+      query: jest.fn().mockReturnValue({
+        promise: jest.fn().mockResolvedValue({ Items: [] })
       }),
     })),
   },
   S3: jest.fn().mockImplementation(() => ({
-    putObject: jest.fn().mockReturnValue({
+    putObject: mockS3PutObject.mockReturnValue({
       promise: jest.fn().mockResolvedValue({})
     }),
   })),
   Support: jest.fn().mockImplementation(() => ({
-    createCase: jest.fn().mockReturnValue({
+    createCase: mockSupportCreateCase.mockReturnValue({
       promise: jest.fn().mockResolvedValue({ caseId: 'test-case-id' })
+    }),
+  })),
+  StepFunctions: jest.fn().mockImplementation(() => ({
+    startExecution: jest.fn().mockReturnValue({
+      promise: jest.fn().mockResolvedValue({})
     }),
   })),
 }));
@@ -83,10 +98,12 @@ const { CostExplorerClient } = require('@aws-sdk/client-cost-explorer');
 const AWS = require('aws-sdk');
 const stripe = require('stripe');
 
+// Create mock instances
 const mockSts = new AWS.STS();
 const mockDynamoDb = new AWS.DynamoDB.DocumentClient();
 const mockS3 = new AWS.S3();
 const mockSupport = new AWS.Support();
+const mockStepFunctions = new AWS.StepFunctions();
 const mockCostExplorer = new CostExplorerClient();
 const mockStripe = new stripe();
 
@@ -105,6 +122,7 @@ describe('SLA Workflow Functions', () => {
       healthEvent: {
         startTime: '2023-10-26T10:00:00Z',
         endTime: '2023-10-26T11:00:00Z',
+        service: 'EC2',
         resources: ['arn:aws:ec2:us-east-1:111122223333:instance/i-1234567890abcdef0'],
       },
     };
@@ -112,7 +130,7 @@ describe('SLA Workflow Functions', () => {
     it('should calculate impacted cost correctly', async () => {
       const result = await calculateImpact(baseEvent);
 
-      expect(mockSts.assumeRole).toHaveBeenCalled();
+      expect(mockStsAssumeRole).toHaveBeenCalled();
       expect(mockCostExplorer.send).toHaveBeenCalled();
       expect(result.impactedCost).toBe(15.75);
     });
@@ -121,7 +139,7 @@ describe('SLA Workflow Functions', () => {
       const eventWithoutResources = { ...baseEvent, healthEvent: { ...baseEvent.healthEvent, resources: [] } };
       const result = await calculateImpact(eventWithoutResources);
 
-      expect(mockDynamoDb.update).toHaveBeenCalledWith(expect.objectContaining({
+      expect(mockDynamoUpdate).toHaveBeenCalledWith(expect.objectContaining({
         ExpressionAttributeValues: { ':status': 'NO_RESOURCES_LISTED' },
       }));
       expect(result.impactedCost).toBe(0);
@@ -130,7 +148,7 @@ describe('SLA Workflow Functions', () => {
 
     it('should use basic support level if not configured', async () => {
       // Temporarily change the mock to return no Item
-      mockDynamoDb.get.mockReturnValueOnce({
+      mockDynamoGet.mockReturnValueOnce({
         promise: jest.fn().mockResolvedValue({}) // No Item
       });
 
@@ -140,7 +158,9 @@ describe('SLA Workflow Functions', () => {
     });
 
     it('should throw an error if assumeRole fails', async () => {
-      mockSts.promise.mockRejectedValueOnce(new Error('AssumeRole failed'));
+      mockStsAssumeRole.mockReturnValueOnce({
+        promise: jest.fn().mockRejectedValue(new Error('AssumeRole failed'))
+      });
       await expect(calculateImpact(baseEvent)).rejects.toThrow('AssumeRole failed');
     });
   });
@@ -186,12 +206,12 @@ describe('SLA Workflow Functions', () => {
 
       const result = await generateReport(baseEvent);
 
-      expect(mockS3.putObject).toHaveBeenCalled();
+      expect(mockS3PutObject).toHaveBeenCalled();
       // Não deveria mais criar um cliente ou fatura no Stripe
       expect(mockStripe.customers.create).not.toHaveBeenCalled();
       expect(mockStripe.invoices.create).not.toHaveBeenCalled();
       // Deveria apenas salvar a claim como READY_TO_SUBMIT
-      expect(mockDynamoDb.put).toHaveBeenCalledWith(expect.objectContaining({
+      expect(mockDynamoPut).toHaveBeenCalledWith(expect.objectContaining({
         Item: expect.objectContaining({
           status: 'READY_TO_SUBMIT',
           stripeInvoiceId: null,
@@ -207,7 +227,7 @@ describe('SLA Workflow Functions', () => {
       const eventNoViolation = { ...baseEvent, violation: false };
       const result = await generateReport(eventNoViolation);
 
-      expect(mockDynamoDb.update).toHaveBeenCalledWith(expect.objectContaining({
+      expect(mockDynamoUpdate).toHaveBeenCalledWith(expect.objectContaining({
         ExpressionAttributeValues: { ':status': 'NO_VIOLATION' },
       }));
       expect(result.status).toBe('no-claim');
@@ -228,8 +248,8 @@ describe('SLA Workflow Functions', () => {
     it('should create a support case and update claim status', async () => {
       const result = await submitSupportTicket({ ...baseEvent, supportLevel: 'premium' });
 
-      expect(mockSupport.createCase).toHaveBeenCalled();
-      expect(mockDynamoDb.update).toHaveBeenCalledWith(expect.objectContaining({
+      expect(mockSupportCreateCase).toHaveBeenCalled();
+      expect(mockDynamoUpdate).toHaveBeenCalledWith(expect.objectContaining({
         ExpressionAttributeValues: { ':status': 'SUBMITTED', ':caseId': 'test-case-id' },
       }));
       expect(result.status).toBe('submitted');
@@ -238,12 +258,12 @@ describe('SLA Workflow Functions', () => {
 
     it('should handle ticket submission failure', async () => {
       // Temporarily change the mock to reject
-      mockSupport.createCase.mockReturnValueOnce({
+      mockSupportCreateCase.mockReturnValueOnce({
         promise: jest.fn().mockRejectedValue(new Error('CreateCase failed'))
       });
 
       await expect(submitSupportTicket({ ...baseEvent, supportLevel: 'premium' })).rejects.toThrow('CreateCase failed');
-      expect(mockDynamoDb.update).toHaveBeenCalledWith(expect.objectContaining({
+      expect(mockDynamoUpdate).toHaveBeenCalledWith(expect.objectContaining({
         ExpressionAttributeValues: { ':status': 'SUBMISSION_FAILED', ':error': 'CreateCase failed' },
       }));
     });
@@ -251,8 +271,8 @@ describe('SLA Workflow Functions', () => {
     it('should require manual submission for basic plan', async () => {
       const result = await submitSupportTicket({ ...baseEvent, supportLevel: 'basic' });
 
-      expect(mockSupport.createCase).not.toHaveBeenCalled();
-      expect(mockDynamoDb.update).toHaveBeenCalledWith(expect.objectContaining({
+      expect(mockSupportCreateCase).not.toHaveBeenCalled();
+      expect(mockDynamoUpdate).toHaveBeenCalledWith(expect.objectContaining({
         ExpressionAttributeValues: { ':status': 'PENDING_MANUAL_SUBMISSION' },
       }));
       expect(result.status).toBe('manual-submission-required');

@@ -1,5 +1,6 @@
 import React from 'react'
-import { render, screen } from '@testing-library/react'
+import { render, screen, fireEvent, waitFor } from '@testing-library/react'
+import userEvent from '@testing-library/user-event'
 import Home from '../page'
 
 // Mock next/link
@@ -19,35 +20,121 @@ jest.mock('react-i18next', () => ({
 }))
 
 describe('Home Page', () => {
-  it('renders welcome message', () => {
+  it('renders main title and description', () => {
     render(<Home />)
 
-    expect(screen.getByText('welcome')).toBeInTheDocument()
+    expect(screen.getByText('AWS Cost Guardian')).toBeInTheDocument()
+    expect(screen.getByText('Economize automaticamente na sua conta AWS. Detectamos recursos ociosos, recuperamos créditos SLA e otimizamos seus custos de nuvem.')).toBeInTheDocument()
   })
 
-  it('renders onboarding button', () => {
+  it('renders trial analysis buttons', () => {
     render(<Home />)
 
-    const onboardingLink = screen.getByTestId('link-/onboard')
-    expect(onboardingLink).toBeInTheDocument()
-    expect(screen.getByText('onboarding')).toBeInTheDocument()
+    const trialLinks = screen.getAllByTestId('link-/login?mode=trial')
+    expect(trialLinks).toHaveLength(2) // Two buttons on the page
+    expect(screen.getByText('Iniciar Análise Gratuita →')).toBeInTheDocument()
   })
 
-  it('renders dashboard button', () => {
+  it('renders benefits section with correct content', () => {
     render(<Home />)
 
-    const dashboardLink = screen.getByTestId('link-/dashboard')
-    expect(dashboardLink).toBeInTheDocument()
-    expect(screen.getByText('dashboard')).toBeInTheDocument()
+    expect(screen.getByText('Por que escolher o AWS Cost Guardian?')).toBeInTheDocument()
+    expect(screen.getByText('Economia Garantida')).toBeInTheDocument()
+    expect(screen.getByText('Créditos SLA Automáticos')).toBeInTheDocument()
+    expect(screen.getByText('Sem Esforço')).toBeInTheDocument()
   })
 
-  it('has correct structure', () => {
+  it('renders commission model section', () => {
+    render(<Home />)
+
+    expect(screen.getByText('Como Funciona Nosso Modelo')).toBeInTheDocument()
+    expect(screen.getByText('30% da Economia Recuperada')).toBeInTheDocument()
+    expect(screen.getByText('Para cada dólar economizado através de nossas recomendações ou créditos SLA recuperados, retemos apenas 30 centavos.')).toBeInTheDocument()
+  })
+
+  it('renders features section', () => {
+    render(<Home />)
+
+    expect(screen.getByText('Recursos Principais')).toBeInTheDocument()
+    expect(screen.getByText('Monitoramento em Tempo Real')).toBeInTheDocument()
+    expect(screen.getByText('Execução Segura')).toBeInTheDocument()
+    expect(screen.getByText('Otimização Contínua')).toBeInTheDocument()
+    expect(screen.getByText('Relatórios Detalhados')).toBeInTheDocument()
+  })
+
+  it('renders final CTA section', () => {
+    render(<Home />)
+
+    expect(screen.getByText('Pronto para começar a economizar?')).toBeInTheDocument()
+    expect(screen.getByText('Cadastre-se gratuitamente e veja quanto você pode economizar na sua conta AWS.')).toBeInTheDocument()
+  })
+
+  it('has correct main structure', () => {
     render(<Home />)
 
     const main = screen.getByRole('main')
-    expect(main).toHaveClass('flex', 'min-h-screen', 'flex-col', 'items-center', 'justify-center', 'p-24')
+    expect(main).toHaveClass('min-h-screen', 'bg-gradient-to-br', 'from-blue-50', 'to-indigo-100')
 
-    const heading = screen.getByRole('heading', { level: 1 })
-    expect(heading).toHaveTextContent('welcome')
+    const headings = screen.getAllByRole('heading')
+    expect(headings).toHaveLength(8) // Multiple h1, h2, h3
+  })
+
+  it('buttons are accessible and clickable', async () => {
+    const user = userEvent.setup()
+    render(<Home />)
+
+    const buttons = screen.getAllByRole('button', { name: /Iniciar Análise Gratuita/ })
+    expect(buttons).toHaveLength(2)
+
+    // Test that buttons have proper accessibility
+    buttons.forEach(button => {
+      expect(button).toHaveAttribute('type', 'button')
+      expect(button).not.toBeDisabled()
+    })
+
+    // Test click simulation (though link is mocked)
+    await user.click(buttons[0])
+    // In real scenario, this would navigate, but with mock we just ensure no errors
+  })
+
+  it('icons are rendered correctly', () => {
+    render(<Home />)
+
+    // Check for presence of icons via their classes (lucide icons)
+    const icons = document.querySelectorAll('[class*="lucide"]')
+    expect(icons.length).toBeGreaterThan(0)
+  })
+
+  it('responsive grid layout is applied', () => {
+    render(<Home />)
+
+    const grids = document.querySelectorAll('[class*="grid"]')
+    expect(grids.length).toBeGreaterThan(0)
+
+    // Check for responsive classes
+    const responsiveElements = document.querySelectorAll('[class*="md:"]')
+    expect(responsiveElements.length).toBeGreaterThan(0)
+  })
+
+  it('handles keyboard navigation', async () => {
+    const user = userEvent.setup()
+    render(<Home />)
+
+    const firstButton = screen.getByRole('button', { name: /Iniciar Análise Gratuita/ })
+
+    firstButton.focus()
+    expect(document.activeElement).toBe(firstButton)
+
+    await user.keyboard('{Tab}')
+    expect(document.activeElement).not.toBe(firstButton) // Should move to next focusable element
+  })
+
+  it('renders without throwing errors', () => {
+    expect(() => render(<Home />)).not.toThrow()
+  })
+
+  it('matches expected snapshot', () => {
+    const { container } = render(<Home />)
+    expect(container.firstChild).toMatchSnapshot()
   })
 })
