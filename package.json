@@ -8,19 +8,19 @@
     "infra"
   ],
   "scripts": {
-  "install:all": "npm ci --workspaces",
-  "dev": "concurrently --kill-others-on-fail --names \"FRONT,BACK\" \"npm:dev --workspace=frontend\" \"npm:dev --workspace=backend\"",
-  "deploy": "./deploy-all.sh",
-  "test": "npm test --workspaces",
+    "install:all": "npm ci --workspaces",
+    "dev": "concurrently --kill-others-on-fail --names \"FRONT,BACK\" \"npm:dev --workspace=frontend\" \"npm:dev --workspace=backend\"",
+    "deploy": "./deploy-all.sh",
+    "test": "npm test --workspaces",
     "test:coverage": "npm run test -- --coverage --coverageDirectory=./coverage --collectCoverageFrom='backend/**/*.js' --collectCoverageFrom='frontend/**/*.{ts,tsx}' --collectCoverageFrom='infra/**/*.ts'"
   },
   "devDependencies": {
+    "@babel/preset-env": "^7.28.5",
+    "@swc/helpers": "^0.5.2",
     "concurrently": "^8.2.2",
     "husky": "^8.0.0",
-    "lint-staged": "^13.0.0",
-    "@swc/helpers": "^0.5.2"
-  }
-  ,
+    "lint-staged": "^13.0.0"
+  },
   "overrides": {
     "react": "^18",
     "react-dom": "^18"

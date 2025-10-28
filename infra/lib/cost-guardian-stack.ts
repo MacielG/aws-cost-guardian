@@ -152,31 +152,33 @@ export class CostGuardianStack extends cdk.Stack {
       }),
     });
 
-    // Implantação do template do CloudFormation no bucket S3
-    // Publica apenas o arquivo `cost-guardian-template.yaml` e o renomeia para `template.yaml`
-    // Skip durante testes para evitar erros de asset não encontrado
-    const docsPath = path.join(__dirname, '../../docs');
-    const fs = require('fs');
-    if (props.isTestEnvironment !== true && fs.existsSync(docsPath)) {
-      new s3deploy.BucketDeployment(this, 'DeployCfnTemplate', {
-        sources: [s3deploy.Source.asset(docsPath)], // Aponta especificamente para o diretório docs
-        // Inclui apenas o template desejado
-        include: ['cost-guardian-template.yaml'],
-        // Renomeia o arquivo no S3 para a URL pública esperada
-        destinationKeyPrefix: '',
-        destinationBucket: templateBucket,
-      });
+    // Use ONLY the prop to determine asset deployment for tests
+    if (!props.isTestEnvironment) {
+         const docsPath = path.join(__dirname, '../../docs');
+         const fs = require('fs');
 
-      // Implantação do template TRIAL no bucket S3
-      new s3deploy.BucketDeployment(this, 'DeployTrialCfnTemplate', {
-        sources: [s3deploy.Source.asset(docsPath)],
-        include: ['cost-guardian-TRIAL-template.yaml'],
-        destinationKeyPrefix: '',
-        destinationBucket: templateBucket,
-      });
-    } else if (!fs.existsSync(docsPath) && props.isTestEnvironment !== true) {
-       console.warn(`Warning: Docs path not found at ${docsPath}. Skipping S3 template deployment.`);
+         if (fs.existsSync(docsPath)) {
+         new s3deploy.BucketDeployment(this, 'DeployCfnTemplate', {
+         sources: [s3deploy.Source.asset(docsPath)],
+         include: ['cost-guardian-template.yaml'],
+         destinationKeyPrefix: '',
+         objectNames: ['template.yaml'], // Explicitly set name
+         destinationBucket: templateBucket,
+       });
+
+           new s3deploy.BucketDeployment(this, 'DeployTrialCfnTemplate', {
+           sources: [s3deploy.Source.asset(docsPath)],
+           include: ['cost-guardian-TRIAL-template.yaml'],
+         destinationKeyPrefix: '',
+         objectNames: ['cost-guardian-TRIAL-template.yaml'], // Explicitly set name
+         destinationBucket: templateBucket,
+       });
+       } else {
+             // Still useful to warn if deploying outside tests and path is missing
+         console.warn(`Warning: Docs path not found at ${docsPath}. Skipping S3 template deployment.`);
+         }
     }
+    // If props.isTestEnvironment is true, the entire block above is skipped.
 
 
     // Cognito (Mantido)

@@ -467,7 +467,6 @@ describe('DashboardPage', () => {
         const htmlContent = content.innerHTML.toLowerCase();
         expect(htmlContent).toContain('&lt;img src="x" onerror="alert(1)"&gt;');
         expect(htmlContent).not.toContain('<script');
-        expect(htmlContent).not.toContain('onerror=');
         expect(htmlContent).not.toContain('drop table');
         });
       });

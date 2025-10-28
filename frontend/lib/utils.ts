@@ -13,7 +13,7 @@ export const formatCurrency = (value: number): string => {
 };
 
 export const formatDate = (date: string): string => {
-  return new Date(date).toLocaleDateString('pt-BR');
+  return new Date(date).toLocaleDateString('en-US');
 };
 
 export const sanitizeHtml = (html: string): string => {

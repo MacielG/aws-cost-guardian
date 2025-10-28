@@ -7,6 +7,7 @@ import { MainLayout } from '@/components/layouts/main-layout';
 import { AlertCircle, DollarSign, TrendingUp, TrendingDown } from 'lucide-react';
 import { apiFetch } from '@/lib/api';
 import { ProtectedRoute } from '@/components/auth/ProtectedRoute';
+import { formatDate, sanitizeHtml } from '@/lib/utils';
 
 interface Incident {
   id: string;
@@ -184,9 +185,9 @@ function DashboardContent() {
         <div className="flex items-center space-x-3">
         <AlertCircle className="w-5 h-5 text-secondary-red" />
         <div>
-        <p className="text-sm font-medium text-text-light">{inc.service}</p>
+        <p className="text-sm font-medium text-text-light" dangerouslySetInnerHTML={{ __html: sanitizeHtml(inc.service) }}></p>
         <p data-testid="impact-value" className="text-xs text-text-medium">{t('dashboard.impact')}: ${inc.impact}</p>
-        <p data-testid="incident-date" className="text-xs text-text-medium">{new Date(inc.timestamp).toLocaleDateString()}</p>
+        <p data-testid="incident-date" className="text-xs text-text-medium">{formatDate(inc.timestamp)}</p>
         </div>
         </div>
         <div className={`px-2 py-1 rounded-full text-xs font-medium ${

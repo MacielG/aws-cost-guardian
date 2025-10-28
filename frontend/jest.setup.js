@@ -1,3 +1,6 @@
+// Configure React act environment for Jest
+global.IS_REACT_ACT_ENVIRONMENT = true
+
 import '@testing-library/jest-dom'
 
 // Mock Next.js router
