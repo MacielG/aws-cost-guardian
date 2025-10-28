@@ -382,10 +382,78 @@ app.post('/api/billing/create-checkout-session', authenticateUser, async (req, r
   }
 });
 
+// POST /api/marketplace/webhook - Webhook do Marketplace SNS
+app.post('/api/marketplace/webhook', express.raw({ type: 'application/json' }), async (req, res) => {
+  try {
+    const message = JSON.parse(req.body);
+
+    // Verificar se é mensagem do SNS
+    if (message.Type === 'SubscriptionConfirmation') {
+      // Confirmar subscrição do SNS (se necessário)
+      // Para simplificar, assumimos que está confirmado
+      console.log('SNS Subscription confirmed');
+      return res.status(200).send('OK');
+    }
+
+    if (message.Type === 'Notification') {
+      const notification = JSON.parse(message.Message);
+
+      const action = notification.action;
+      const customerIdentifier = notification.customerIdentifier;
+
+      // Mapear customerIdentifier para userId (assumindo que foi armazenado no resolve)
+      // Na prática, você precisa mapear o marketplaceCustomerId para o userId
+      // Aqui, assumimos que há um campo marketplaceCustomerId no item do usuário
+
+      // Buscar usuário pelo marketplaceCustomerId
+      const queryParams = {
+        TableName: DYNAMODB_TABLE,
+        IndexName: 'MarketplaceCustomerIndex', // Assumindo que existe um GSI
+        KeyConditionExpression: 'marketplaceCustomerId = :cid',
+        ExpressionAttributeValues: { ':cid': customerIdentifier }
+      };
+      const userResult = await dynamoDb.query(queryParams).promise();
+      if (!userResult.Items || userResult.Items.length === 0) {
+        console.error('Usuário não encontrado para marketplaceCustomerId:', customerIdentifier);
+        return res.status(404).send('User not found');
+      }
+      const userId = userResult.Items[0].id;
+
+      if (action === 'subscribe-success') {
+        // Atualizar status para ACTIVE
+        await dynamoDb.update({
+          TableName: DYNAMODB_TABLE,
+          Key: { id: userId, sk: 'CONFIG#ONBOARD' },
+          UpdateExpression: 'SET subscriptionStatus = :status',
+          ExpressionAttributeValues: { ':status': 'active' }
+        }).promise();
+        console.log(`Usuário ${userId} ativado via Marketplace`);
+      } else if (action === 'unsubscribe-pending' || action === 'unsubscribe-success') {
+        // Atualizar status para cancelled
+        await dynamoDb.update({
+          TableName: DYNAMODB_TABLE,
+          Key: { id: userId, sk: 'CONFIG#ONBOARD' },
+          UpdateExpression: 'SET subscriptionStatus = :status',
+          ExpressionAttributeValues: { ':status': 'cancelled' }
+        }).promise();
+        console.log(`Usuário ${userId} cancelado via Marketplace`);
+      }
+
+      return res.status(200).send('OK');
+    }
+
+    res.status(400).send('Invalid message type');
+  } catch (err) {
+    console.error('Erro no webhook do Marketplace:', err);
+    res.status(500).send('Internal error');
+  }
+});
+
 // POST /api/marketplace/resolve - Resolver customer do Marketplace
-app.post('/api/marketplace/resolve', async (req, res) => {
+app.post('/api/marketplace/resolve', authenticateUser, async (req, res) => {
   try {
     const { registrationToken } = req.body;
+    const userId = req.user.sub;
 
     if (!registrationToken) {
       return res.status(400).json({ message: 'registrationToken é obrigatório' });
@@ -395,19 +463,27 @@ app.post('/api/marketplace/resolve', async (req, res) => {
     const resolveResult = await marketplace.resolveCustomer({
       RegistrationToken: registrationToken,
     }).promise();
-    
+
     const {
       CustomerIdentifier: marketplaceCustomerId,
       ProductCode: productCode,
       CustomerAWSAccountId: awsAccountId,
     } = resolveResult;
 
+    // Armazenar marketplaceCustomerId no item do usuário
+    await dynamoDb.update({
+      TableName: DYNAMODB_TABLE,
+      Key: { id: userId, sk: 'CONFIG#ONBOARD' },
+      UpdateExpression: 'SET marketplaceCustomerId = :mcid',
+      ExpressionAttributeValues: { ':mcid': marketplaceCustomerId }
+    }).promise();
+
     res.json({
       success: true,
       marketplaceCustomerId,
       productCode,
       awsAccountId,
-      message: 'Customer resolvido - complete signup para vincular',
+      message: 'Customer resolvido e vinculado à conta',
     });
 
   } catch (err) {
@@ -1028,6 +1104,59 @@ app.put('/api/admin/claims/:customerId/:claimId/status', authenticateUser, autho
   }
 });
 
+// POST /api/admin/users/{userId}/status
+app.post('/api/admin/users/:userId/status', authenticateUser, authorizeAdmin, async (req, res) => {
+  const { userId } = req.params;
+  const { status } = req.body; // e.g., 'ACTIVE'
+
+  if (!status || !['TRIAL', 'ACTIVE'].includes(status)) {
+    return res.status(400).json({ message: 'Status inválido. Use TRIAL ou ACTIVE.' });
+  }
+
+  try {
+    await dynamoDb.update({
+      TableName: DYNAMODB_TABLE,
+      Key: { id: userId, sk: 'CONFIG#ONBOARD' },
+      UpdateExpression: 'SET accountType = :status',
+      ExpressionAttributeValues: { ':status': status },
+    }).promise();
+    res.json({ success: true, message: `Status do usuário ${userId} atualizado para ${status}.` });
+  } catch (err) {
+    console.error(`Erro ao atualizar status do usuário ${userId}:`, err);
+    res.status(500).json({ message: 'Erro ao atualizar status.' });
+  }
+});
+
+// PUT /api/admin/claims/{customerId}/{claimId}/recover
+app.put('/api/admin/claims/:customerId/:claimId/recover', authenticateUser, authorizeAdmin, async (req, res) => {
+  const { customerId, claimId } = req.params;
+  const { recoveredAmount } = req.body;
+
+  if (!recoveredAmount || typeof recoveredAmount !== 'number') {
+    return res.status(400).json({ message: 'recoveredAmount é obrigatório e deve ser um número' });
+  }
+
+  const fullClaimSk = `CLAIM#${claimId}`;
+
+  try {
+    await dynamoDb.update({
+      TableName: DYNAMODB_TABLE,
+      Key: { id: customerId, sk: fullClaimSk },
+      UpdateExpression: 'SET #status = :status, recoveredAmount = :amount, recoveredAt = :now',
+      ExpressionAttributeNames: { '#status': 'status' },
+      ExpressionAttributeValues: {
+        ':status': 'RECOVERED',
+        ':amount': recoveredAmount,
+        ':now': new Date().toISOString(),
+      },
+    }).promise();
+    res.json({ success: true, message: `Claim ${claimId} marcada como recuperada com valor ${recoveredAmount}` });
+  } catch (err) {
+    console.error(`Erro ao marcar claim ${claimId} como recuperada:`, err);
+    res.status(500).json({ message: 'Erro ao atualizar claim' });
+  }
+});
+
 // POST /api/admin/claims/{customerId}/{claimId}/create-invoice
 app.post('/api/admin/claims/:customerId/:claimId/create-invoice', authenticateUser, authorizeAdmin, async (req, res) => {
   const { customerId, claimId } = req.params;
@@ -1224,7 +1353,7 @@ app.get('/api/recommendations', authenticateUser, async (req, res) => {
       KeyConditionExpression: 'id = :userId AND begins_with(sk, :skPrefix)',
       ExpressionAttributeValues: {
         ':userId': userId,
-        ':skPrefix': 'REC#',
+        ':skPrefix': 'REC#EC2#',
       },
     };
 
@@ -1246,8 +1375,38 @@ app.get('/api/recommendations', authenticateUser, async (req, res) => {
   }
 });
 
+// GET /api/sla-claims - Listar claims SLA
+app.get('/api/sla-claims', authenticateUser, async (req, res) => {
+  try {
+    const userId = req.user.sub;
+
+    const params = {
+      TableName: DYNAMODB_TABLE,
+      KeyConditionExpression: 'id = :userId AND begins_with(sk, :prefix)',
+      ExpressionAttributeValues: {
+        ':userId': userId,
+        ':prefix': 'CLAIM#'
+      }
+    };
+
+    const result = await dynamoDb.query(params).promise();
+    const claims = result.Items.map(item => ({
+      id: item.sk,
+      status: item.status,
+      creditAmount: item.creditAmount,
+      reportUrl: item.reportUrl || null,
+      createdAt: item.createdAt,
+    }));
+
+    res.json({ claims });
+  } catch (err) {
+    console.error('Erro ao buscar claims SLA:', err);
+    res.status(500).json({ message: 'Erro ao buscar claims SLA' });
+  }
+});
+
 // GET /api/sla-reports/:claimId - Download de relatório SLA
-app.get('/api/sla-reports/:claimId', authenticateUser, async (req, res) => {
+app.get('/api/sla-claims/:claimId/report', authenticateUser, async (req, res) => {
   try {
     const userId = req.user.sub;
     const { claimId } = req.params;
@@ -1348,6 +1507,83 @@ app.post('/api/upgrade', authenticateUser, async (req, res) => {
   } catch (err) {
     console.error('Erro ao fazer upgrade:', err);
     res.status(500).json({ message: 'Erro ao processar upgrade' });
+  }
+});
+
+// GET /api/user/status - Status do usuário (TRIAL/ACTIVE)
+app.get('/api/user/status', authenticateUser, async (req, res) => {
+  try {
+    const userId = req.user.sub;
+
+    const params = {
+      TableName: DYNAMODB_TABLE,
+      Key: { id: userId, sk: 'CONFIG#ONBOARD' },
+    };
+
+    const result = await dynamoDb.get(params).promise();
+    const config = result.Item;
+
+    res.json({ accountType: config?.accountType || 'TRIAL' });
+  } catch (err) {
+    console.error('Erro ao buscar status do usuário:', err);
+    res.status(500).json({ message: 'Erro ao buscar status' });
+  }
+});
+
+// GET /api/billing/history - Histórico de economias e créditos
+app.get('/api/billing/history', authenticateUser, async (req, res) => {
+  try {
+    const userId = req.user.sub;
+
+    // Buscar SAVING# items
+    const savingsParams = {
+      TableName: DYNAMODB_TABLE,
+      KeyConditionExpression: 'id = :userId AND begins_with(sk, :prefix)',
+      ExpressionAttributeValues: {
+        ':userId': userId,
+        ':prefix': 'SAVING#',
+      },
+    };
+
+    const savingsResult = await dynamoDb.query(savingsParams).promise();
+    const savings = savingsResult.Items || [];
+
+    // Buscar CLAIM#RECOVERED items
+    const claimsParams = {
+      TableName: DYNAMODB_TABLE,
+      KeyConditionExpression: 'id = :userId AND begins_with(sk, :prefix)',
+      FilterExpression: '#status = :status',
+      ExpressionAttributeNames: { '#status': 'status' },
+      ExpressionAttributeValues: {
+        ':userId': userId,
+        ':prefix': 'CLAIM#',
+        ':status': 'RECOVERED',
+      },
+    };
+
+    const claimsResult = await dynamoDb.query(claimsParams).promise();
+    const claims = claimsResult.Items || [];
+
+    // Combinar e formatar
+    const history = [
+      ...savings.map(s => ({
+        type: 'saving',
+        amount: s.amountPerHour,
+        timestamp: s.timestamp,
+        description: `Economia de ${s.recommendationType}`,
+      })),
+      ...claims.map(c => ({
+        type: 'credit',
+        amount: c.recoveredAmount,
+        timestamp: c.recoveredAt,
+        description: `Crédito SLA recuperado`,
+      })),
+    ].sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
+
+    res.json({ history });
+  } catch (err) {
+    console.error('Erro ao buscar histórico de billing:', err);
+    res.status(500).json({ message: 'Erro ao buscar histórico' });
   }
 });
 

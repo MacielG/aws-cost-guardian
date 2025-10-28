@@ -1,6 +1,7 @@
 'use client';
 import { useTranslation } from 'react-i18next';
 import { useEffect, useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { MainLayout } from '@/components/layouts/main-layout';
 import { AlertCircle, DollarSign, TrendingUp, TrendingDown } from 'lucide-react';
@@ -17,9 +18,27 @@ interface Incident {
 
 function DashboardContent() {
   const { t } = useTranslation();
+  const router = useRouter();
   const [incidents, setIncidents] = useState<Incident[]>([]);
   const [costs, setCosts] = useState<any[]>([]);
   const [loadingCosts, setLoadingCosts] = useState(true);
+  const [accountType, setAccountType] = useState<string>('TRIAL');
+
+  const loadUserStatus = async () => {
+    try {
+      const data = await apiFetch('/api/user/status');
+      setAccountType(data.accountType);
+      if (data.accountType === 'TRIAL') {
+        router.push('/trial');
+      }
+    } catch (err: any) {
+      console.error('Erro ao carregar status do usuário:', err);
+    }
+  };
+
+  useEffect(() => {
+    loadUserStatus();
+  }, [router]);
 
   useEffect(() => {
     apiFetch('/api/incidents')

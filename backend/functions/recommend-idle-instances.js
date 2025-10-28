@@ -4,11 +4,13 @@ import { CloudWatchClient, GetMetricStatisticsCommand } from '@aws-sdk/client-cl
 import { PricingClient, GetProductsCommand } from '@aws-sdk/client-pricing';
 import { DynamoDBClient } from '@aws-sdk/client-dynamodb';
 import { DynamoDBDocumentClient, QueryCommand, PutCommand } from '@aws-sdk/lib-dynamodb';
+import { SNSClient, PublishCommand } from '@aws-sdk/client-sns';
 
 const ddbClient = new DynamoDBClient({});
 const dynamoDb = DynamoDBDocumentClient.from(ddbClient);
 const sts = new STSClient({});
 const pricing = new PricingClient({ region: 'us-east-1' });
+const sns = new SNSClient({});
 
 const DYNAMODB_TABLE = process.env.DYNAMODB_TABLE;
 
@@ -31,19 +33,18 @@ export const handler = async (event) => {
   const queryParams = {
     TableName: DYNAMODB_TABLE,
     IndexName: 'ActiveCustomerIndex',
-    KeyConditionExpression: 'sk = :sk AND #status = :status',
-    ExpressionAttributeNames: { 
+    KeyConditionExpression: 'sk = :sk',
+    ExpressionAttributeNames: {
       '#status': 'status',
       '#automationSettings': 'automationSettings',
       '#stopIdleInstances': 'stopIdleInstances'
     },
-    ExpressionAttributeValues: { 
+    ExpressionAttributeValues: {
       ':sk': 'CONFIG#ONBOARD',
-      ':status': 'ACTIVE',
       ':true': true
     },
     FilterExpression: '#automationSettings.#stopIdleInstances = :true',
-    ProjectionExpression: 'id, roleArn, automationSettings, exclusionTags'
+    ProjectionExpression: 'id, roleArn, automationSettings, exclusionTags, #status'
   };
 
   const response = await dynamoDb.send(new QueryCommand(queryParams));
@@ -169,6 +170,43 @@ export const handler = async (event) => {
 
     } catch (err) {
       console.error(`Erro ao processar cliente ${customer.id}:`, err);
+    }
+  }
+
+  // Check for high-value leads
+  for (const customer of items) {
+    if (!customer.roleArn) continue;
+
+    try {
+      // Query all REC# items for the customer
+      const recQuery = {
+        TableName: DYNAMODB_TABLE,
+        KeyConditionExpression: 'id = :id AND begins_with(sk, :prefix)',
+        ExpressionAttributeValues: {
+          ':id': customer.id,
+          ':prefix': 'REC#',
+        },
+      };
+
+      const recResult = await dynamoDb.send(new QueryCommand(recQuery));
+      const recommendations = recResult.Items || [];
+
+      const totalPotentialSavings = recommendations.reduce((sum, rec) => sum + (rec.potentialSavings || 0), 0);
+
+      if (totalPotentialSavings > 500) { // High-value threshold
+        console.log(`High-value lead detected for customer ${customer.id}: $${totalPotentialSavings.toFixed(2)} potential savings`);
+
+        // Publish to SNS
+        if (process.env.SNS_TOPIC_ARN) {
+          await sns.send(new PublishCommand({
+            TopicArn: process.env.SNS_TOPIC_ARN,
+            Subject: `[Cost Guardian] High-Value Lead: ${customer.id}`,
+            Message: `Cliente ${customer.id} tem $${totalPotentialSavings.toFixed(2)} em economia potencial mensal. Conta TRIAL detectada como lead de alto valor.`
+          }));
+        }
+      }
+    } catch (err) {
+      console.error(`Erro ao verificar high-value para ${customer.id}:`, err);
     }
   }
 

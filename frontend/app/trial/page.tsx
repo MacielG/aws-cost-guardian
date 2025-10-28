@@ -1,144 +1,173 @@
 'use client';
 
-import { useState } from 'react';
-import { useRouter } from 'next/navigation';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import { useEffect, useState } from 'react';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { DollarSign, TrendingUp, AlertCircle, CheckCircle } from 'lucide-react';
+import { MainLayout } from '@/components/layouts/main-layout';
+import { apiFetch } from '@/lib/api';
+import { DollarSign, Award, TrendingUp } from 'lucide-react';
+import { toast } from 'sonner';
+import { useRouter } from 'next/navigation';
+
+interface Recommendation {
+  potentialSavings: number;
+}
+
+interface Claim {
+  creditAmount: number;
+}
 
 export default function TrialPage() {
+  const [recommendations, setRecommendations] = useState<Recommendation[]>([]);
+  const [claims, setClaims] = useState<Claim[]>([]);
+  const [loading, setLoading] = useState(true);
   const router = useRouter();
-  const [loading, setLoading] = useState(false);
 
-  const handleStartTrial = () => {
-    setLoading(true);
-    // Redirecionar para signup com parâmetro trial
-    router.push('/login?mode=trial');
-  };
+  useEffect(() => {
+    const loadData = async () => {
+      try {
+        setLoading(true);
+        const [recData, claimsData] = await Promise.all([
+          apiFetch('/api/recommendations'),
+          apiFetch('/api/sla-claims'),
+        ]);
+        setRecommendations(recData.recommendations || []);
+        setClaims(claimsData.claims || []);
+      } catch (err: any) {
+        console.error('Erro ao carregar dados do trial:', err);
+        toast.error('Erro ao carregar dados');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadData();
+  }, []);
+
+  const totalSavingsPotential = recommendations.reduce((sum, rec) => sum + (rec.potentialSavings || 0), 0);
+  const totalCreditsPotential = claims.reduce((sum, claim) => sum + (claim.creditAmount || 0), 0);
+  const totalPotential = totalSavingsPotential + totalCreditsPotential;
+
+  if (loading) {
+    return (
+      <MainLayout title="Trial Dashboard">
+        <div className="flex justify-center py-8">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+        </div>
+      </MainLayout>
+    );
+  }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 dark:from-gray-900 dark:to-gray-800">
-      {/* Hero Section */}
-      <div className="container mx-auto px-4 py-16">
-        <div className="text-center mb-12">
-          <h1 className="text-5xl font-bold mb-4 bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent">
-            Análise Gratuita de Custos AWS
-          </h1>
-          <p className="text-xl text-gray-600 dark:text-gray-300 max-w-2xl mx-auto">
-            Descubra quanto você pode economizar na AWS sem compromisso.
-            Análise 100% automatizada em minutos.
-          </p>
-        </div>
-
-        {/* Value Props */}
-        <div className="grid md:grid-cols-3 gap-6 mb-12">
-          <Card className="border-2 border-transparent hover:border-blue-500 transition-all">
-            <CardHeader>
-              <DollarSign className="w-12 h-12 text-green-500 mb-4" />
-              <CardTitle>Economia Potencial</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <p className="text-gray-600 dark:text-gray-400">
-                Identifique recursos ociosos, volumes não utilizados e oportunidades
-                de otimização instantaneamente.
-              </p>
-            </CardContent>
-          </Card>
-
-          <Card className="border-2 border-transparent hover:border-blue-500 transition-all">
-            <CardHeader>
-              <TrendingUp className="w-12 h-12 text-blue-500 mb-4" />
-              <CardTitle>Créditos SLA</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <p className="text-gray-600 dark:text-gray-400">
-                Calcule automaticamente créditos de SLA não reclamados devido a
-                incidentes AWS Health.
-              </p>
-            </CardContent>
-          </Card>
-
-          <Card className="border-2 border-transparent hover:border-blue-500 transition-all">
-            <CardHeader>
-              <AlertCircle className="w-12 h-12 text-orange-500 mb-4" />
-              <CardTitle>Zero Risco</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <p className="text-gray-600 dark:text-gray-400">
-                Apenas leitura. Nenhuma mudança será feita na sua conta AWS.
-                Cancele quando quiser.
-              </p>
-            </CardContent>
-          </Card>
-        </div>
-
-        {/* CTA Section */}
-        <Card className="max-w-3xl mx-auto bg-gradient-to-r from-blue-600 to-indigo-600 text-white border-0">
-          <CardHeader>
-            <CardTitle className="text-3xl text-center">
-              Comece Sua Análise Gratuita
-            </CardTitle>
-            <CardDescription className="text-blue-100 text-center text-lg">
-              Veja o potencial de economia em menos de 5 minutos
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-6">
-            <div className="space-y-3">
-              <div className="flex items-center gap-3">
-                <CheckCircle className="w-5 h-5 text-green-300" />
-                <span>Configuração em 1 clique via CloudFormation</span>
+    <MainLayout title="AWS Cost Guardian - Trial">
+      <div className="space-y-6">
+        {/* Hero Message */}
+        <Card className="bg-gradient-to-r from-blue-500 to-purple-600 text-white">
+          <CardContent className="pt-6">
+            <h1 className="text-3xl font-bold mb-4">
+              Bem-vindo ao AWS Cost Guardian!
+            </h1>
+            <p className="text-xl mb-6">
+              Analisamos sua conta AWS e detectamos oportunidades incríveis de economia.
+            </p>
+            <div className="grid md:grid-cols-3 gap-4 mb-6">
+              <div className="text-center">
+                <DollarSign className="w-8 h-8 mx-auto mb-2" />
+                <div className="text-2xl font-bold">${totalSavingsPotential.toFixed(2)}</div>
+                <div className="text-sm">Economia mensal em recursos</div>
               </div>
-              <div className="flex items-center gap-3">
-                <CheckCircle className="w-5 h-5 text-green-300" />
-                <span>Dashboard com análise completa de custos</span>
+              <div className="text-center">
+                <Award className="w-8 h-8 mx-auto mb-2" />
+                <div className="text-2xl font-bold">${totalCreditsPotential.toFixed(2)}</div>
+                <div className="text-sm">Créditos SLA recuperáveis</div>
               </div>
-              <div className="flex items-center gap-3">
-                <CheckCircle className="w-5 h-5 text-green-300" />
-                <span>Recomendações priorizadas por impacto</span>
-              </div>
-              <div className="flex items-center gap-3">
-                <CheckCircle className="w-5 h-5 text-green-300" />
-                <span>Sem cartão de crédito necessário</span>
+              <div className="text-center">
+                <TrendingUp className="w-8 h-8 mx-auto mb-2" />
+                <div className="text-2xl font-bold">${totalPotential.toFixed(2)}</div>
+                <div className="text-sm">Valor total potencial</div>
               </div>
             </div>
-
-            <Button
-              size="lg"
-              onClick={handleStartTrial}
-              disabled={loading}
-              className="w-full bg-white text-blue-600 hover:bg-blue-50 text-lg py-6"
-            >
-              {loading ? 'Iniciando...' : 'Iniciar Análise Gratuita'}
-            </Button>
-
-            <p className="text-xs text-blue-100 text-center">
-              Ao continuar, você concorda com nossos Termos de Serviço e Política de Privacidade.
-              Pague apenas 30% sobre economias realizadas após ativação completa.
-            </p>
+            <div className="text-center">
+              <p className="text-lg mb-4">
+                Detectamos <strong>${totalPotential.toFixed(2)}</strong> em economia mensal e créditos SLA recuperáveis na sua conta.
+              </p>
+              <p className="mb-6">
+                Ative a versão completa para começar a economizar automaticamente. Cobramos apenas <strong>30%</strong> do valor recuperado.
+              </p>
+              <Button size="lg" className="bg-white text-blue-600 hover:bg-gray-100" onClick={() => router.push('/billing')}>
+                Ativar Agora e Economizar →
+              </Button>
+            </div>
           </CardContent>
         </Card>
 
-        {/* Social Proof */}
-        <div className="mt-12 text-center">
-          <p className="text-gray-600 dark:text-gray-400 mb-4">
-            92% das contas AWS deixam créditos de SLA na mesa 💰
-          </p>
-          <div className="flex justify-center gap-8 text-sm text-gray-500">
-            <div>
-              <div className="text-2xl font-bold text-blue-600">$150-500</div>
-              <div>Economia média/trimestre</div>
+        {/* Recommendations Summary */}
+        <Card>
+          <CardHeader>
+            <CardTitle>Recomendações Encontradas</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p className="text-muted-foreground mb-4">
+              Identificamos {recommendations.length} oportunidades de otimização em sua conta AWS.
+            </p>
+            <div className="grid md:grid-cols-2 gap-4">
+              {recommendations.slice(0, 4).map((rec, index) => (
+                <div key={index} className="border rounded-lg p-4">
+                  <div className="flex justify-between items-center">
+                    <span className="font-medium">Recomendação {index + 1}</span>
+                    <span className="text-green-600 font-bold">${rec.potentialSavings?.toFixed(2)}/mês</span>
+                  </div>
+                </div>
+              ))}
             </div>
-            <div>
-              <div className="text-2xl font-bold text-blue-600">5min</div>
-              <div>Setup completo</div>
+            {recommendations.length > 4 && (
+              <p className="text-sm text-muted-foreground mt-4">
+                E mais {recommendations.length - 4} recomendações...
+              </p>
+            )}
+          </CardContent>
+        </Card>
+
+        {/* SLA Claims Summary */}
+        <Card>
+          <CardHeader>
+            <CardTitle>Créditos SLA</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p className="text-muted-foreground mb-4">
+              Identificamos {claims.length} eventos de interrupção elegíveis para créditos SLA.
+            </p>
+            <div className="grid md:grid-cols-2 gap-4">
+              {claims.slice(0, 4).map((claim, index) => (
+                <div key={index} className="border rounded-lg p-4">
+                  <div className="flex justify-between items-center">
+                    <span className="font-medium">Claim {index + 1}</span>
+                    <span className="text-blue-600 font-bold">${claim.creditAmount?.toFixed(2)}</span>
+                  </div>
+                </div>
+              ))}
             </div>
-            <div>
-              <div className="text-2xl font-bold text-blue-600">0%</div>
-              <div>Risco</div>
-            </div>
-          </div>
-        </div>
+            {claims.length > 4 && (
+              <p className="text-sm text-muted-foreground mt-4">
+                E mais {claims.length - 4} claims...
+              </p>
+            )}
+          </CardContent>
+        </Card>
+
+        {/* Call to Action */}
+        <Card className="text-center">
+          <CardContent className="pt-6">
+            <h2 className="text-2xl font-bold mb-4">Pronto para economizar?</h2>
+            <p className="text-muted-foreground mb-6">
+              Ative sua conta completa e deixe o AWS Cost Guardian trabalhar para você automaticamente.
+            </p>
+            <Button size="lg" onClick={() => router.push('/billing')}>
+              Começar a Economizar Agora
+            </Button>
+          </CardContent>
+        </Card>
       </div>
-    </div>
+    </MainLayout>
   );
 }

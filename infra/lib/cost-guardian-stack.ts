@@ -111,6 +111,14 @@ export class CostGuardianStack extends cdk.Stack {
       nonKeyAttributes: ['status', 'creditAmount', 'reportUrl', 'incidentId', 'awsAccountId', 'stripeInvoiceId', 'caseId', 'submissionError', 'reportError', 'commissionAmount'],
     });
 
+    // GSI para Marketplace customer mapping
+    table.addGlobalSecondaryIndex({
+      indexName: 'MarketplaceCustomerIndex',
+      partitionKey: { name: 'marketplaceCustomerId', type: dynamodb.AttributeType.STRING },
+      projectionType: dynamodb.ProjectionType.INCLUDE,
+      nonKeyAttributes: ['id'],
+    });
+
     // GSI para consultas de recomendações
     table.addGlobalSecondaryIndex({
       indexName: 'RecommendationsIndex',
@@ -140,6 +148,14 @@ export class CostGuardianStack extends cdk.Stack {
       // Inclui apenas o template desejado
       include: ['cost-guardian-template.yaml'],
       // Renomeia o arquivo no S3 para a URL pública esperada
+      destinationKeyPrefix: '',
+      destinationBucket: templateBucket,
+    });
+
+    // Implantação do template TRIAL no bucket S3
+    new s3deploy.BucketDeployment(this, 'DeployTrialCfnTemplate', {
+      sources: [s3deploy.Source.asset(path.join(__dirname, '../../../docs'))],
+      include: ['cost-guardian-TRIAL-template.yaml'],
       destinationKeyPrefix: '',
       destinationBucket: templateBucket,
     });
@@ -414,7 +430,7 @@ export class CostGuardianStack extends cdk.Stack {
       entry: path.join(__dirname, '../../backend/functions/recommend-idle-instances.js'),
       handler: 'handler',
       timeout: cdk.Duration.minutes(5),
-      bundling: { 
+      bundling: {
         format: aws_lambda_nodejs.OutputFormat.ESM,
         minify: true,
       },
@@ -431,6 +447,28 @@ export class CostGuardianStack extends cdk.Stack {
       })
     });
     table.grantReadWriteData(stopIdleInstancesLambda);
+
+    const recommendRdsIdleLambda = new NodejsFunction(this, 'RecommendRdsIdle', {
+      runtime: lambda.Runtime.NODEJS_18_X,
+      entry: path.join(__dirname, '../../backend/functions/recommend-rds-idle.js'),
+      handler: 'handler',
+      timeout: cdk.Duration.minutes(5),
+      bundling: { externalModules: ['aws-sdk'] },
+      environment: { DYNAMODB_TABLE: table.tableName },
+      role: new iam.Role(this, 'RecommendRdsRole', {
+        assumedBy: new iam.ServicePrincipal('lambda.amazonaws.com'),
+        managedPolicies: [iam.ManagedPolicy.fromAwsManagedPolicyName('service-role/AWSLambdaBasicExecutionRole')],
+        inlinePolicies: {
+          DynamoPolicy: new iam.PolicyDocument({ statements: [
+            new iam.PolicyStatement({ actions: ['dynamodb:Query','dynamodb:Scan','dynamodb:GetItem','dynamodb:PutItem'], resources: [table.tableArn, `${table.tableArn}/index/*`] }),
+            new iam.PolicyStatement({ actions: ['sts:AssumeRole'], resources: ['arn:aws:iam::*:role/CostGuardianDelegatedRole'] }),
+            new iam.PolicyStatement({ actions: ['rds:DescribeDBInstances'], resources: ['*'] }),
+            new iam.PolicyStatement({ actions: ['cloudwatch:GetMetricStatistics'], resources: ['*'] }),
+          ]})
+        }
+      })
+    });
+    table.grantReadWriteData(recommendRdsIdleLambda);
 
     const deleteUnusedEbsLambda = new NodejsFunction(this, 'DeleteUnusedEbs', {
       runtime: lambda.Runtime.NODEJS_18_X,
@@ -455,10 +493,12 @@ export class CostGuardianStack extends cdk.Stack {
     // 7.2 - 7.3 Step Function de automação (executa tasks em paralelo)
     const stopIdleTask = new sfn_tasks.LambdaInvoke(this, 'StopIdleResources', { lambdaFunction: stopIdleInstancesLambda, outputPath: '$.Payload' });
     const deleteEbsTask = new sfn_tasks.LambdaInvoke(this, 'DeleteUnusedVolumes', { lambdaFunction: deleteUnusedEbsLambda, outputPath: '$.Payload' });
+    const recommendRdsTask = new sfn_tasks.LambdaInvoke(this, 'RecommendIdleRds', { lambdaFunction: recommendRdsIdleLambda, outputPath: '$.Payload' });
 
     const automationDefinition = new stepfunctions.Parallel(this, 'RunAllAutomations')
       .branch(stopIdleTask)
-      .branch(deleteEbsTask);
+      .branch(deleteEbsTask)
+      .branch(recommendRdsTask);
 
     const automationSfn = new stepfunctions.StateMachine(this, 'AutomationWorkflow', {
       definitionBody: stepfunctions.DefinitionBody.fromChainable(automationDefinition),
@@ -468,6 +508,25 @@ export class CostGuardianStack extends cdk.Stack {
     new events.Rule(this, 'WeeklyAutomationRule', {
       schedule: events.Schedule.cron({ weekDay: 'SUN', hour: '3', minute: '0' }), // Domingo 03:00 UTC
       targets: [new targets.SfnStateMachine(automationSfn)],
+    });
+
+    // Lambda de metering do Marketplace
+    const marketplaceMeteringLambda = new NodejsFunction(this, 'MarketplaceMetering', {
+      runtime: lambda.Runtime.NODEJS_18_X,
+      entry: path.join(__dirname, '../../backend/functions/marketplace-metering.js'),
+      handler: 'handler',
+      bundling: { externalModules: ['aws-sdk'] },
+      environment: {
+        DYNAMODB_TABLE: table.tableName,
+        PRODUCT_CODE: 'your-product-code', // Substituir pelo código real do produto
+      },
+    });
+    table.grantReadWriteData(marketplaceMeteringLambda);
+
+    // Regra para executar a cada hora
+    new events.Rule(this, 'HourlyMeteringRule', {
+      schedule: events.Schedule.rate(cdk.Duration.hours(1)),
+      targets: [new targets.LambdaFunction(marketplaceMeteringLambda)],
     });
 
     // Step Functions SLA (Usando os Lambdas corretos)

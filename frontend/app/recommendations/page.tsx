@@ -25,6 +25,7 @@ function RecommendationsContent() {
   const [recommendations, setRecommendations] = useState<Recommendation[]>([]);
   const [loading, setLoading] = useState(true);
   const [executing, setExecuting] = useState<string | null>(null);
+  const [accountType, setAccountType] = useState<string>('TRIAL');
 
   const loadRecommendations = async () => {
     try {
@@ -39,8 +40,18 @@ function RecommendationsContent() {
     }
   };
 
+  const loadUserStatus = async () => {
+    try {
+      const data = await apiFetch('/api/user/status');
+      setAccountType(data.accountType);
+    } catch (err: any) {
+      console.error('Erro ao carregar status do usuário:', err);
+    }
+  };
+
   useEffect(() => {
     loadRecommendations();
+    loadUserStatus();
   }, []);
 
   const handleExecute = async (recommendationId: string) => {
@@ -71,6 +82,8 @@ function RecommendationsContent() {
         return 'Instância Ociosa';
       case 'UNUSED_EBS':
         return 'Volume EBS Não Utilizado';
+      case 'IDLE_RDS':
+        return 'Instância RDS Ociosa';
       default:
         return type;
     }
@@ -113,6 +126,24 @@ function RecommendationsContent() {
             </div>
           </CardContent>
         </Card>
+
+        {accountType === 'TRIAL' && (
+          <Card className="border-orange-200 bg-orange-50">
+            <CardContent className="pt-6">
+              <div className="text-center">
+                <h3 className="text-lg font-semibold text-orange-800 mb-2">
+                  Faça upgrade para executar recomendações
+                </h3>
+                <p className="text-orange-700 mb-4">
+                  Você está no modo Trial. Ative sua conta para começar a economizar automaticamente.
+                </p>
+                <Button onClick={() => router.push('/billing')}>
+                  Ativar Agora
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        )}
 
         <Card>
           <CardHeader>
@@ -163,12 +194,21 @@ function RecommendationsContent() {
                               {rec.details.instanceId && (
                                 <p>Instância: {rec.details.instanceId} ({rec.details.instanceType})</p>
                               )}
-                              {rec.details.cpuAvg !== undefined && (
-                                <p>CPU média (24h): {rec.details.cpuAvg.toFixed(2)}%</p>
+                              {rec.details.dbInstanceId && (
+                                <p>RDS: {rec.details.dbInstanceId} ({rec.details.dbInstanceClass})</p>
                               )}
-                              {rec.details.tags && rec.details.tags.length > 0 && (
+                              {rec.details.volumeId && (
+                                <p>Volume: {rec.details.volumeId} ({rec.details.sizeGb}GB, {rec.details.volumeType})</p>
+                              )}
+                              {rec.details.cpuAvg !== undefined && (
+                                <p>CPU média (7d): {rec.details.cpuAvg.toFixed(2)}%</p>
+                              )}
+                              {rec.details.daysUnused !== undefined && (
+                                <p>Dias não utilizado: {rec.details.daysUnused}</p>
+                              )}
+                              {(rec.details.tags || rec.details.TagList) && (rec.details.tags || rec.details.TagList).length > 0 && (
                                 <div className="flex gap-1 flex-wrap mt-2">
-                                  {rec.details.tags.slice(0, 3).map((tag: any, idx: number) => (
+                                  {(rec.details.tags || rec.details.TagList).slice(0, 3).map((tag: any, idx: number) => (
                                     <span key={idx} className="px-2 py-0.5 bg-secondary rounded text-xs">
                                       {tag.Key}: {tag.Value}
                                     </span>
@@ -195,13 +235,15 @@ function RecommendationsContent() {
                             size="sm"
                             className="mt-2"
                             onClick={() => handleExecute(rec.id)}
-                            disabled={executing === rec.id}
+                            disabled={executing === rec.id || accountType !== 'ACTIVE'}
                           >
                             {executing === rec.id ? (
                               <>
                                 <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-white mr-2" />
                                 Executando...
                               </>
+                            ) : accountType !== 'ACTIVE' ? (
+                              'Upgrade Necessário'
                             ) : (
                               'Executar'
                             )}

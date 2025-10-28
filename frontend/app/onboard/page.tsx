@@ -7,7 +7,7 @@ import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/com
 import { Skeleton } from '@/components/ui/skeleton';
 import { useNotify } from '@/hooks/useNotify';
 import { useState, useEffect, useCallback } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 // Assuma que existe um hook ou contexto para obter o token de autenticação
 // import { useAuth } from '@/context/AuthContext'; 
 
@@ -20,6 +20,8 @@ export default function Onboard() {
     const [loading, setLoading] = useState(true);
     const [step, setStep] = useState(1);
     const router = useRouter();
+    const searchParams = useSearchParams();
+    const mode = searchParams.get('mode');
     // const { getToken } = useAuth(); // Exemplo de como obter o token
 
     const checkOnboardingStatus = useCallback(async () => {
@@ -42,7 +44,8 @@ export default function Onboard() {
     const fetchOnboardConfig = useCallback(async () => {
         // const token = await getToken(); // Obter token do Cognito
         setLoading(true);
-        const response = await fetch('/api/onboard-init', {
+        const query = mode ? `?mode=${mode}` : '';
+        const response = await fetch(`/api/onboard-init${query}`, {
             headers: {
                 // 'Authorization': `Bearer ${token}`, // Enviar o token
             },
@@ -51,7 +54,7 @@ export default function Onboard() {
         if (response.ok) {
             const config = await response.json();
             // Constrói o link do CloudFormation dinamicamente
-            const templateUrl = process.env.NEXT_PUBLIC_CFN_TEMPLATE_URL;
+            const templateUrl = config.templateUrl || process.env.NEXT_PUBLIC_CFN_TEMPLATE_URL;
             setOnboardingStatus(config.status);
             const callbackUrl = `${process.env.NEXT_PUBLIC_API_URL}/onboard`;
             const link = `https://console.aws.amazon.com/cloudformation/home?region=us-east-1#/stacks/create/review?templateURL=${templateUrl}&stackName=CostGuardianStack&param_ExternalId=${config.externalId}&param_PlatformAccountId=${config.platformAccountId}&param_CallbackUrl=${encodeURIComponent(callbackUrl)}`;
@@ -60,7 +63,7 @@ export default function Onboard() {
             notify.error('Erro ao buscar configuração de onboarding.');
         }
         setLoading(false);
-    }, []);
+    }, [mode]);
 
     // Buscar o ExternalId seguro no backend
     useEffect(() => {

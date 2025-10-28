@@ -2,13 +2,43 @@ import { STSClient, AssumeRoleCommand } from '@aws-sdk/client-sts';
 import { EC2Client, StopInstancesCommand, DeleteVolumeCommand } from '@aws-sdk/client-ec2';
 import { RDSClient, StopDBInstanceCommand } from '@aws-sdk/client-rds';
 import { DynamoDBClient } from '@aws-sdk/client-dynamodb';
-import { DynamoDBDocumentClient, UpdateCommand } from '@aws-sdk/lib-dynamodb';
+import { DynamoDBDocumentClient, UpdateCommand, PutCommand } from '@aws-sdk/lib-dynamodb';
 
 const ddbClient = new DynamoDBClient({});
 const dynamoDb = DynamoDBDocumentClient.from(ddbClient);
 const sts = new STSClient({});
 
 const DYNAMODB_TABLE = process.env.DYNAMODB_TABLE;
+
+function calculateSavings(recommendation) {
+  switch (recommendation.type) {
+    case 'IDLE_INSTANCE':
+      const instanceType = recommendation.details.instanceType;
+      const hourlyCost = {
+        't2.micro': 0.0116,
+        't2.small': 0.023,
+        't3.medium': 0.0369,
+      }[instanceType] || 0.05;
+      return hourlyCost * 24 * 30; // Monthly
+    case 'UNUSED_EBS':
+      const sizeGb = recommendation.details.sizeGb;
+      const volumeType = recommendation.details.volumeType;
+      const pricePerGb = {
+        'gp2': 0.10,
+        'gp3': 0.08,
+        'io1': 0.125,
+        'io2': 0.125,
+        'st1': 0.045,
+        'sc1': 0.025,
+        'standard': 0.05,
+      }[volumeType] || 0.10;
+      return pricePerGb * sizeGb; // Monthly
+    case 'IDLE_RDS':
+      return 0.05 * 24 * 30; // Monthly estimate
+    default:
+      return 0;
+  }
+}
 
 async function getAssumedCredentials(roleArn, externalId, region = 'us-east-1') {
   const command = new AssumeRoleCommand({
@@ -88,6 +118,22 @@ export const handler = async (event) => {
       default:
         throw new Error(`Tipo de recomendação não suportado: ${recommendation.type}`);
     }
+
+    // Calcular economia horária
+    const amountPerHour = calculateSavings(recommendation);
+
+    // Registrar economia realizada
+    const savingItem = {
+      id: userId,
+      sk: `SAVING#REC#${recommendationId}`,
+      amountPerHour,
+      timestamp: new Date().toISOString(),
+      recommendationType: recommendation.type,
+    };
+    await dynamoDb.send(new PutCommand({
+      TableName: DYNAMODB_TABLE,
+      Item: savingItem,
+    }));
 
     // Atualizar status no DynamoDB
     const updateCommand = new UpdateCommand({
