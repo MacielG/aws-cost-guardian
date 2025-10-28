@@ -157,7 +157,7 @@ export class CostGuardianStack extends cdk.Stack {
     // Skip durante testes para evitar erros de asset não encontrado
     const docsPath = path.join(__dirname, '../../docs');
     const fs = require('fs');
-    if (fs.existsSync(docsPath)) {
+    if (props.isTestEnvironment !== true && fs.existsSync(docsPath)) {
       new s3deploy.BucketDeployment(this, 'DeployCfnTemplate', {
         sources: [s3deploy.Source.asset(docsPath)], // Aponta especificamente para o diretório docs
         // Inclui apenas o template desejado
@@ -174,6 +174,8 @@ export class CostGuardianStack extends cdk.Stack {
         destinationKeyPrefix: '',
         destinationBucket: templateBucket,
       });
+    } else if (!fs.existsSync(docsPath) && props.isTestEnvironment !== true) {
+       console.warn(`Warning: Docs path not found at ${docsPath}. Skipping S3 template deployment.`);
     }
 
 

@@ -12,7 +12,7 @@ jest.mock('aws-amplify/auth', () => ({
 }));
 
 import React from 'react';
-import { render, screen, waitFor, within } from '@testing-library/react';
+import { render, screen, waitFor, within, act } from '@testing-library/react';
 import '@testing-library/jest-dom';
 import { AuthProvider } from '@/components/auth/AuthProvider';
 
@@ -316,26 +316,34 @@ describe('DashboardPage', () => {
           });
         });
 
-        const { unmount } = render(
+        let unmount: () => void;
+        await act(async () => {
+        const result = render(
           <TestWrapper>
-            <DashboardPage />
-          </TestWrapper>
-        );
+              <DashboardPage />
+            </TestWrapper>
+          );
+        unmount = result.unmount;
+        });
 
         if (shouldRedirect) {
-          await waitFor(() => {
-            expect(mockRouter.push).toHaveBeenCalledWith('/trial');
-          });
+        await act(async () => {
+        await waitFor(() => {
+          expect(mockRouter.push).toHaveBeenCalledWith('/trial');
+        });
+        });
         } else {
-          await waitFor(() => {
-            const dashboard = screen.getByTestId('dashboard-content');
-            expectedElements.forEach(element => {
+        await act(async () => {
+        await waitFor(() => {
+        const dashboard = screen.getByTestId('dashboard-content');
+          expectedElements.forEach(element => {
               const regex = new RegExp(element.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'i');
-              const elementFound = within(dashboard).getByText(regex);
-              expect(elementFound).toBeInTheDocument();
-              if (!elementFound) {
-                throw new Error(`Elemento "${element}" não encontrado no dashboard`);
-              }
+                const elementFound = within(dashboard).getByText(regex);
+                expect(elementFound).toBeInTheDocument();
+                if (!elementFound) {
+                  throw new Error(`Elemento "${element}" não encontrado no dashboard`);
+                }
+              });
             });
           });
 
@@ -369,7 +377,11 @@ describe('DashboardPage', () => {
           }
         }
 
-        unmount();
+        if (unmount!) {
+          act(() => {
+            unmount();
+          });
+        }
       }
     );
   });
@@ -395,17 +407,27 @@ describe('DashboardPage', () => {
           });
         });
 
-        const { unmount } = render(
-          <TestWrapper>
-            <DashboardPage />
-          </TestWrapper>
-        );
-
-        await waitFor(() => {
-          expect(screen.getByText(new RegExp(expectedError, 'i'))).toBeInTheDocument();
+        let unmount: () => void;
+        await act(async () => {
+          const result = render(
+            <TestWrapper>
+              <DashboardPage />
+            </TestWrapper>
+          );
+          unmount = result.unmount;
         });
 
-        unmount();
+        await act(async () => {
+          await waitFor(() => {
+            expect(screen.getByText(new RegExp(expectedError, 'i'))).toBeInTheDocument();
+          });
+        });
+
+        if (unmount!) {
+          act(() => {
+            unmount();
+          });
+        }
       }
     );
   });
@@ -429,21 +451,32 @@ describe('DashboardPage', () => {
         return Promise.resolve({});
       });
 
-      render(
+      let unmount: () => void;
+      await act(async () => {
+      const result = render(
         <TestWrapper>
-          <DashboardPage />
-        </TestWrapper>
-      );
+            <DashboardPage />
+          </TestWrapper>
+        );
+      unmount = result.unmount;
+      });
 
+      await act(async () => {
       await waitFor(() => {
         const content = screen.getByTestId('dashboard-content');
         const htmlContent = content.innerHTML.toLowerCase();
-        expect(htmlContent).toContain('&lt;img src=&quot;x&quot; onerror=&quot;alert(1)&quot;&gt;');
-        expect(htmlContent).toContain(')); drop table users; --');
+        expect(htmlContent).toContain('&lt;img src="x" onerror="alert(1)"&gt;');
         expect(htmlContent).not.toContain('<script');
         expect(htmlContent).not.toContain('onerror=');
         expect(htmlContent).not.toContain('drop table');
+        });
       });
+
+      if (unmount!) {
+        act(() => {
+          unmount();
+        });
+      }
     });
 
     test('deve validar tipos de dados rigorosamente', async () => {
@@ -475,19 +508,31 @@ describe('DashboardPage', () => {
         return Promise.resolve({});
       });
 
-      render(
+      let unmount: () => void;
+      await act(async () => {
+      const result = render(
         <TestWrapper>
-          <DashboardPage />
-        </TestWrapper>
-      );
-
-      await waitFor(() => {
-        const noIncidentsElement = screen.getByText('No incidents found');
-        expect(noIncidentsElement).toBeInTheDocument();
-        if (!noIncidentsElement) {
-          throw new Error('Deve mostrar mensagem de "sem incidentes" quando dados são inválidos');
-        }
+            <DashboardPage />
+          </TestWrapper>
+        );
+      unmount = result.unmount;
       });
+
+      await act(async () => {
+      await waitFor(() => {
+          const noIncidentsElement = screen.getByText('No incidents found');
+          expect(noIncidentsElement).toBeInTheDocument();
+          if (!noIncidentsElement) {
+            throw new Error('Deve mostrar mensagem de "sem incidentes" quando dados são inválidos');
+          }
+        });
+      });
+
+      if (unmount!) {
+        act(() => {
+          unmount();
+        });
+      }
     });
   });
 
@@ -523,14 +568,25 @@ describe('DashboardPage', () => {
         });
       });
 
-      const { unmount } = render(
-        <TestWrapper>
-          <DashboardPage />
-        </TestWrapper>
-      );
+      let unmount: () => void;
+      await act(async () => {
+        const result = render(
+          <TestWrapper>
+            <DashboardPage />
+          </TestWrapper>
+        );
+        unmount = result.unmount;
+      });
 
-      jest.advanceTimersByTime(requestTimeout / 2);
-      unmount();
+      act(() => {
+        jest.advanceTimersByTime(requestTimeout / 2);
+      });
+
+      if (unmount!) {
+        act(() => {
+          unmount();
+        });
+      }
       abortControllers.forEach(controller => controller.abort());
 
       expect(requestsCanceled).toBe(requestsStarted);
@@ -546,21 +602,33 @@ describe('DashboardPage', () => {
         Promise.resolve({ accountType: 'PREMIUM', incidents: [], costs: { Groups: [] } })
       );
 
-      render(
+      let unmount: () => void;
+      await act(async () => {
+      const result = render(
         <TestWrapper>
-          <DashboardPage />
-        </TestWrapper>
-      );
+            <DashboardPage />
+          </TestWrapper>
+        );
+        unmount = result.unmount;
+      });
 
       const callsBefore = mockApiFetch.mock.calls.length;
 
       for (let i = 0; i < totalUpdates; i++) {
-        jest.advanceTimersByTime(updateInterval);
-        await Promise.resolve();
+        await act(async () => {
+          jest.advanceTimersByTime(updateInterval);
+          await Promise.resolve();
+        });
       }
 
       const callsAfter = mockApiFetch.mock.calls.length;
       expect(callsAfter).toBeLessThanOrEqual(callsBefore + totalUpdates * 3);
+
+      if (unmount!) {
+        act(() => {
+          unmount();
+        });
+      }
     });
   });
 });

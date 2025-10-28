@@ -148,7 +148,7 @@ function DashboardContent() {
         <DollarSign className="h-4 w-4 text-secondary-red" />
         </CardHeader>
         <CardContent>
-        <div className="heading-2 text-text-light">${totalCost.toFixed(2)}</div>
+        <div data-testid="total-cost" className="heading-2 text-text-light">${totalCost.toFixed(2)}</div>
         <p className="text-xs text-secondary-red flex items-center">
         <TrendingDown className="w-3 h-3 mr-1" />
         +8% {t('dashboard.fromLastMonth')}
@@ -179,13 +179,14 @@ function DashboardContent() {
         <p className="text-muted">{t('dashboard.noIncidents')}</p>
         ) : (
         <div className="space-y-4">
-        {validIncidents.slice(0, 5).map(inc => (
-        <div key={inc.id} className="flex items-center justify-between">
+        {validIncidents.sort((a, b) => b.impact - a.impact).slice(0, 5).map(inc => (
+        <div key={inc.id} data-testid="incident-item" className="flex items-center justify-between">
         <div className="flex items-center space-x-3">
         <AlertCircle className="w-5 h-5 text-secondary-red" />
         <div>
         <p className="text-sm font-medium text-text-light">{inc.service}</p>
-        <p className="text-xs text-text-medium">{t('dashboard.impact')}: ${inc.impact}</p>
+        <p data-testid="impact-value" className="text-xs text-text-medium">{t('dashboard.impact')}: ${inc.impact}</p>
+        <p data-testid="incident-date" className="text-xs text-text-medium">{new Date(inc.timestamp).toLocaleDateString()}</p>
         </div>
         </div>
         <div className={`px-2 py-1 rounded-full text-xs font-medium ${
