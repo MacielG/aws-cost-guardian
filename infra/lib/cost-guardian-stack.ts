@@ -181,6 +181,8 @@ export class CostGuardianStack extends cdk.Stack {
         USER_POOL_ID: userPool.userPoolId,
         USER_POOL_CLIENT_ID: userPoolClient.userPoolClientId,
         PLATFORM_ACCOUNT_ID: this.account || process.env.CDK_DEFAULT_ACCOUNT,
+        TRIAL_TEMPLATE_URL: templateBucket.bucketWebsiteUrl + '/cost-guardian-TRIAL-template.yaml',
+        FULL_TEMPLATE_URL: templateBucket.bucketWebsiteUrl + '/cost-guardian-template.yaml',
       },
     });
     table.grantReadWriteData(apiHandlerLambda);
@@ -205,13 +207,16 @@ export class CostGuardianStack extends cdk.Stack {
     const executeRecommendationLambda = new NodejsFunction(this, 'ExecuteRecommendation', {
       runtime: lambda.Runtime.NODEJS_18_X,
       handler: 'handler',
-      entry: path.join(__dirname, '../../backend/functions/execute-recommendation.js'),
+      entry: path.join(__dirname, '../../backend/functions/execute-recommendation-v3.js'),
       timeout: cdk.Duration.minutes(5),
       memorySize: 256,
       environment: {
         DYNAMODB_TABLE: table.tableName,
       },
-      bundling: { externalModules: ['aws-sdk'] },
+      bundling: { 
+        format: aws_lambda_nodejs.OutputFormat.ESM,
+        minify: true,
+      },
     });
 
     // Permissões para o Lambda de recomendações
@@ -221,8 +226,9 @@ export class CostGuardianStack extends cdk.Stack {
       resources: ['*'], // O Lambda precisa poder assumir a role do cliente
     }));
 
-    // Dar ao ApiHandler o ARN do lambda de execução e permitir invocação
+    // Dar ao ApiHandler o ARN e o NAME do lambda de execução e permitir invocação
     apiHandlerLambda.addEnvironment('EXECUTE_RECOMMENDATION_LAMBDA_ARN', executeRecommendationLambda.functionArn);
+    apiHandlerLambda.addEnvironment('EXECUTE_RECOMMENDATION_LAMBDA_NAME', executeRecommendationLambda.functionName);
     executeRecommendationLambda.grantInvoke(apiHandlerLambda);
 
     // 3. Lambdas para as Tarefas do Step Functions
@@ -540,6 +546,31 @@ export class CostGuardianStack extends cdk.Stack {
   // Alerts API: GET /api/alerts (protegido)
   const alertsApi = apiRoot.addResource('alerts');
   alertsApi.addMethod('GET', apiIntegration, { authorizer: auth });
+
+  // Connections API: GET/DELETE /api/connections (protegido)
+  const connectionsApi = apiRoot.addResource('connections');
+  connectionsApi.addMethod('GET', apiIntegration, { authorizer: auth });
+  const connectionItem = connectionsApi.addResource('{awsAccountId}');
+  connectionItem.addMethod('DELETE', apiIntegration, { authorizer: auth });
+
+  // Recommendations API: GET/POST /api/recommendations (protegido)
+  const recommendationsApi = apiRoot.addResource('recommendations');
+  recommendationsApi.addMethod('GET', apiIntegration, { authorizer: auth });
+  const executeRec = recommendationsApi.addResource('execute');
+  executeRec.addMethod('POST', apiIntegration, { authorizer: auth });
+
+  // SLA Reports API: GET /api/sla-reports/{claimId} (protegido)
+  const slaReports = apiRoot.addResource('sla-reports');
+  const slaReportItem = slaReports.addResource('{claimId}');
+  slaReportItem.addMethod('GET', apiIntegration, { authorizer: auth });
+
+  // Upgrade API: POST /api/upgrade (protegido)
+  const upgradeApi = apiRoot.addResource('upgrade');
+  upgradeApi.addMethod('POST', apiIntegration, { authorizer: auth });
+
+  // Billing API: GET /api/billing/summary (protegido)
+  const billingApi = apiRoot.addResource('billing');
+  billingApi.addResource('summary').addMethod('GET', apiIntegration, { authorizer: auth });
 
     const termsApi = apiRoot.addResource('accept-terms');
     termsApi.addMethod('POST', apiIntegration, { authorizer: auth });

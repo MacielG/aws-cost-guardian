@@ -1,226 +1,235 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert';
-import { PiggyBank, AlertTriangle, Check, Loader2 } from 'lucide-react';
-import { formatDistanceToNow } from 'date-fns';
-import { ptBR } from 'date-fns/locale';
+import { MainLayout } from '@/components/layouts/main-layout';
+import { ProtectedRoute } from '@/components/auth/ProtectedRoute';
+import { apiFetch } from '@/lib/api';
+import { AlertCircle, CheckCircle, Clock, DollarSign } from 'lucide-react';
+import { toast } from 'sonner';
 
 interface Recommendation {
   id: string;
-  sk: string;
   type: string;
   status: string;
   potentialSavings: number;
+  resourceArn: string;
   details: any;
   createdAt: string;
-  executedAt?: string;
-  error?: string;
 }
 
-export default function RecommendationsPage() {
+function RecommendationsContent() {
+  const { t } = useTranslation();
   const [recommendations, setRecommendations] = useState<Recommendation[]>([]);
   const [loading, setLoading] = useState(true);
-  const [executing, setExecuting] = useState<Record<string, boolean>>({});
-  const [error, setError] = useState<string | null>(null);
-  const [filterType, setFilterType] = useState<string>('all');
-  const [filterStatus, setFilterStatus] = useState<string>('all');
-  const [orderBy, setOrderBy] = useState<'savings' | 'date'>('savings');
+  const [executing, setExecuting] = useState<string | null>(null);
 
-  useEffect(() => {
-  fetchRecommendations();
-  }, []);
-
-  const fetchRecommendations = async () => {
+  const loadRecommendations = async () => {
     try {
       setLoading(true);
-      const res = await fetch('/api/recommendations');
-      if (!res.ok) {
-        throw new Error('Falha ao carregar recomendações');
-      }
-      const data = await res.json();
-      setRecommendations(data);
-    } catch (err) {
-      setError('Erro ao carregar recomendações');
-      console.error(err);
+      const data = await apiFetch('/api/recommendations');
+      setRecommendations(data.recommendations || []);
+    } catch (err: any) {
+      console.error('Erro ao carregar recomendações:', err);
+      toast.error('Erro ao carregar recomendações');
     } finally {
       setLoading(false);
     }
   };
 
+  useEffect(() => {
+    loadRecommendations();
+  }, []);
+
   const handleExecute = async (recommendationId: string) => {
+    if (!confirm('Deseja realmente executar esta recomendação? Esta ação não pode ser desfeita.')) {
+      return;
+    }
+
     try {
-      setExecuting(prev => ({ ...prev, [recommendationId]: true }));
-      
-      const res = await fetch(`/api/recommendations/${recommendationId}/execute`, {
-        method: 'POST'
+      setExecuting(recommendationId);
+      await apiFetch('/api/recommendations/execute', {
+        method: 'POST',
+        body: JSON.stringify({ recommendationId }),
       });
       
-      if (!res.ok) {
-        throw new Error('Falha ao executar recomendação');
-      }
-      
-      // Atualizar a lista
-      await fetchRecommendations();
-    } catch (err) {
-      setError('Erro ao executar recomendação');
-      console.error(err);
+      toast.success('Recomendação executada com sucesso!');
+      await loadRecommendations();
+    } catch (err: any) {
+      console.error('Erro ao executar recomendação:', err);
+      toast.error(err.message || 'Erro ao executar recomendação');
     } finally {
-      setExecuting(prev => ({ ...prev, [recommendationId]: false }));
+      setExecuting(null);
     }
   };
 
-  const getRecommendationTitle = (rec: Recommendation) => {
-    switch (rec.type) {
-      case 'UNUSED_EBS_VOLUME':
-        return `Volume EBS não utilizado: ${rec.details.volumeId}`;
+  const getTypeLabel = (type: string) => {
+    switch (type) {
       case 'IDLE_INSTANCE':
-        return `Instância ociosa: ${rec.details.instanceId}`;
+        return 'Instância Ociosa';
+      case 'UNUSED_EBS':
+        return 'Volume EBS Não Utilizado';
       default:
-        return 'Recomendação';
+        return type;
     }
   };
 
-  const getRecommendationDescription = (rec: Recommendation) => {
-    switch (rec.type) {
-      case 'UNUSED_EBS_VOLUME':
-        return `Volume EBS de ${rec.details.volumeSize}GB está sem uso desde ${formatDistanceToNow(new Date(rec.details.createTime), { 
-          addSuffix: true, 
-          locale: ptBR 
-        })}`;
-      case 'IDLE_INSTANCE':
-        return `Instância com baixa utilização de CPU por um período prolongado`;
+  const getStatusIcon = (status: string) => {
+    switch (status) {
+      case 'RECOMMENDED':
+        return <Clock className="w-5 h-5 text-yellow-500" />;
+      case 'EXECUTED':
+        return <CheckCircle className="w-5 h-5 text-green-500" />;
+      case 'IGNORED':
+        return <AlertCircle className="w-5 h-5 text-gray-500" />;
       default:
-        return '';
+        return <AlertCircle className="w-5 h-5 text-blue-500" />;
     }
   };
 
-  if (loading) {
-    return (
-      <div className="p-8">
-        <div className="flex items-center justify-center">
-          <Loader2 className="mr-2 h-8 w-8 animate-spin" />
-          <span>Carregando recomendações...</span>
-        </div>
-      </div>
-    );
-  }
+  const totalSavings = recommendations
+    .filter(r => r.status === 'RECOMMENDED')
+    .reduce((sum, r) => sum + (r.potentialSavings || 0), 0);
 
   return (
-    <div className="p-8">
-      <div className="mb-8">
-        <h1 className="text-3xl font-bold mb-2">Guardian Advisor</h1>
-        <p className="text-muted-foreground">
-          Recomendações para otimizar seus custos e recursos na AWS
-        </p>
-      </div>
-
-      <div className="flex gap-4 mb-6">
-        <select value={filterType} onChange={e => setFilterType(e.target.value)} className="border rounded px-2 py-1">
-          <option value="all">Todos os tipos</option>
-          <option value="UNUSED_EBS_VOLUME">Volumes EBS não utilizados</option>
-          <option value="IDLE_INSTANCE">Instâncias ociosas</option>
-        </select>
-        <select value={filterStatus} onChange={e => setFilterStatus(e.target.value)} className="border rounded px-2 py-1">
-          <option value="all">Todos os status</option>
-          <option value="RECOMMENDED">Recomendado</option>
-          <option value="COMPLETED">Executado</option>
-          <option value="FAILED">Falhou</option>
-        </select>
-        <Button variant="outline" onClick={() => setOrderBy(orderBy === 'savings' ? 'date' : 'savings')}>
-          Ordenar por {orderBy === 'savings' ? 'Economia' : 'Data'}
-        </Button>
-      </div>
-
-      {error && (
-        <Alert variant="destructive" className="mb-4">
-          <AlertTriangle className="h-4 w-4" />
-          <AlertTitle>Erro</AlertTitle>
-          <AlertDescription>{error}</AlertDescription>
-        </Alert>
-      )}
-
-      {recommendations.length === 0 ? (
+    <MainLayout title="Recomendações">
+      <div className="space-y-6">
         <Card>
-          <CardContent className="p-8">
-            <div className="flex flex-col items-center text-center">
-              <Check className="h-12 w-12 text-green-500 mb-4" />
-              <h3 className="text-lg font-semibold mb-2">Nenhuma recomendação pendente</h3>
-              <p className="text-muted-foreground">
-                Seus recursos estão otimizados. Continuaremos monitorando e alertaremos quando houver novas oportunidades.
-              </p>
+          <CardHeader>
+            <CardTitle>Economia Potencial</CardTitle>
+            <CardDescription>
+              Total de economia se todas as recomendações forem aplicadas
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="flex items-center gap-2">
+              <DollarSign className="w-8 h-8 text-green-500" />
+              <span className="text-3xl font-bold">
+                ${totalSavings.toFixed(2)}
+              </span>
+              <span className="text-muted-foreground">/mês</span>
             </div>
           </CardContent>
         </Card>
-      ) : (
-        <div className="grid gap-6">
-          {recommendations
-            .filter(rec => filterType === 'all' || rec.type === filterType)
-            .filter(rec => filterStatus === 'all' || rec.status === filterStatus)
-            .sort((a, b) => orderBy === 'savings' ? b.potentialSavings - a.potentialSavings : new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
-            .map((rec) => (
-              <Card key={rec.sk}>
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    {rec.type === 'UNUSED_EBS_VOLUME' ? <AlertTriangle className="h-5 w-5 text-red-500" /> : <PiggyBank className="h-5 w-5 text-green-600" />}
-                    {getRecommendationTitle(rec)}
-                  </CardTitle>
-                  <CardDescription>{getRecommendationDescription(rec)}</CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="text-lg font-semibold text-green-600">
-                        Economia potencial: ${rec.potentialSavings.toFixed(2)}/mês
-                      </p>
-                      <p className="text-sm text-muted-foreground">
-                        Criado {formatDistanceToNow(new Date(rec.createdAt), { addSuffix: true, locale: ptBR })}
-                      </p>
-                    </div>
-                    {rec.status === 'RECOMMENDED' && (
-                      <Button 
-                        onClick={() => {
-                          if (window.confirm('Deseja realmente executar esta recomendação?')) {
-                            handleExecute(rec.sk.replace('REC#', ''));
-                          }
-                        }}
-                        disabled={executing[rec.sk]}
-                      >
-                        {executing[rec.sk] ? (
-                          <>
-                            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                            Executando...
-                          </>
-                        ) : (
-                          'Executar'
-                        )}
-                      </Button>
-                    )}
-                    {rec.status === 'COMPLETED' && (
-                      <div className="flex items-center text-green-600">
-                        <Check className="mr-2" />
-                        Executado
-                      </div>
-                    )}
-                    {rec.status === 'FAILED' && (
-                      <div className="flex flex-col">
-                        <div className="flex items-center text-red-600">
-                          <AlertTriangle className="mr-2" />
-                          Falha na execução
+
+        <Card>
+          <CardHeader>
+            <CardTitle>Recomendações de Otimização</CardTitle>
+            <CardDescription>
+              Ações sugeridas para reduzir custos AWS
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            {loading ? (
+              <div className="flex justify-center py-8">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+              </div>
+            ) : recommendations.length === 0 ? (
+              <div className="text-center py-8">
+                <AlertCircle className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
+                <p className="text-muted-foreground">
+                  Nenhuma recomendação disponível no momento
+                </p>
+                <p className="text-sm text-muted-foreground mt-2">
+                  Conecte uma conta AWS para começar a receber recomendações
+                </p>
+              </div>
+            ) : (
+              <div className="space-y-4">
+                {recommendations.map((rec) => (
+                  <div
+                    key={rec.id}
+                    className="border rounded-lg p-4 hover:bg-accent transition-colors"
+                  >
+                    <div className="flex items-start justify-between">
+                      <div className="flex gap-3 flex-1">
+                        {getStatusIcon(rec.status)}
+                        <div className="flex-1">
+                          <div className="flex items-center gap-2 mb-1">
+                            <h3 className="font-medium">{getTypeLabel(rec.type)}</h3>
+                            <span className={`px-2 py-0.5 rounded text-xs ${
+                              rec.status === 'RECOMMENDED' ? 'bg-yellow-100 text-yellow-800' :
+                              rec.status === 'EXECUTED' ? 'bg-green-100 text-green-800' :
+                              'bg-gray-100 text-gray-800'
+                            }`}>
+                              {rec.status}
+                            </span>
+                          </div>
+                          
+                          {rec.details && (
+                            <div className="text-sm text-muted-foreground space-y-1">
+                              {rec.details.instanceId && (
+                                <p>Instância: {rec.details.instanceId} ({rec.details.instanceType})</p>
+                              )}
+                              {rec.details.cpuAvg !== undefined && (
+                                <p>CPU média (24h): {rec.details.cpuAvg.toFixed(2)}%</p>
+                              )}
+                              {rec.details.tags && rec.details.tags.length > 0 && (
+                                <div className="flex gap-1 flex-wrap mt-2">
+                                  {rec.details.tags.slice(0, 3).map((tag: any, idx: number) => (
+                                    <span key={idx} className="px-2 py-0.5 bg-secondary rounded text-xs">
+                                      {tag.Key}: {tag.Value}
+                                    </span>
+                                  ))}
+                                </div>
+                              )}
+                            </div>
+                          )}
+                          
+                          <p className="text-xs text-muted-foreground mt-2">
+                            {new Date(rec.createdAt).toLocaleString()}
+                          </p>
                         </div>
-                        {rec.error && (
-                          <p className="text-sm text-red-500 mt-1">{rec.error}</p>
+                      </div>
+                      
+                      <div className="text-right">
+                        <div className="text-lg font-bold text-green-600">
+                          ${rec.potentialSavings.toFixed(2)}
+                        </div>
+                        <div className="text-xs text-muted-foreground">economia/mês</div>
+                        
+                        {rec.status === 'RECOMMENDED' && (
+                          <Button
+                            size="sm"
+                            className="mt-2"
+                            onClick={() => handleExecute(rec.id)}
+                            disabled={executing === rec.id}
+                          >
+                            {executing === rec.id ? (
+                              <>
+                                <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-white mr-2" />
+                                Executando...
+                              </>
+                            ) : (
+                              'Executar'
+                            )}
+                          </Button>
+                        )}
+                        {rec.status === 'EXECUTING' && (
+                          <div className="mt-2 text-xs text-yellow-600 flex items-center gap-1">
+                            <Clock className="w-3 h-3" />
+                            Em execução...
+                          </div>
                         )}
                       </div>
-                    )}
+                    </div>
                   </div>
-                </CardContent>
-              </Card>
-            ))}
-        </div>
-      )}
-    </div>
+                ))}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      </div>
+    </MainLayout>
+  );
+}
+
+export default function RecommendationsPage() {
+  return (
+    <ProtectedRoute>
+      <RecommendationsContent />
+    </ProtectedRoute>
   );
 }

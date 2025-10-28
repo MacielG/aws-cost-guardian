@@ -382,6 +382,40 @@ app.post('/api/billing/create-checkout-session', authenticateUser, async (req, r
   }
 });
 
+// POST /api/marketplace/resolve - Resolver customer do Marketplace
+app.post('/api/marketplace/resolve', async (req, res) => {
+  try {
+    const { registrationToken } = req.body;
+
+    if (!registrationToken) {
+      return res.status(400).json({ message: 'registrationToken é obrigatório' });
+    }
+
+    const marketplace = new AWS.MarketplaceMetering();
+    const resolveResult = await marketplace.resolveCustomer({
+      RegistrationToken: registrationToken,
+    }).promise();
+    
+    const {
+      CustomerIdentifier: marketplaceCustomerId,
+      ProductCode: productCode,
+      CustomerAWSAccountId: awsAccountId,
+    } = resolveResult;
+
+    res.json({
+      success: true,
+      marketplaceCustomerId,
+      productCode,
+      awsAccountId,
+      message: 'Customer resolvido - complete signup para vincular',
+    });
+
+  } catch (err) {
+    console.error('Erro ao resolver Marketplace customer:', err);
+    res.status(500).json({ message: 'Erro ao processar Marketplace registration' });
+  }
+});
+
 // POST /api/onboard
 app.post('/api/onboard', async (req, res) => {
   try {
@@ -543,6 +577,7 @@ app.post('/api/accept-terms', authenticateUser, async (req, res) => {
 app.get('/api/onboard-init', authenticateUser, async (req, res) => {
   try {
     const userId = req.user.sub;
+    const mode = req.query.mode || 'trial';
 
     // Tenta recuperar a configuração existente
     const getParams = {
@@ -553,16 +588,27 @@ app.get('/api/onboard-init', authenticateUser, async (req, res) => {
     const existing = await dynamoDb.get(getParams).promise();
     if (existing && existing.Item) {
       const item = existing.Item;
+      const templateUrl = item.accountType === 'TRIAL'
+        ? process.env.TRIAL_TEMPLATE_URL
+        : process.env.FULL_TEMPLATE_URL;
+
       return res.json({
         externalId: item.externalId,
         platformAccountId: process.env.PLATFORM_ACCOUNT_ID,
         status: item.status || 'PENDING_CFN',
         termsAccepted: !!item.termsAccepted,
+        accountType: item.accountType || 'TRIAL',
+        templateUrl,
       });
     }
 
     // Se não existir, cria um novo registro de configuração
     const externalId = randomBytes(16).toString('hex');
+    const accountType = mode === 'active' ? 'ACTIVE' : 'TRIAL';
+    const templateUrl = accountType === 'TRIAL'
+      ? process.env.TRIAL_TEMPLATE_URL
+      : process.env.FULL_TEMPLATE_URL;
+
     const putParams = {
       TableName: process.env.DYNAMODB_TABLE,
       Item: {
@@ -570,6 +616,7 @@ app.get('/api/onboard-init', authenticateUser, async (req, res) => {
         sk: 'CONFIG#ONBOARD',
         externalId,
         status: 'PENDING_CFN',
+        accountType,
         createdAt: new Date().toISOString(),
       },
     };
@@ -600,6 +647,8 @@ app.get('/api/onboard-init', authenticateUser, async (req, res) => {
       platformAccountId: process.env.PLATFORM_ACCOUNT_ID,
       status: 'PENDING_CFN',
       termsAccepted: false,
+      accountType,
+      templateUrl,
     });
 
   } catch (err) {
@@ -1096,6 +1145,525 @@ async function sendCfnResponse(event, responseStatus, responseData) {
     request.end();
   });
 }
+
+// GET /api/connections - Listar contas AWS conectadas pelo usuário
+app.get('/api/connections', authenticateUser, async (req, res) => {
+  try {
+    const userId = req.user.sub;
+
+    const params = {
+      TableName: process.env.DYNAMODB_TABLE,
+      KeyConditionExpression: 'id = :userId AND begins_with(sk, :skPrefix)',
+      ExpressionAttributeValues: {
+        ':userId': userId,
+        ':skPrefix': 'AWS_ACCOUNT#',
+      },
+    };
+
+    const result = await dynamoDb.query(params).promise();
+    const connections = (result.Items || []).map(item => ({
+      awsAccountId: item.awsAccountId,
+      roleArn: item.roleArn,
+      status: item.status,
+      connectedAt: item.connectedAt,
+      externalId: item.externalId,
+    }));
+
+    res.json({ connections });
+  } catch (err) {
+    console.error('Erro ao buscar conexões:', err);
+    res.status(500).json({ message: 'Erro ao buscar conexões AWS' });
+  }
+});
+
+// DELETE /api/connections/:awsAccountId - Remover conexão AWS
+app.delete('/api/connections/:awsAccountId', authenticateUser, async (req, res) => {
+  try {
+    const userId = req.user.sub;
+    const { awsAccountId } = req.params;
+
+    // Verificar se a conexão pertence ao usuário
+    const getParams = {
+      TableName: process.env.DYNAMODB_TABLE,
+      Key: {
+        id: userId,
+        sk: `AWS_ACCOUNT#${awsAccountId}`,
+      },
+    };
+
+    const existing = await dynamoDb.get(getParams).promise();
+    if (!existing.Item) {
+      return res.status(404).json({ message: 'Conexão não encontrada' });
+    }
+
+    // Deletar a conexão
+    const deleteParams = {
+      TableName: process.env.DYNAMODB_TABLE,
+      Key: {
+        id: userId,
+        sk: `AWS_ACCOUNT#${awsAccountId}`,
+      },
+    };
+
+    await dynamoDb.delete(deleteParams).promise();
+
+    res.json({ message: 'Conexão removida com sucesso' });
+  } catch (err) {
+    console.error('Erro ao remover conexão:', err);
+    res.status(500).json({ message: 'Erro ao remover conexão AWS' });
+  }
+});
+
+// GET /api/recommendations - Buscar recomendações do usuário
+app.get('/api/recommendations', authenticateUser, async (req, res) => {
+  try {
+    const userId = req.user.sub;
+
+    const params = {
+      TableName: process.env.DYNAMODB_TABLE,
+      KeyConditionExpression: 'id = :userId AND begins_with(sk, :skPrefix)',
+      ExpressionAttributeValues: {
+        ':userId': userId,
+        ':skPrefix': 'REC#',
+      },
+    };
+
+    const result = await dynamoDb.query(params).promise();
+    const recommendations = (result.Items || []).map(item => ({
+      id: item.sk,
+      type: item.type,
+      status: item.status,
+      potentialSavings: item.potentialSavings,
+      resourceArn: item.resourceArn,
+      details: item.details,
+      createdAt: item.createdAt,
+    }));
+
+    res.json({ recommendations });
+  } catch (err) {
+    console.error('Erro ao buscar recomendações:', err);
+    res.status(500).json({ message: 'Erro ao buscar recomendações' });
+  }
+});
+
+// GET /api/sla-reports/:claimId - Download de relatório SLA
+app.get('/api/sla-reports/:claimId', authenticateUser, async (req, res) => {
+  try {
+    const userId = req.user.sub;
+    const { claimId } = req.params;
+
+    // Buscar claim
+    const getParams = {
+      TableName: process.env.DYNAMODB_TABLE,
+      Key: {
+        id: userId,
+        sk: claimId,
+      },
+    };
+
+    const result = await dynamoDb.get(getParams).promise();
+    const claim = result.Item;
+
+    if (!claim) {
+      return res.status(404).json({ message: 'Claim não encontrado' });
+    }
+
+    if (!claim.reportUrl) {
+      return res.status(404).json({ message: 'Relatório não disponível' });
+    }
+
+    // Extrair bucket e key da URL S3
+    const s3Url = claim.reportUrl; // s3://bucket/key
+    const matches = s3Url.match(/s3:\/\/([^\/]+)\/(.+)/);
+    
+    if (!matches) {
+      return res.status(500).json({ message: 'URL do relatório inválida' });
+    }
+
+    const bucket = matches[1];
+    const key = matches[2];
+
+    // Gerar URL pré-assinada (válida por 1 hora)
+    const s3 = new AWS.S3();
+    const presignedUrl = s3.getSignedUrl('getObject', {
+      Bucket: bucket,
+      Key: key,
+      Expires: 3600, // 1 hora
+    });
+
+    res.json({ downloadUrl: presignedUrl });
+
+  } catch (err) {
+    console.error('Erro ao gerar URL de download:', err);
+    res.status(500).json({ message: 'Erro ao gerar URL de download' });
+  }
+});
+
+// POST /api/upgrade - Upgrade de Trial para Active
+app.post('/api/upgrade', authenticateUser, async (req, res) => {
+  try {
+    const userId = req.user.sub;
+
+    // Buscar config atual
+    const getParams = {
+      TableName: process.env.DYNAMODB_TABLE,
+      Key: { id: userId, sk: 'CONFIG#ONBOARD' },
+    };
+
+    const result = await dynamoDb.get(getParams).promise();
+    const config = result.Item;
+
+    if (!config) {
+      return res.status(404).json({ message: 'Configuração não encontrada' });
+    }
+
+    if (config.accountType === 'ACTIVE') {
+      return res.status(400).json({ message: 'Conta já está ativa' });
+    }
+
+    // Atualizar para ACTIVE
+    const updateParams = {
+      TableName: process.env.DYNAMODB_TABLE,
+      Key: { id: userId, sk: 'CONFIG#ONBOARD' },
+      UpdateExpression: 'SET accountType = :type, upgradedAt = :now, #status = :status',
+      ExpressionAttributeNames: { '#status': 'status' },
+      ExpressionAttributeValues: {
+        ':type': 'ACTIVE',
+        ':now': new Date().toISOString(),
+        ':status': 'PENDING_UPGRADE', // Precisará reinstalar com template completo
+      },
+    };
+
+    await dynamoDb.update(updateParams).promise();
+
+    // Retornar nova config com URL do template completo
+    res.json({
+      message: 'Upgrade iniciado com sucesso',
+      accountType: 'ACTIVE',
+      status: 'PENDING_UPGRADE',
+      templateUrl: process.env.FULL_TEMPLATE_URL,
+      nextSteps: 'Reinstale o CloudFormation com o template completo para habilitar execução de recomendações',
+    });
+
+  } catch (err) {
+    console.error('Erro ao fazer upgrade:', err);
+    res.status(500).json({ message: 'Erro ao processar upgrade' });
+  }
+});
+
+// GET /api/billing/summary - Resumo de billing e economias
+app.get('/api/billing/summary', authenticateUser, async (req, res) => {
+  try {
+    const userId = req.user.sub;
+
+    // Buscar recomendações executadas
+    const recParams = {
+      TableName: process.env.DYNAMODB_TABLE,
+      KeyConditionExpression: 'id = :userId AND begins_with(sk, :prefix)',
+      FilterExpression: '#status = :executed',
+      ExpressionAttributeNames: { '#status': 'status' },
+      ExpressionAttributeValues: {
+        ':userId': userId,
+        ':prefix': 'REC#',
+        ':executed': 'EXECUTED',
+      },
+    };
+
+    const recResult = await dynamoDb.query(recParams).promise();
+    const executedRecs = recResult.Items || [];
+
+    // Calcular economia realizada
+    const totalSavings = executedRecs.reduce((sum, rec) => sum + (rec.potentialSavings || 0), 0);
+    const commission = totalSavings * 0.30; // 30% de comissão
+
+    // Buscar claims de SLA
+    const claimParams = {
+      TableName: process.env.DYNAMODB_TABLE,
+      KeyConditionExpression: 'id = :userId AND begins_with(sk, :prefix)',
+      FilterExpression: '#status = :status',
+      ExpressionAttributeNames: { '#status': 'status' },
+      ExpressionAttributeValues: {
+        ':userId': userId,
+        ':prefix': 'SLA#',
+        ':status': 'REFUNDED',
+      },
+    };
+
+    const claimResult = await dynamoDb.query(claimParams).promise();
+    const refundedClaims = claimResult.Items || [];
+
+    const totalCredits = refundedClaims.reduce((sum, claim) => sum + (claim.creditAmount || 0), 0);
+    const creditCommission = totalCredits * 0.30;
+
+    res.json({
+      summary: {
+        totalSavingsRealized: totalSavings,
+        totalCreditsRecovered: totalCredits,
+        totalValue: totalSavings + totalCredits,
+        ourCommission: commission + creditCommission,
+        yourSavings: (totalSavings + totalCredits) - (commission + creditCommission),
+      },
+      recommendations: {
+        executed: executedRecs.length,
+        totalSavings,
+      },
+      sla: {
+        refunded: refundedClaims.length,
+        totalCredits,
+      },
+    });
+
+  } catch (err) {
+    console.error('Erro ao buscar billing:', err);
+    res.status(500).json({ message: 'Erro ao buscar dados de billing' });
+  }
+});
+
+// POST /api/recommendations/execute - Executar uma recomendação
+app.post('/api/recommendations/execute', authenticateUser, async (req, res) => {
+  try {
+    const userId = req.user.sub;
+    const { recommendationId } = req.body;
+
+    if (!recommendationId) {
+      return res.status(400).json({ message: 'recommendationId é obrigatório' });
+    }
+
+    // Buscar a recomendação
+    const getParams = {
+      TableName: process.env.DYNAMODB_TABLE,
+      Key: {
+        id: userId,
+        sk: recommendationId,
+      },
+    };
+
+    const result = await dynamoDb.get(getParams).promise();
+    const recommendation = result.Item;
+
+    if (!recommendation) {
+      return res.status(404).json({ message: 'Recomendação não encontrada' });
+    }
+
+    if (recommendation.status !== 'RECOMMENDED') {
+      return res.status(400).json({ message: 'Recomendação já foi processada' });
+    }
+
+    // Buscar configuração do cliente para obter roleArn
+    const configParams = {
+      TableName: process.env.DYNAMODB_TABLE,
+      Key: {
+        id: userId,
+        sk: 'CONFIG#ONBOARD',
+      },
+    };
+
+    const configResult = await dynamoDb.get(configParams).promise();
+    const config = configResult.Item;
+
+    if (!config || !config.roleArn) {
+      return res.status(400).json({ message: 'Configuração AWS não encontrada' });
+    }
+
+    // Invocar a Lambda de execução (será criada a seguir)
+    const lambda = new AWS.Lambda();
+    const invokeParams = {
+      FunctionName: process.env.EXECUTE_RECOMMENDATION_LAMBDA_NAME,
+      InvocationType: 'Event', // Assíncrona
+      Payload: JSON.stringify({
+        userId,
+        recommendationId,
+        recommendation,
+        roleArn: config.roleArn,
+        externalId: config.externalId,
+      }),
+    };
+
+    await lambda.invoke(invokeParams).promise();
+
+    // Atualizar status para 'EXECUTING'
+    const updateParams = {
+      TableName: process.env.DYNAMODB_TABLE,
+      Key: {
+        id: userId,
+        sk: recommendationId,
+      },
+      UpdateExpression: 'SET #status = :status, executedAt = :executedAt',
+      ExpressionAttributeNames: {
+        '#status': 'status',
+      },
+      ExpressionAttributeValues: {
+        ':status': 'EXECUTING',
+        ':executedAt': new Date().toISOString(),
+      },
+    };
+
+    await dynamoDb.update(updateParams).promise();
+
+    res.json({ 
+      message: 'Execução iniciada com sucesso',
+      status: 'EXECUTING'
+    });
+
+  } catch (err) {
+    console.error('Erro ao executar recomendação:', err);
+    res.status(500).json({ message: 'Erro ao executar recomendação' });
+  }
+});
+
+// GET /api/admin/metrics - Métricas admin
+app.get('/api/admin/metrics', authenticateUser, async (req, res) => {
+  try {
+    // TODO: Verificar se o usuário é admin (grupo Cognito)
+    
+    // Buscar todos os clientes
+    const allCustomersParams = {
+      TableName: process.env.DYNAMODB_TABLE,
+      IndexName: 'ActiveCustomerIndex',
+      KeyConditionExpression: 'sk = :sk',
+      ExpressionAttributeValues: {
+        ':sk': 'CONFIG#ONBOARD',
+      },
+    };
+
+    const allCustomers = await dynamoDb.query(allCustomersParams).promise();
+    const customers = allCustomers.Items || [];
+
+    // Calcular métricas
+    const totalCustomers = customers.length;
+    const trialCustomers = customers.filter(c => c.accountType === 'TRIAL').length;
+    const activeCustomers = customers.filter(c => c.accountType === 'ACTIVE').length;
+
+    // Churn este mês (clientes que cancelaram)
+    const thisMonth = new Date();
+    const startOfMonth = new Date(thisMonth.getFullYear(), thisMonth.getMonth(), 1);
+    const churnedThisMonth = customers.filter(c => 
+      c.canceledAt && new Date(c.canceledAt) >= startOfMonth
+    ).length;
+
+    // Receita este mês (buscar billing records)
+    const billingPeriod = `${thisMonth.getFullYear()}-${String(thisMonth.getMonth() + 1).padStart(2, '0')}`;
+    let thisMonthRevenue = 0;
+    
+    for (const customer of customers.filter(c => c.accountType === 'ACTIVE')) {
+      try {
+        const billingResult = await dynamoDb.get({
+          TableName: process.env.DYNAMODB_TABLE,
+          Key: {
+            id: customer.id,
+            sk: `BILLING#${billingPeriod}`,
+          },
+        }).promise();
+        
+        if (billingResult.Item) {
+          thisMonthRevenue += billingResult.Item.commission || 0;
+        }
+      } catch (err) {
+        // Ignorar erros individuais
+      }
+    }
+
+    // Leads novos esta semana
+    const oneWeekAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
+    const newLeadsThisWeek = customers.filter(c => 
+      c.createdAt && new Date(c.createdAt) >= oneWeekAgo
+    ).length;
+
+    // Taxa de conversão
+    const conversionRate = trialCustomers > 0 
+      ? (activeCustomers / (activeCustomers + trialCustomers)) * 100 
+      : 0;
+
+    // High-value leads (economia potencial > $500/mês)
+    let highValueCount = 0;
+    // TODO: Implementar busca de economia potencial
+
+    // Recomendações
+    let totalRecommendations = 0;
+    let executedRecommendations = 0;
+
+    for (const customer of customers) {
+      try {
+        const recResult = await dynamoDb.query({
+          TableName: process.env.DYNAMODB_TABLE,
+          KeyConditionExpression: 'id = :id AND begins_with(sk, :prefix)',
+          ExpressionAttributeValues: {
+            ':id': customer.id,
+            ':prefix': 'REC#',
+          },
+        }).promise();
+
+        totalRecommendations += recResult.Items?.length || 0;
+        executedRecommendations += recResult.Items?.filter(r => r.status === 'EXECUTED').length || 0;
+      } catch (err) {
+        // Ignorar
+      }
+    }
+
+    const executionRate = totalRecommendations > 0 
+      ? (executedRecommendations / totalRecommendations) * 100 
+      : 0;
+
+    // SLA Claims
+    let claimsDetected = 0;
+    let claimsSubmitted = 0;
+    let creditsRecovered = 0;
+
+    for (const customer of customers) {
+      try {
+        const slaResult = await dynamoDb.query({
+          TableName: process.env.DYNAMODB_TABLE,
+          KeyConditionExpression: 'id = :id AND begins_with(sk, :prefix)',
+          ExpressionAttributeValues: {
+            ':id': customer.id,
+            ':prefix': 'SLA#',
+          },
+        }).promise();
+
+        claimsDetected += slaResult.Items?.length || 0;
+        claimsSubmitted += slaResult.Items?.filter(s => s.status === 'SUBMITTED').length || 0;
+        creditsRecovered += slaResult.Items
+          ?.filter(s => s.status === 'REFUNDED')
+          .reduce((sum, s) => sum + (s.creditAmount || 0), 0) || 0;
+      } catch (err) {
+        // Ignorar
+      }
+    }
+
+    res.json({
+      customers: {
+        total: totalCustomers,
+        trial: trialCustomers,
+        active: activeCustomers,
+        churnedThisMonth,
+      },
+      revenue: {
+        thisMonth: thisMonthRevenue,
+        lastMonth: 0, // TODO: Calcular mês anterior
+        growth: 0, // TODO: Calcular crescimento
+      },
+      leads: {
+        newThisWeek,
+        conversionRate,
+        highValueCount,
+      },
+      recommendations: {
+        totalGenerated: totalRecommendations,
+        executed: executedRecommendations,
+        executionRate,
+      },
+      sla: {
+        claimsDetected,
+        claimsSubmitted,
+        creditsRecovered,
+      },
+    });
+
+  } catch (err) {
+    console.error('Erro ao buscar métricas admin:', err);
+    res.status(500).json({ message: 'Erro ao buscar métricas' });
+  }
+});
 
 // Export the raw Express app for unit testing (supertest)
 module.exports.rawApp = app;

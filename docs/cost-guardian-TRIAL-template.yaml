@@ -1,0 +1,245 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: 'AWS Cost Guardian TRIAL - Read-Only IAM Role (Análise Gratuita)'
+
+Parameters:
+  ExternalId:
+    Type: String
+    Description: 'Unique External ID for AssumeRole Security'
+    MinLength: '1'
+    MaxLength: '1024'
+  PlatformAccountId:
+    Type: String
+    Default: '123456789012'
+    Description: 'Platform Account ID'
+  CallbackUrl:
+    Type: String
+    Description: 'URL de callback para notificar a plataforma sobre a criação da role.'
+    AllowedPattern: 'https://.+'
+
+Resources:
+  CostGuardianTrialRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: CostGuardianTrialRole
+      Description: 'Cost Guardian Trial - Read-Only Access for Cost Analysis'
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal: { AWS: !Ref PlatformAccountId }
+            Action: sts:AssumeRole
+            Condition:
+              StringEquals:
+                sts:ExternalId: !Ref ExternalId
+      Policies:
+        - PolicyName: CostGuardianTrialReadOnlyPolicy
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              # Cost Explorer - Apenas leitura
+              - Effect: Allow
+                Action:
+                  - ce:GetCostAndUsage
+                  - ce:GetCostAndUsageWithResources
+                  - ce:GetCostForecast
+                  - ce:GetDimensionValues
+                  - ce:GetTags
+                Resource: '*'
+              
+              # AWS Health - Apenas leitura
+              - Effect: Allow
+                Action:
+                  - health:DescribeEvents
+                  - health:DescribeEventDetails
+                  - health:DescribeAffectedEntities
+                  - health:DescribeEventAggregates
+                Resource: '*'
+              
+              # CloudWatch Metrics - Apenas leitura
+              - Effect: Allow
+                Action:
+                  - cloudwatch:GetMetricData
+                  - cloudwatch:GetMetricStatistics
+                  - cloudwatch:ListMetrics
+                Resource: '*'
+              
+              # EC2 - Apenas leitura (para análise de recursos)
+              - Effect: Allow
+                Action:
+                  - ec2:DescribeInstances
+                  - ec2:DescribeVolumes
+                  - ec2:DescribeSnapshots
+                  - ec2:DescribeImages
+                  - ec2:DescribeRegions
+                  - ec2:DescribeAvailabilityZones
+                  - ec2:DescribeTags
+                Resource: '*'
+              
+              # RDS - Apenas leitura
+              - Effect: Allow
+                Action:
+                  - rds:DescribeDBInstances
+                  - rds:DescribeDBClusters
+                  - rds:ListTagsForResource
+                Resource: '*'
+              
+              # Lambda - Apenas leitura
+              - Effect: Allow
+                Action:
+                  - lambda:ListFunctions
+                  - lambda:GetFunction
+                  - lambda:ListTags
+                Resource: '*'
+              
+              # S3 - Apenas leitura
+              - Effect: Allow
+                Action:
+                  - s3:ListAllMyBuckets
+                  - s3:GetBucketLocation
+                  - s3:GetBucketTagging
+                Resource: '*'
+              
+              # Pricing API - Obter preços AWS
+              - Effect: Allow
+                Action:
+                  - pricing:GetProducts
+                  - pricing:DescribeServices
+                Resource: '*'
+              
+              # EventBridge - Apenas leitura (para correlação futura)
+              - Effect: Allow
+                Action:
+                  - events:ListRules
+                  - events:DescribeRule
+                Resource: '*'
+              
+              # NENHUMA permissão de escrita (Stop, Delete, Modify, etc.)
+              # Esta role é APENAS para análise e relatórios
+
+  # Custom Resource para Callback (notifica criação da role)
+  CallbackFunction:
+    Type: AWS::Lambda::Function
+    Properties:
+      Handler: index.handler
+      Role: !GetAtt LambdaExecutionRole.Arn
+      Runtime: nodejs18.x
+      Timeout: 30
+      Code:
+        ZipFile: |
+          const https = require('https');
+          const url = require('url');
+
+          exports.handler = async (event, context) => {
+            const responseData = { RoleArn: event.ResourceProperties.RoleArn };
+            try {
+              if (event.RequestType === 'Create' || event.RequestType === 'Update') {
+                const callbackUrl = event.ResourceProperties.CallbackUrl;
+                const externalId = event.ResourceProperties.ExternalId;
+                const roleArn = event.ResourceProperties.RoleArn;
+                const awsAccountId = context.invokedFunctionArn.split(':')[4];
+
+                const postData = JSON.stringify({
+                  roleArn: roleArn,
+                  awsAccountId: awsAccountId,
+                  externalId: externalId,
+                  trialMode: true
+                });
+
+                const options = url.parse(callbackUrl);
+                options.method = 'POST';
+                options.headers = {
+                  'Content-Type': 'application/json',
+                  'Content-Length': Buffer.byteLength(postData)
+                };
+
+                await new Promise((resolve, reject) => {
+                  const req = https.request(options, (res) => {
+                    let body = '';
+                    res.on('data', chunk => body += chunk);
+                    res.on('end', () => {
+                      if (res.statusCode >= 200 && res.statusCode < 300) {
+                        console.log('Callback success:', body);
+                        resolve();
+                      } else {
+                        console.warn('Callback failed:', res.statusCode, body);
+                        resolve(); // Não falhar o CFN por callback
+                      }
+                    });
+                  });
+                  req.on('error', err => {
+                    console.error('Callback error:', err);
+                    resolve(); // Não falhar o CFN
+                  });
+                  req.write(postData);
+                  req.end();
+                });
+              }
+
+              await sendResponse(event, context, 'SUCCESS', responseData);
+            } catch (error) {
+              console.error('Error:', error);
+              await sendResponse(event, context, 'FAILED', { Error: error.message });
+            }
+          };
+
+          async function sendResponse(event, context, status, data) {
+            const responseBody = JSON.stringify({
+              Status: status,
+              Reason: data.Error || 'See CloudWatch logs',
+              PhysicalResourceId: context.logStreamName,
+              StackId: event.StackId,
+              RequestId: event.RequestId,
+              LogicalResourceId: event.LogicalResourceId,
+              Data: data
+            });
+
+            const parsedUrl = url.parse(event.ResponseURL);
+            const options = {
+              hostname: parsedUrl.hostname,
+              port: 443,
+              path: parsedUrl.path,
+              method: 'PUT',
+              headers: {
+                'Content-Type': '',
+                'Content-Length': responseBody.length
+              }
+            };
+
+            return new Promise((resolve, reject) => {
+              const request = https.request(options, () => resolve());
+              request.on('error', reject);
+              request.write(responseBody);
+              request.end();
+            });
+          }
+
+  LambdaExecutionRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal: { Service: lambda.amazonaws.com }
+            Action: sts:AssumeRole
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
+
+  TriggerCallback:
+    Type: Custom::CallbackTrigger
+    Properties:
+      ServiceToken: !GetAtt CallbackFunction.Arn
+      RoleArn: !GetAtt CostGuardianTrialRole.Arn
+      ExternalId: !Ref ExternalId
+      CallbackUrl: !Ref CallbackUrl
+
+Outputs:
+  RoleArn:
+    Description: 'ARN da Role do Cost Guardian Trial'
+    Value: !GetAtt CostGuardianTrialRole.Arn
+  RoleName:
+    Description: 'Nome da Role'
+    Value: !Ref CostGuardianTrialRole
+  TrialMode:
+    Description: 'Modo Trial - Apenas Read-Only'
+    Value: 'true'

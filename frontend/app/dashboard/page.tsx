@@ -5,6 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { MainLayout } from '@/components/layouts/main-layout';
 import { AlertCircle, DollarSign, TrendingUp, TrendingDown } from 'lucide-react';
 import { apiFetch } from '@/lib/api';
+import { ProtectedRoute } from '@/components/auth/ProtectedRoute';
 
 interface Incident {
   id: string;
@@ -14,7 +15,7 @@ interface Incident {
   status: 'detected' | 'submitted' | 'refunded';
 }
 
-export default function Dashboard() {
+function DashboardContent() {
   const { t } = useTranslation();
   const [incidents, setIncidents] = useState<Incident[]>([]);
   const [costs, setCosts] = useState<any[]>([]);
@@ -165,5 +166,13 @@ export default function Dashboard() {
         </Card>
       </div>
     </MainLayout>
+  );
+}
+
+export default function Dashboard() {
+  return (
+    <ProtectedRoute>
+      <DashboardContent />
+    </ProtectedRoute>
   );
 }

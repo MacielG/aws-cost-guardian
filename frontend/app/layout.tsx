@@ -5,6 +5,7 @@ import '@aws-amplify/ui-react/styles.css';
 import ConfigureAmplifyClientSide from '../components/ConfigureAmplifyClientSide';
 import { ToasterProvider } from '../components/ui/toaster';
 import { I18nClientProvider } from '@/components/I18nClientProvider';
+import { AuthProvider } from '@/components/auth/AuthProvider';
 
 const inter = Inter({ subsets: ['latin'] });
 
@@ -19,7 +20,9 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       <body className={inter.className}>
         <ToasterProvider>
           <ConfigureAmplifyClientSide />
-          <I18nClientProvider>{children}</I18nClientProvider>
+          <AuthProvider>
+            <I18nClientProvider>{children}</I18nClientProvider>
+          </AuthProvider>
         </ToasterProvider>
       </body>
     </html>
