@@ -45,7 +45,7 @@ jest.mock('aws-sdk', () => {
 });
 
 const { handler: deleteUnusedEbsHandler } = require('../functions/delete-unused-ebs');
-const { handler: stopIdleInstancesHandler } = require('../functions/stop-idle-instances');
+const { handler: stopIdleInstancesHandler } = require('../functions/recommend-idle-instances');
 
 describe('Funções de Automação', () => {
   beforeEach(() => {

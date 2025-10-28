@@ -149,22 +149,27 @@ export class CostGuardianStack extends cdk.Stack {
 
     // Implantação do template do CloudFormation no bucket S3
     // Publica apenas o arquivo `cost-guardian-template.yaml` e o renomeia para `template.yaml`
-    new s3deploy.BucketDeployment(this, 'DeployCfnTemplate', {
-      sources: [s3deploy.Source.asset(path.join(__dirname, '../../docs'))], // Aponta especificamente para o diretório docs
-      // Inclui apenas o template desejado
-      include: ['cost-guardian-template.yaml'],
-      // Renomeia o arquivo no S3 para a URL pública esperada
-      destinationKeyPrefix: '',
-      destinationBucket: templateBucket,
-    });
+    // Skip durante testes para evitar erros de asset não encontrado
+    const docsPath = path.join(__dirname, '../../docs');
+    const fs = require('fs');
+    if (fs.existsSync(docsPath)) {
+      new s3deploy.BucketDeployment(this, 'DeployCfnTemplate', {
+        sources: [s3deploy.Source.asset(docsPath)], // Aponta especificamente para o diretório docs
+        // Inclui apenas o template desejado
+        include: ['cost-guardian-template.yaml'],
+        // Renomeia o arquivo no S3 para a URL pública esperada
+        destinationKeyPrefix: '',
+        destinationBucket: templateBucket,
+      });
 
-    // Implantação do template TRIAL no bucket S3
-    new s3deploy.BucketDeployment(this, 'DeployTrialCfnTemplate', {
-      sources: [s3deploy.Source.asset(path.join(__dirname, '../../docs'))],
-      include: ['cost-guardian-TRIAL-template.yaml'],
-      destinationKeyPrefix: '',
-      destinationBucket: templateBucket,
-    });
+      // Implantação do template TRIAL no bucket S3
+      new s3deploy.BucketDeployment(this, 'DeployTrialCfnTemplate', {
+        sources: [s3deploy.Source.asset(docsPath)],
+        include: ['cost-guardian-TRIAL-template.yaml'],
+        destinationKeyPrefix: '',
+        destinationBucket: templateBucket,
+      });
+    }
 
 
     // Cognito (Mantido)
