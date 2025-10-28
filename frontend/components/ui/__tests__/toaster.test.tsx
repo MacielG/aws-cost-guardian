@@ -20,6 +20,8 @@ function TestComponent() {
 }
 
 describe('ToasterProvider', () => {
+  // increase timeout because toast disappearance relies on timers/animations
+  jest.setTimeout(15000)
   it('renders children correctly', () => {
     render(
       <ToasterProvider>

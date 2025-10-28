@@ -35,6 +35,21 @@ jest.mock('aws-amplify', () => ({
   },
 }))
 
+// Mock aws-amplify auth submodule used by AuthProvider (getCurrentUser, fetchAuthSession)
+jest.mock('aws-amplify/auth', () => ({
+  getCurrentUser: jest.fn(() => Promise.resolve({ username: 'test-user', userId: 'user-1' })),
+  fetchAuthSession: jest.fn(() =>
+    Promise.resolve({ tokens: { idToken: { payload: { email: 'test@example.com' } } } })
+  ),
+  signOut: jest.fn(() => Promise.resolve()),
+}))
+
+// Mock next/navigation (useRouter) so tests can call mockReturnValue on it when needed
+jest.mock('next/navigation', () => ({
+  useRouter: jest.fn(() => ({ push: jest.fn() })),
+  useSearchParams: jest.fn(() => ({ get: () => null })),
+}))
+
 // Global test utilities
 global.fetch = jest.fn(() =>
   Promise.resolve({

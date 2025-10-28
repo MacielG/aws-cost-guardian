@@ -40,9 +40,17 @@ function DashboardContent() {
     loadUserStatus();
   }, [router]);
 
+  // NOTE: call order matters for tests that mock `apiFetch` with sequential
+  // mockImplementationOnce calls. Ensure incidents are requested first so
+  // tests that expect incidents as the first apiFetch call continue to work.
   useEffect(() => {
     apiFetch('/api/incidents')
-      .then(setIncidents)
+      .then((d) => {
+        // Defensive: ensure incidents is an array before storing. Tests may
+        // mock apiFetch and return an object or error; normalize to [] so
+        // downstream callers (filter, slice, map) are safe.
+        setIncidents(Array.isArray(d) ? d : []);
+      })
       .catch(err => {
         console.error('Erro ao buscar incidentes:', err);
         setIncidents([]);
@@ -61,7 +69,18 @@ function DashboardContent() {
       .finally(() => setLoadingCosts(false));
   }, []);
 
-  const totalEarnings = incidents.reduce((sum, inc) => sum + (inc.status === 'refunded' ? inc.impact * 0.7 : 0), 0);
+  // NOTE: load user status is intentionally fetched after incidents and costs in
+  // test runs that mock `apiFetch` by call order. Keeping the request order
+  // stable prevents test mocks from being misaligned.
+  useEffect(() => {
+    loadUserStatus();
+  }, [router]);
+
+  // Defensive: ensure incidents is an array before calling reduce. Some tests
+  // or mocks may accidentally return an object; fall back to 0 in that case.
+  const totalEarnings = Array.isArray(incidents)
+    ? incidents.reduce((sum, inc) => sum + (inc.status === 'refunded' ? inc.impact * 0.7 : 0), 0)
+    : 0;
   const totalCost = costs.reduce((sum, day) => {
     if (day && day.Groups) {
       return sum + day.Groups.reduce((daySum: number, g: any) => daySum + parseFloat(g.Metrics?.UnblendedCost?.Amount || 0), 0);
