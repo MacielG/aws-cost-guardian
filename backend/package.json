@@ -5,8 +5,8 @@
   "description": "Backend services for AWS Cost Guardian",
   "main": "handler.js",
   "scripts": {
-    "test": "jest",
-    "dev": "echo \"Backend dev script not implemented yet.\""
+  "test": "jest --runInBand",
+  "dev": "echo \"Backend dev script not implemented yet.\""
   },
   "dependencies": {
     "@aws-sdk/client-cloudwatch": "^3.585.0",

@@ -356,12 +356,14 @@ describe('DashboardPage', () => {
           await act(async () => {
           await waitFor(() => {
           // Ensure the incident section title is present
-          expect(screen.getByText('Recent Incidents')).toBeInTheDocument();
+          const incidentsHeading = screen.getByRole('heading', { name: /recent incidents/i });
+          expect(incidentsHeading).toBeInTheDocument();
+          const incidentsCard = incidentsHeading.closest('div[class*="rounded-xl"]');
+          expect(incidentsCard).toBeInTheDocument();
           // Check that *at least one* incident item is rendered
           expect(screen.queryAllByTestId('incident-item').length).toBeGreaterThan(0);
-          // Check for text unique to the *last* item after sorting
-          // Use queryByText first to avoid throwing error during intermediate renders
-          expect(screen.queryByText(new RegExp(lastIncidentService, 'i'))).toBeInTheDocument();
+          // Check for text unique to the *last* item after sorting within the incidents card
+          expect(within(incidentsCard!).getByText(new RegExp(lastIncidentService, 'i'))).toBeInTheDocument();
           });
           });
 

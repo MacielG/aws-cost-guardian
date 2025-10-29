@@ -1,6 +1,28 @@
 import * as cdk from 'aws-cdk-lib';
 import { Template, Match } from 'aws-cdk-lib/assertions';
 import * as CostGuardian from '../lib/cost-guardian-stack';
+// V-- Import the modules to mock V--
+import * as s3deploy from 'aws-cdk-lib/aws-s3-deployment';
+
+// V-- Mock the specific part causing issues V--
+jest.mock('aws-cdk-lib/aws-s3-deployment', () => {
+  return {
+    ...jest.requireActual('aws-cdk-lib/aws-s3-deployment'), // Keep original exports
+    Source: {
+      ...jest.requireActual('aws-cdk-lib/aws-s3-deployment').Source,
+      asset: jest.fn().mockReturnValue({ // Mock the 'asset' static method
+          isAsset: true,
+          bind: jest.fn().mockReturnValue({ /* return minimal required config */ bucket: {}, zipObjectKey: '' }), // Mock bind if needed
+          // Add other properties/methods if the mock complains
+      }),
+    },
+    BucketDeployment: jest.fn().mockImplementation((scope, id, props) => {
+         // Return a mock construct or minimal object if needed
+         // This basic mock prevents the constructor logic from running deeply
+         return { node: { addDependency: jest.fn() } };
+    }),
+  };
+});
 
 describe('CostGuardianStack: Testes de Asserção e Segurança', () => {
   let app: cdk.App;
@@ -8,13 +30,19 @@ describe('CostGuardianStack: Testes de Asserção e Segurança', () => {
   let template: Template;
 
   beforeAll(() => {
-app = new cdk.App();
-    // Passa a flag isTestEnvironment como true para evitar o deploy de assets
+    app = new cdk.App();
+    // Create stack WITHOUT isTestEnvironment if mocking effectively prevents asset logic
     stack = new CostGuardian.CostGuardianStack(app, 'MyTestStack', {
-        env: { account: '123456789012', region: 'us-east-1' },
-        isTestEnvironment: true
+      // isTestEnvironment: true, // Maybe no longer needed with the mock
+      githubRepo: 'test/repo',
+      githubBranch: 'main',
+      githubTokenSecretName: 'dummy-secret',
+      // ... other props ...
     });
     template = Template.fromStack(stack);
+    // Optional: Reset mock calls if needed between tests
+     (s3deploy.Source.asset as jest.Mock).mockClear();
+     (s3deploy.BucketDeployment as unknown as jest.Mock).mockClear();
   });
 
   test('Snapshot do Stack está consistente', () => {

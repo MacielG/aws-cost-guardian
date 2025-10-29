@@ -67,13 +67,14 @@ describe('correlate-health handler', () => {
    });
 
    test('should handle SFN_ARN not set', async () => {
-       delete process.env.SFN_ARN; // Unset for this test
-       process.env.DYNAMODB_TABLE = 'test-table';
-        mockDynamoQuery.mockReturnValue({ promise: jest.fn().mockResolvedValue({ Items: [{ id: 'cust-abc' }] }) }); // Assume customer found
-       const handler = require('../functions/correlate-health').handler;
-       const event = { /* your mock event */ };
-       const result = await handler(event);
-       expect(result).toEqual({ status: 'error', reason: 'SFN_ARN not set' });
-       expect(mockSfnStartExecution).not.toHaveBeenCalled();
-   });
+   delete process.env.SFN_ARN;
+   process.env.DYNAMODB_TABLE = 'test-table';
+   mockDynamoQuery.mockReturnValue({ promise: jest.fn().mockResolvedValue({ Items: [{ id: 'cust-abc' }] }) });
+   const handler = require('../functions/correlate-health').handler;
+   // V-- Provide minimal event structure V--
+   const event = { detail: { affectedAccount: '111122223333' } }; // Add necessary properties
+   const result = await handler(event);
+   expect(result).toEqual({ status: 'error', reason: 'SFN_ARN not set' });
+     expect(mockSfnStartExecution).not.toHaveBeenCalled();
+    });
 });
