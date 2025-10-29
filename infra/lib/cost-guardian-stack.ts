@@ -473,11 +473,15 @@ export class CostGuardianStack extends cdk.Stack {
     table.grantReadWriteData(stopIdleInstancesLambda);
 
     const recommendRdsIdleLambda = new lambda_nodejs.NodejsFunction(this, 'RecommendRdsIdle', {
-      runtime: lambda.Runtime.NODEJS_18_X,
-      entry: path.join(__dirname, '../../backend/functions/recommend-rds-idle.js'),
-      handler: 'handler',
-      timeout: cdk.Duration.minutes(5),
-      bundling: { externalModules: ['aws-sdk'] },
+    runtime: lambda.Runtime.NODEJS_18_X,
+    entry: path.join(__dirname, '../../backend/functions/recommend-rds-idle.js'),
+    handler: 'handler',
+    timeout: cdk.Duration.minutes(5),
+    bundling: {
+    format: lambda_nodejs.OutputFormat.ESM,
+    minify: true,
+    externalModules: '@aws-sdk/*'
+    },
       environment: { DYNAMODB_TABLE: table.tableName },
       role: new iam.Role(this, 'RecommendRdsRole', {
         assumedBy: new iam.ServicePrincipal('lambda.amazonaws.com'),

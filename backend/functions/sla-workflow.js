@@ -81,16 +81,16 @@ exports.calculateImpact = async (event) => {
 
   // Se o evento do Health não listou ARNs de recursos, não podemos calcular o impacto.
   if (affectedResources.length === 0) {
-    console.log(`Nenhum recurso específico afetado para o incidente ${incidentId}.`);
-    // Atualiza o status no DB e termina o fluxo
-    await dynamoDb.update({
-        TableName: DYNAMODB_TABLE,
-        Key: { id: event.customerId, sk: incidentId },
-        UpdateExpression: 'SET #status = :status',
-        ExpressionAttributeNames: { '#status': 'status' },
-        ExpressionAttributeValues: { ':status': 'NO_RESOURCES_LISTED' }
-    }).promise();
-    return { ...event, impactedCost: 0, status: 'NO_RESOURCES', supportLevel };
+  console.log(`Nenhum recurso específico afetado para o incidente ${incidentId}.`);
+  // Atualiza o status no DB e termina o fluxo
+  await dynamoDb.update({
+  TableName: DYNAMODB_TABLE,
+  Key: { id: event.customerId, sk: incidentId },
+  UpdateExpression: 'SET #status = :status',
+  ExpressionAttributeNames: { '#status': 'status' },
+  ExpressionAttributeValues: { ':status': 'NO_RESOURCES_LISTED' }
+  }).promise();
+  throw new Error('Nenhum recurso específico afetado para o incidente.');
   }
 
   try {

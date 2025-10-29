@@ -302,22 +302,10 @@ describe('DashboardPage', () => {
     test.each(accountScenarios)(
       '$name',
       async ({ accountType, incidents, costs, expectedElements, shouldRedirect }) => {
-        mockApiFetch.mockImplementation((url: string) => {
-          const controller = new AbortController();
-          abortControllers.push(controller);
-
-          return new Promise((resolve, reject) => {
-            if (controller.signal.aborted) {
-              reject(new Error('Aborted'));
-              return;
-            }
-
-            if (url === '/api/user/status') resolve({ accountType });
-            if (url === '/api/incidents') resolve(incidents);
-            if (url === '/api/dashboard/costs') resolve(costs);
-            resolve({});
-          });
-        });
+        mockApiFetch
+        .mockResolvedValueOnce(incidents)
+        .mockResolvedValueOnce(costs)
+          .mockResolvedValueOnce({ accountType });
 
         let unmount: () => void;
         await act(async () => {
