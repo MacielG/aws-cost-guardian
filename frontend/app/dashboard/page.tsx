@@ -3,11 +3,12 @@ import { useTranslation } from 'react-i18next';
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { MainLayout } from '@/components/layouts/main-layout';
 import { AlertCircle, DollarSign, TrendingUp, TrendingDown } from 'lucide-react';
 import { apiFetch } from '@/lib/api';
 import { ProtectedRoute } from '@/components/auth/ProtectedRoute';
-import { formatDate, sanitizeHtml } from '@/lib/utils';
+import { formatCurrency, formatDate, sanitizeHtml } from '@/lib/utils';
 
 interface Incident {
   id: string;
@@ -126,11 +127,13 @@ function DashboardContent() {
   }, 0);
 
   return (
-    <MainLayout title={t('dashboard')}>
-      {error && (
-        <div className="mb-4 p-4 bg-red-100 border border-red-400 text-red-700 rounded">
-          {error}
-        </div>
+  <MainLayout title={t('dashboard')}>
+  {error && ( // Certifique-se que o erro combinado é renderizado
+  <Alert variant="destructive" className="mb-4">
+  <AlertCircle className="h-4 w-4" />
+    <AlertTitle>{t('common.error')}</AlertTitle>
+      <AlertDescription>{error}</AlertDescription>
+        </Alert>
       )}
       <div data-testid="dashboard-content">
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
@@ -153,7 +156,7 @@ function DashboardContent() {
         <DollarSign className="h-4 w-4 text-secondary-red" />
         </CardHeader>
         <CardContent>
-        <div data-testid="total-cost" className="heading-2 text-text-light">${totalCost.toFixed(2)}</div>
+        <div data-testid="total-cost" className="heading-2 text-text-light">{formatCurrency(totalCost, 'pt-BR')}</div>
         <p className="text-xs text-secondary-red flex items-center">
         <TrendingDown className="w-3 h-3 mr-1" />
         +8% {t('dashboard.fromLastMonth')}
@@ -191,7 +194,7 @@ function DashboardContent() {
         <div>
         <p className="text-sm font-medium text-text-light" dangerouslySetInnerHTML={{ __html: sanitizeHtml(inc.service) }}></p>
         <p data-testid="impact-value" className="text-xs text-text-medium">{t('dashboard.impact')}: ${inc.impact}</p>
-        <p data-testid="incident-date" className="text-xs text-text-medium">{formatDate(inc.timestamp)}</p>
+        <p data-testid="incident-date" className="text-xs text-text-medium">{formatDate(inc.timestamp, 'pt-BR')}</p>
         </div>
         </div>
         <div className={`px-2 py-1 rounded-full text-xs font-medium ${

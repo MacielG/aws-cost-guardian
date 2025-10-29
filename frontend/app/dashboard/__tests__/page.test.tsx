@@ -37,7 +37,7 @@ const defaultTranslations: Record<string, string> = {
   'dashboard.status.detected': 'Detected',
   'dashboard.error.auth': 'Authentication failed',
   'dashboard.error.network': 'Network error occurred',
-  'dashboard.error.timeout': 'Request timed out',
+  'dashboard.error.timeout': 'A requisição excedeu o tempo limite',
 };
 
 jest.mock('next/navigation', () => ({
@@ -400,7 +400,7 @@ describe('DashboardPage', () => {
                 sum + Number(group.Metrics.UnblendedCost.Amount),
               0
             );
-            // Call with specific locale in tests\n            expect(screen.getByTestId('total-cost')).toHaveTextContent(formatCurrency(totalCost, 'en-US', 'USD'));
+            // Call with specific locale in tests\n            expect(screen.getByTestId('total-cost')).toHaveTextContent(formatCurrency(totalCost, 'pt-BR'));
           }
         }
 

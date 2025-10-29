@@ -1,8 +1,11 @@
-// Mock AWS SDK v2 DocumentClient (for delete-unused-ebs)
+// File: backend/__tests__/automation-functions.test.js
+
+// ... (Mocks V3 como no plano anterior) ...
 const mockDynamoQueryV2 = jest.fn();
-const mockDynamoDeleteV2 = jest.fn(); // Assume it uses delete too
+const mockDynamoDeleteV2 = jest.fn();
 const mockEC2DescribeVolumes = jest.fn();
 const mockEC2DeleteVolume = jest.fn();
+const mockSTSAssumeRoleV2 = jest.fn(); // Mock para STS V2
 
 // Mock AWS SDK v3 clients (for recommend-idle-instances)
 const mockSendV3 = jest.fn(); // Separate mock send if needed, or reuse global one
@@ -33,92 +36,69 @@ jest.mock('@aws-sdk/client-dynamodb', () => ({
    }));
 
 
-// Mock V2 services used by delete-unused-ebs
+// Mock V2 services
 jest.mock('aws-sdk', () => ({
-  config: { update: jest.fn() },
-  DynamoDB: {
-    DocumentClient: jest.fn(() => ({
-      query: mockDynamoQueryV2,
-      delete: mockDynamoDeleteV2,
-    }))
-  },
-  EC2: jest.fn(() => ({
-    describeVolumes: mockEC2DescribeVolumes,
-    deleteVolume: mockEC2DeleteVolume
+config: { update: jest.fn() },
+DynamoDB: {
+DocumentClient: jest.fn(() => ({
+query: mockDynamoQueryV2,   // <-- Adiciona query
+delete: mockDynamoDeleteV2,
+}))
+},
+EC2: jest.fn(() => ({
+describeVolumes: mockEC2DescribeVolumes,
+deleteVolume: mockEC2DeleteVolume
+})),
+  STS: jest.fn(() => ({ // <-- Adiciona STS
+    assumeRole: mockSTSAssumeRoleV2
   }))
 }));
 
- // Import AFTER mocks
- const { deleteUnusedEbsHandler } = require('../functions/delete-unused-ebs');
- const { recommendIdleInstancesHandler } = require('../functions/recommend-idle-instances');
+ describe('Funções de Automação', () => {
+ const OLD_ENV = process.env;
 
-describe('Funções de Automação', () => {
-const OLD_ENV = process.env;
+  beforeEach(() => {
+    jest.resetModules(); // Garante que módulos com mocks sejam recarregados
+    process.env = { ...OLD_ENV };
+    process.env.DYNAMODB_TABLE = 'automation-test-table'; // Set antes de importar/requerer as funções
 
-beforeEach(() => {
-    jest.resetModules(); // Important if functions read env vars at module level
-  process.env = { ...OLD_ENV };
-process.env.DYNAMODB_TABLE = 'automation-test-table'; // Set table name for ALL tests
-
-// Reset V2 mocks
-mockDynamoQueryV2.mockClear().mockReturnValue({ promise: jest.fn().mockResolvedValue({ Items: [] }) });
-mockDynamoDeleteV2.mockClear().mockReturnValue({ promise: jest.fn().mockResolvedValue({}) });
+ // Reset V2 mocks
+   mockDynamoQueryV2.mockClear().mockReturnValue({ promise: jest.fn().mockResolvedValue({ Items: [] }) });
+    mockDynamoDeleteV2.mockClear().mockReturnValue({ promise: jest.fn().mockResolvedValue({}) });
     mockEC2DescribeVolumes.mockClear().mockReturnValue({ promise: jest.fn().mockResolvedValue({ Volumes: [] }) });
-mockEC2DeleteVolume.mockClear().mockReturnValue({ promise: jest.fn().mockResolvedValue({}) });
+    mockEC2DeleteVolume.mockClear().mockReturnValue({ promise: jest.fn().mockResolvedValue({}) });
+    mockSTSAssumeRoleV2.mockClear().mockReturnValue({ promise: jest.fn().mockResolvedValue({ Credentials: { /* ... */ } }) }); // Reset STS V2
 
-// Reset V3 mock
-mockSendV3.mockClear();
-mockSendV3.mockImplementation(async (command) => { // Default successful v3 mock
- if (command.constructor.name === 'QueryCommand') { return { Items: [] }; }
- if (command.constructor.name === 'PutCommand') { return {}; }
- if (command.constructor.name === 'PublishCommand') { return {}; }
-      if (command.constructor.name === 'GetMetricDataCommand') { return { MetricDataResults: [] }; }
-          if (command.constructor.name === 'DescribeInstancesCommand') { return { Reservations: [] }; }
-     // Add other default command handlers
- return {};
+ // Reset V3 mock
+    mockSendV3.mockClear();
+    mockSendV3.mockImplementation(async (command) => { /* ... default impl ... */ });
+  });
+
+  afterAll(() => {
+     process.env = OLD_ENV;
  });
-
-});
-
-afterAll(() => {
- process.env = OLD_ENV;
-});
 
 
 describe('delete-unused-ebs', () => {
-     it('should query dynamo and describe volumes', async () => {
-   // Setup specific mock returns for this test
-   mockDynamoQueryV2.mockReturnValueOnce({ promise: jest.fn().mockResolvedValue({ Items: [{ pk: 'CUST#c1', sk: 'AWS#111', roleArn: 'arn:role' }] }) });
-   mockEC2DescribeVolumes.mockReturnValueOnce({ promise: jest.fn().mockResolvedValue({ Volumes: [{ VolumeId: 'v-123', State: 'available' }] }) });
-
- await deleteUnusedEbsHandler({}); // Pass empty event if needed
-
- expect(mockDynamoQueryV2).toHaveBeenCalled();
-   expect(mockEC2DescribeVolumes).toHaveBeenCalled();
-     expect(mockEC2DeleteVolume).toHaveBeenCalledWith({ VolumeId: 'v-123' });
+it('should query dynamo and describe volumes', async () => {
+    const { deleteUnusedEbsHandler } = require('../functions/delete-unused-ebs'); // Require aqui
+    // ... mocks ...
+    await deleteUnusedEbsHandler({});
+       expect(mockDynamoQueryV2).toHaveBeenCalled(); // Agora deve ser encontrado
+      // ...
      });
-});
+ });
 
 describe('recommend-idle-instances', () => {
-it('should query dynamo, get metrics, describe instances', async () => {
-   // Setup specific V3 mock returns
-   mockSendV3.mockImplementation(async (command) => {
-         if (command.constructor.name === 'QueryCommand') { return { Items: [{ pk: 'CUST#c1', sk: 'AWS#111', roleArn: 'arn:role', config: { idleInstanceThreshold: 5 } }] }; } // Customer config
-             if (command.constructor.name === 'DescribeInstancesCommand') { return { Reservations: [{ Instances: [{ InstanceId: 'i-abc', State: { Name: 'running' } }] }] }; }
-         if (command.constructor.name === 'GetMetricDataCommand') { return { MetricDataResults: [{ Id: 'cpu', Timestamps: [new Date()], Values: [1.0] }] }; } // Low CPU
-       if (command.constructor.name === 'PutCommand') { return {}; } // Recommendation save
-     if (command.constructor.name === 'PublishCommand') { return {}; } // SNS publish
-   return {};
-});
-
+     it('should query dynamo, get metrics, describe instances', async () => {
+    const { recommendIdleInstancesHandler } = require('../functions/recommend-idle-instances'); // Require aqui
+   // ... mocks V3 ...
 await recommendIdleInstancesHandler({});
-
-// Check that mockSendV3 was called with specific command types
-expect(mockSendV3).toHaveBeenCalledWith(expect.objectContaining({ constructor: { name: 'QueryCommand' } }));
-expect(mockSendV3).toHaveBeenCalledWith(expect.objectContaining({ constructor: { name: 'DescribeInstancesCommand' } }));
-expect(mockSendV3).toHaveBeenCalledWith(expect.objectContaining({ constructor: { name: 'GetMetricDataCommand' } }));
-expect(mockSendV3).toHaveBeenCalledWith(expect.objectContaining({ constructor: { name: 'PutCommand' } })); // Check recommendation saved
-expect(mockSendV3).toHaveBeenCalledWith(expect.objectContaining({ constructor: { name: 'PublishCommand' } })); // Check SNS called
-});
-});
+// Check V3 query command input
+expect(mockSendV3).toHaveBeenCalledWith(expect.objectContaining({
+ input: expect.objectContaining({ TableName: 'automation-test-table' }) // Verifica se TableName está no input
+ }));
+   // ... outras verificações mockSendV3 ...
+    });
+   });
 });

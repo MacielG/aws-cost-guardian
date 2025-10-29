@@ -5,8 +5,9 @@ export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
 }
 
-// Example allowing locale override
-export function formatCurrency(value: number, locale = 'pt-BR', currency = 'BRL'): string {
+// Permite override do locale, default 'en-US' se não especificado
+export function formatCurrency(value: number, locale = 'en-US'): string {
+  const currency = locale === 'pt-BR' ? 'BRL' : 'USD'; // Define a moeda baseada no locale
   try {
     return new Intl.NumberFormat(locale, {
       style: 'currency',
@@ -14,13 +15,26 @@ export function formatCurrency(value: number, locale = 'pt-BR', currency = 'BRL'
     }).format(value);
   } catch (e) {
     console.error("Error formatting currency:", e);
-    return `${currency === 'BRL' ? 'R$' : '$'}${value.toFixed(2)}`; // Basic fallback
+    // Fallback simples
+    return `${currency === 'BRL' ? 'R$' : '$'}${value.toFixed(2)}`;
   }
 }
 
-export const formatDate = (date: string): string => {
-  return new Date(date).toLocaleDateString('en-US');
-};
+// Se você tiver uma função formatDate, aplique lógica similar se necessário
+export function formatDate(dateString: string | Date, locale = 'en-US'): string {
+    try {
+        const date = new Date(dateString);
+        // Exemplo: Formato DD/MM/YYYY para pt-BR, MM/DD/YYYY para en-US
+        return new Intl.DateTimeFormat(locale, {
+            day: '2-digit',
+            month: '2-digit',
+            year: 'numeric',
+        }).format(date);
+    } catch(e) {
+        console.error("Error formatting date:", e);
+        return String(dateString); // Fallback
+    }
+}
 
 export const sanitizeHtml = (html: string): string => {
   return html

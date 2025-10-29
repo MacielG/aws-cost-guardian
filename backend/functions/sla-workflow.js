@@ -163,9 +163,14 @@ exports.calculateImpact = async (event) => {
     };
 
   } catch (err) {
-    console.error(`Erro ao calcular impacto para ${awsAccountId} (Incidente ${incidentId}):`, err);
-    // Propaga o erro para o Step Function tratar (ex: Causa 'States.TaskFailed')
-    throw new Error(`Falha ao calcular impacto: ${err.message}`);
+  console.error(`Erro ao calcular impacto para ${awsAccountId} (Incidente ${incidentId}):`, err);
+  // Padroniza a mensagem de erro lançada
+  let errorMessage = `Falha ao calcular impacto: ${err.message}`;
+    if (err.message.includes('AssumeRole failed')) { // Verifica se o erro original foi do assumeRole
+        errorMessage = `Falha ao assumir role: ${err.message}`;
+    }
+     // Lança o erro padronizado ou específico
+    throw new Error(errorMessage);
   }
 };
 
@@ -211,15 +216,15 @@ exports.generateReport = async (event) => {
 
   // Se não houver violação ou crédito, não faz nada
   if (!violation || credit <= 0) {
-    console.log('Nenhuma violação ou crédito. Nenhuma reivindicação gerada.');
-    await dynamoDb.update({
-        TableName: DYNAMODB_TABLE,
-        Key: { id: customerId, sk: incidentId },
-        UpdateExpression: 'SET #status = :status',
-        ExpressionAttributeNames: { '#status': 'status' },
-        ExpressionAttributeValues: { ':status': 'NO_VIOLATION' }
-    }).promise();
-    return { ...event, status: 'no-claim' };
+  console.log('Nenhuma violação ou crédito. Nenhuma reivindicação gerada.');
+  await dynamoDb.update({
+  TableName: DYNAMODB_TABLE,
+  Key: { id: customerId, sk: incidentId },
+  UpdateExpression: 'SET #status = :status',
+  ExpressionAttributeNames: { '#status': 'status' },
+  ExpressionAttributeValues: { ':status': 'NO_VIOLATION' }
+  }).promise();
+  return { claimGenerated: false }; // <-- Retorna explicitamente
   }
 
   // 1. Gerar PDF com pdf-lib e salvar em S3
