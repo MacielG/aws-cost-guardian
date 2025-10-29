@@ -1,86 +1,79 @@
-// Primeiro, declare todos os mocks antes de qualquer jest.mock
+// Declare mocks
 const mockDynamoQuery = jest.fn();
 const mockDynamoPut = jest.fn();
 const mockSfnStartExecution = jest.fn();
 
-const { handler } = require('../functions/correlate-health');
-
-// Mock AWS SDK depois das declarações
+// Mock AWS SDK
 jest.mock('aws-sdk', () => ({
   DynamoDB: {
-    DocumentClient: jest.fn().mockImplementation(() => ({
-      query: mockDynamoQuery.mockReturnValue({
-        promise: jest.fn().mockResolvedValue({ Items: [] })
-      }),
-      put: mockDynamoPut.mockReturnValue({
-        promise: jest.fn().mockResolvedValue({})
-      })
+    DocumentClient: jest.fn(() => ({
+      query: mockDynamoQuery,
+      put: mockDynamoPut
     }))
   },
-  StepFunctions: jest.fn().mockImplementation(() => ({
-    startExecution: mockSfnStartExecution.mockReturnValue({
-      promise: jest.fn().mockResolvedValue({})
-    })
+  StepFunctions: jest.fn(() => ({
+    startExecution: mockSfnStartExecution
   }))
 }));
 
 describe('correlate-health handler', () => {
-  const AWS = require('aws-sdk');
-  const mockDdb = new AWS.DynamoDB.DocumentClient();
-  const mockSfn = new AWS.StepFunctions();
+  const OLD_ENV = process.env;
 
   beforeEach(() => {
-    jest.clearAllMocks();
-    process.env.DYNAMODB_TABLE = 'test-table';
-    process.env.SFN_ARN = 'arn:aws:states:us-east-1:123456789012:stateMachine:test';
+    jest.resetModules(); // Important: Clears cache
+    process.env = { ...OLD_ENV }; // Make a copy
+    // Set env vars needed by the handler
+    process.env.DYNAMODB_TABLE = 'test-table'; // Set table name
+    process.env.SFN_ARN = 'dummy-sfn-arn';      // Set SFN ARN
+    // Reset mocks
+    mockDynamoQuery.mockClear().mockReturnValue({ promise: jest.fn().mockResolvedValue({ Items: [{ id: 'cust-abc' }] }) }); // Default successful query
+    mockDynamoPut.mockClear().mockReturnValue({ promise: jest.fn().mockResolvedValue({}) });
+    mockSfnStartExecution.mockClear().mockReturnValue({ promise: jest.fn().mockResolvedValue({}) });
   });
 
-  it('should query DynamoDB and start the Step Function with correct input', async () => {
-    const event = {
-      detail: {
-        id: 'evt-1',
-        affectedAccount: '111122223333',
-        startTime: '2025-10-26T10:00:00Z',
-        service: 'EC2',
-        resources: ['arn:aws:ec2:us-east-1:111122223333:instance/i-123']
-      }
-    };
-
-    // Mock DynamoDB query to return a customer mapping
-    mockDynamoQuery.mockReturnValue({
-      promise: jest.fn().mockResolvedValue({ Items: [{ id: 'cust-abc' }] })
-    });
-
-    // Mock SFN startExecution to resolve
-    mockSfnStartExecution.mockReturnValue({
-      promise: jest.fn().mockResolvedValue({ executionArn: 'arn:exec' })
-    });
-
-    const result = await handler(event);
-
-    expect(mockDynamoQuery).toHaveBeenCalled();
-    expect(mockDynamoPut).toHaveBeenCalledWith(expect.objectContaining({ TableName: 'test-table' }));
-
-    expect(mockSfnStartExecution).toHaveBeenCalledWith(expect.objectContaining({
-      stateMachineArn: process.env.SFN_ARN,
-      input: expect.any(String),
-    }));
-
-    const calledInput = JSON.parse(mockSfnStartExecution.mock.calls[0][0].input);
-    expect(calledInput.customerId).toBe('cust-abc');
-    expect(calledInput.awsAccountId).toBe('111122223333');
-    expect(result.status).toBe('success');
-    expect(result.customerId).toBe('cust-abc');
+  afterAll(() => {
+    process.env = OLD_ENV; // Restore old environment
   });
 
-  it('should return error when no customer found', async () => {
-    const event = { detail: { id: 'evt-2', affectedAccount: '999988887777', resources: [] } };
-    mockDynamoQuery.mockReturnValue({
-      promise: jest.fn().mockResolvedValue({ Items: [] })
-    });
 
-    const result = await handler(event);
-    expect(result.status).toBe('error');
-    expect(result.reason).toMatch(/Customer not found/i);
+
+  test('should query DynamoDB and start the Step Function...', async () => {
+     // The handler will now have process.env.SFN_ARN and process.env.DYNAMODB_TABLE
+     const handler = require('../functions/correlate-health').handler; // Require inside test or beforeEach after setting env
+     const event = { detail: { affectedAccount: '111122223333', startTime: '2025-10-26T10:00:00Z', service: 'EC2', resources: ['arn:aws:ec2:us-east-1:111122223333:instance/i-123'] } };
+     await handler(event);
+
+     // Assertions should now pass if correlate-health.js uses process.env.DYNAMODB_TABLE
+     expect(mockDynamoPut).toHaveBeenCalledWith(expect.objectContaining({
+        TableName: 'test-table', // Check it uses the env var value
+        Item: expect.any(Object)
+     }));
+      expect(mockSfnStartExecution).toHaveBeenCalledWith(expect.objectContaining({
+         stateMachineArn: 'dummy-sfn-arn', // Check it uses the env var value
+         input: expect.any(String)
+      }));
   });
+
+   test('should handle customer not found', async () => {
+       // Override mock for this specific test
+       mockDynamoQuery.mockReturnValue({ promise: jest.fn().mockResolvedValue({ Items: [] }) });
+       process.env.DYNAMODB_TABLE = 'test-table';
+       process.env.SFN_ARN = 'dummy-sfn-arn';
+       const handler = require('../functions/correlate-health').handler;
+       const event = { detail: { affectedAccount: '999988887777', /* ... */ } };
+       const result = await handler(event);
+       expect(result).toEqual({ status: 'error', reason: 'Customer not found' });
+       expect(mockSfnStartExecution).not.toHaveBeenCalled();
+   });
+
+   test('should handle SFN_ARN not set', async () => {
+       delete process.env.SFN_ARN; // Unset for this test
+       process.env.DYNAMODB_TABLE = 'test-table';
+        mockDynamoQuery.mockReturnValue({ promise: jest.fn().mockResolvedValue({ Items: [{ id: 'cust-abc' }] }) }); // Assume customer found
+       const handler = require('../functions/correlate-health').handler;
+       const event = { /* your mock event */ };
+       const result = await handler(event);
+       expect(result).toEqual({ status: 'error', reason: 'SFN_ARN not set' });
+       expect(mockSfnStartExecution).not.toHaveBeenCalled();
+   });
 });

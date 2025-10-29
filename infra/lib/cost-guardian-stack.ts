@@ -152,33 +152,37 @@ export class CostGuardianStack extends cdk.Stack {
       }),
     });
 
-    // Use ONLY the prop to determine asset deployment for tests
+    // Conditionally perform deployment ONLY if not in test environment
     if (!props.isTestEnvironment) {
-         const docsPath = path.join(__dirname, '../../docs');
-         const fs = require('fs');
+    const docsPath = path.join(__dirname, '../../docs');
+    const fs = require('fs');
 
-         if (fs.existsSync(docsPath)) {
-         new s3deploy.BucketDeployment(this, 'DeployCfnTemplate', {
-         sources: [s3deploy.Source.asset(docsPath)],
-         include: ['cost-guardian-template.yaml'],
-         destinationKeyPrefix: '',
-         objectNames: ['template.yaml'], // Explicitly set name
-         destinationBucket: templateBucket,
-       });
+    if (fs.existsSync(docsPath)) {
+    // Deployments are ONLY created inside this block
+    new s3deploy.BucketDeployment(this, 'DeployCfnTemplate', {
+     sources: [s3deploy.Source.asset(docsPath)], // Asset call only happens here
+     include: ['cost-guardian-template.yaml'],
+     destinationKeyPrefix: '',
+     objectNames: ['template.yaml'],
+       destinationBucket: templateBucket,
+        });
 
-           new s3deploy.BucketDeployment(this, 'DeployTrialCfnTemplate', {
-           sources: [s3deploy.Source.asset(docsPath)],
-           include: ['cost-guardian-TRIAL-template.yaml'],
-         destinationKeyPrefix: '',
-         objectNames: ['cost-guardian-TRIAL-template.yaml'], // Explicitly set name
-         destinationBucket: templateBucket,
-       });
-       } else {
-             // Still useful to warn if deploying outside tests and path is missing
-         console.warn(`Warning: Docs path not found at ${docsPath}. Skipping S3 template deployment.`);
-         }
+    new s3deploy.BucketDeployment(this, 'DeployTrialCfnTemplate', {
+     sources: [s3deploy.Source.asset(docsPath)], // Asset call only happens here
+     include: ['cost-guardian-TRIAL-template.yaml'],
+     destinationKeyPrefix: '',
+     objectNames: ['cost-guardian-TRIAL-template.yaml'],
+       destinationBucket: templateBucket,
+     });
+    } else {
+    console.warn(`Warning: Docs path not found at ${docsPath}. Skipping S3 template deployment.`);
     }
-    // If props.isTestEnvironment is true, the entire block above is skipped.
+    }
+    // If isTestEnvironment is true, the Source.asset() calls are never made.
+
+     // Ensure URLs passed to lambdas/outputs handle the test case gracefully
+     const trialTemplateUrl = !props.isTestEnvironment ? (templateBucket.bucketWebsiteUrl + '/cost-guardian-TRIAL-template.yaml') : 'test-trial-url';
+     const fullTemplateUrl = !props.isTestEnvironment ? (templateBucket.bucketWebsiteUrl + '/template.yaml') : 'test-full-url';
 
 
     // Cognito (Mantido)
@@ -678,7 +682,7 @@ export class CostGuardianStack extends cdk.Stack {
     new cdk.CfnOutput(this, 'TableName', { value: table.tableName });
     new cdk.CfnOutput(this, 'SFNArn', { value: sfn.stateMachineArn });
     const cfnTemplateUrlOutput = new cdk.CfnOutput(this, 'CfnTemplateUrl', {
-      value: `${templateBucket.bucketWebsiteUrl}/template.yaml`,
+      value: fullTemplateUrl, // Use the potentially dummy URL in tests
       description: 'URL do template do CloudFormation para o onboarding do cliente. Use esta URL no frontend.',
     });
 
@@ -713,7 +717,7 @@ export class CostGuardianStack extends cdk.Stack {
               `echo "NEXT_PUBLIC_COGNITO_USER_POOL_ID=${userPool.userPoolId}" >> .env.production`,
               `echo "NEXT_PUBLIC_COGNITO_USER_POOL_CLIENT_ID=${userPoolClient.userPoolClientId}" >> .env.production`,
               `echo "NEXT_PUBLIC_COGNITO_IDENTITY_POOL_ID=${identityPool.ref}" >> .env.production`,
-              `echo "NEXT_PUBLIC_CFN_TEMPLATE_URL=${templateBucket.bucketWebsiteUrl}/template.yaml" >> .env.production`,
+              `echo "NEXT_PUBLIC_CFN_TEMPLATE_URL=${fullTemplateUrl}" >> .env.production`,
               'npm run build',
             ],
           },

@@ -348,14 +348,39 @@ describe('DashboardPage', () => {
           });
 
           if (incidents.length > 0) {
+          // Wait for the incident card title AND specifically for an element
+          // within the last expected incident item after sorting.
+          const sortedMockIncidents = [...incidents].sort((a, b) => b.impact - a.impact);
+          const lastIncidentService = sortedMockIncidents[sortedMockIncidents.length-1].service;
+
+          await act(async () => {
+          await waitFor(() => {
+          // Ensure the incident section title is present
+          expect(screen.getByText('Recent Incidents')).toBeInTheDocument();
+          // Check that *at least one* incident item is rendered
+          expect(screen.queryAllByTestId('incident-item').length).toBeGreaterThan(0);
+          // Check for text unique to the *last* item after sorting
+          // Use queryByText first to avoid throwing error during intermediate renders
+          expect(screen.queryByText(new RegExp(lastIncidentService, 'i'))).toBeInTheDocument();
+          });
+          });
+
+            // Now get elements and check order
             const incidentElements = screen.getAllByTestId('incident-item');
-            const impactValues = incidentElements.map(el => 
-              Number(within(el).getByTestId('impact-value').textContent)
-            );
-            const sortedValues = [...impactValues].sort((a, b) => b - a);
-            expect(impactValues).toEqual(sortedValues);
-            if (!impactValues.every((value, index) => value === sortedValues[index])) {
-              throw new Error('Incidentes devem estar ordenados por impacto em ordem decrescente');
+            const impactValues = incidentElements.map(el => {
+              const textContent = within(el).getByTestId('impact-value').textContent || '';
+              // Extract number more robustly (handles '$' and potential formatting)
+              const numericValue = parseFloat(textContent.replace(/[^0-9.]/g, ''));
+              return isNaN(numericValue) ? 0 : numericValue; // Default to 0 if parsing fails
+            });
+
+            const sortedExpectedValues = sortedMockIncidents.slice(0, 5).map(inc => inc.impact); // Use sorted mock data for comparison base
+
+            expect(impactValues).toEqual(sortedExpectedValues); // Compare rendered values against sorted mock data
+
+            // Keep explicit error throw for clarity if assertion fails
+            if (!impactValues.every((value, index) => value === sortedExpectedValues[index])) {
+              throw new Error('Incidentes devem estar ordenados por impacto em ordem decrescente. Rendered: [' + impactValues.join(', ') + '], Expected: ['+ sortedExpectedValues.join(', ') +']');
             }
 
             incidentElements.forEach(el => {

@@ -24,7 +24,11 @@ function DashboardContent() {
   const [costs, setCosts] = useState<any[]>([]);
   const [loadingCosts, setLoadingCosts] = useState(true);
   const [accountType, setAccountType] = useState<string>('TRIAL');
-  const [error, setError] = useState<string | null>(null);
+  const [incidentError, setIncidentError] = useState<string | null>(null);
+  const [costError, setCostError] = useState<string | null>(null);
+  const [authError, setAuthError] = useState<string | null>(null);
+  // Combine errors for display
+  const error = authError || incidentError || costError;
 
   const isValidIncident = (inc: any): inc is Incident => {
     return (
@@ -49,10 +53,10 @@ function DashboardContent() {
       if (data.accountType === 'TRIAL') {
         router.push('/trial');
       }
-      setError(null);
+      setAuthError(null); // Clear only auth error on success
     } catch (err: any) {
       console.error('Erro ao carregar status do usuário:', err);
-      setError(t('dashboard.error.auth'));
+      setAuthError(t('dashboard.error.auth')); // Set only auth error
     }
   };
 
@@ -67,12 +71,12 @@ function DashboardContent() {
         // mock apiFetch and return an object or error; normalize to [] so
         // downstream callers (filter, slice, map) are safe.
         setIncidents(Array.isArray(d) ? d : []);
-        setError(null);
+        setIncidentError(null); // Clear only incident error
       })
       .catch(err => {
         console.error('Erro ao buscar incidentes:', err);
         setIncidents([]);
-        setError(t('dashboard.error.network'));
+        setIncidentError(t('dashboard.error.network')); // Set only incident error
       });
   }, []);
 
@@ -88,15 +92,15 @@ function DashboardContent() {
         } else {
           setCosts([]);
         }
-        setError(null);
+        setCostError(null); // Clear only cost error
       })
       .catch((err) => {
         console.error('Erro ao buscar custos:', err);
         setCosts([]);
         if (err.message === 'Request timeout') {
-          setError(t('dashboard.error.timeout'));
+          setCostError(t('dashboard.error.timeout')); // Set only cost error
         } else {
-          setError(t('dashboard.error.network'));
+          setCostError(t('dashboard.error.network')); // Set only cost error
         }
       })
       .finally(() => setLoadingCosts(false));

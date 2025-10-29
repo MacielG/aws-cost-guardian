@@ -1,11 +1,9 @@
-const { calculateImpact, checkSLA, generateReport, submitSupportTicket } = require('../functions/sla-workflow');
-
-// Primeiro, declare todos os mocks antes de qualquer jest.mock
-const mockStsAssumeRole = jest.fn();
+// Define mocks FIRST
 const mockDynamoGet = jest.fn();
 const mockDynamoPut = jest.fn();
-const mockDynamoUpdate = jest.fn();
-const mockDynamoQuery = jest.fn();
+const mockDynamoQuery = jest.fn(); // Add if used
+const mockAssumeRole = jest.fn();
+const mockGetSecretValue = jest.fn();
 const mockS3PutObject = jest.fn();
 const mockSupportCreateCase = jest.fn();
 
@@ -31,61 +29,46 @@ jest.mock('@aws-sdk/client-cost-explorer', () => ({
   GetCostAndUsageCommand: jest.fn(),
 }));
 
-// Mock AWS SDK com retry logic
+// THEN mock the SDK using the declared mocks
 jest.mock('aws-sdk', () => ({
-  STS: jest.fn().mockImplementation(() => ({
-    assumeRole: mockStsAssumeRole.mockReturnValue({
-      promise: jest.fn().mockResolvedValue({
-        Credentials: {
-          AccessKeyId: 'test-key',
-          SecretAccessKey: 'test-secret',
-          SessionToken: 'test-token'
-        }
-      })
-    }),
-  })),
+  config: { update: jest.fn() },
   DynamoDB: {
-    DocumentClient: jest.fn().mockImplementation(() => ({
-      get: mockDynamoGet.mockReturnValue({
-        promise: jest.fn().mockResolvedValue({ Item: { supportLevel: 'premium' } })
+    DocumentClient: jest.fn(() => ({
+      get: mockDynamoGet.mockReturnValue({ // Now mockDynamoGet is defined
+        promise: jest.fn().mockResolvedValue({ Item: { supportLevel: 'premium' } }) // Adjust mock as needed per test
       }),
-      put: mockDynamoPut.mockReturnValue({
+      put: mockDynamoPut.mockReturnValue({ // Now mockDynamoPut is defined
         promise: jest.fn().mockResolvedValue({})
       }),
-      update: mockDynamoUpdate.mockReturnValue({
-      promise: jest.fn().mockResolvedValue({})
+      query: mockDynamoQuery.mockReturnValue({ // Add if needed
+         promise: jest.fn().mockResolvedValue({ Items: [] })
       }),
-      query: mockDynamoQuery.mockReturnValue({
-      promise: jest.fn().mockResolvedValue({ Items: [] })
-      }),
-    })),
+    }))
   },
-  S3: jest.fn().mockImplementation(() => ({
-    putObject: mockS3PutObject.mockReturnValue({
-      promise: jest.fn().mockResolvedValue({})
-    }),
+  STS: jest.fn(() => ({ // Mock STS if needed
+     assumeRole: mockAssumeRole.mockReturnValue({
+        promise: jest.fn().mockResolvedValue({ Credentials: { AccessKeyId: '...', SecretAccessKey: '...', SessionToken: '...' }})
+     })
   })),
-  Support: jest.fn().mockImplementation(() => ({
-    createCase: mockSupportCreateCase.mockReturnValue({
-      promise: jest.fn().mockResolvedValue({ caseId: 'test-case-id' })
-    }),
-  })),
-  StepFunctions: jest.fn().mockImplementation(() => ({
-    startExecution: jest.fn().mockReturnValue({
-      promise: jest.fn().mockResolvedValue({})
-    }),
-  })),
+   SecretsManager: jest.fn(() => ({ // Mock SecretsManager if needed
+     getSecretValue: mockGetSecretValue.mockReturnValue({
+        promise: jest.fn().mockResolvedValue({ SecretString: '{"key":"..."}'})
+     })
+   })),
+   S3: jest.fn(() => ({ // Mock S3 if needed
+     putObject: mockS3PutObject.mockReturnValue({
+        promise: jest.fn().mockResolvedValue({})
+     })
+   })),
+   Support: jest.fn(() => ({ // Mock Support if needed
+     createCase: mockSupportCreateCase.mockReturnValue({
+        promise: jest.fn().mockResolvedValue({ caseId: 'case-123'})
+     })
+   }))
+  // ... mock other services used in sla-workflow.js
 }));
 
-// Mock Cost Explorer
-jest.mock('@aws-sdk/client-cost-explorer', () => ({
-  CostExplorerClient: jest.fn().mockImplementation(() => ({
-    send: jest.fn().mockResolvedValue({
-      ResultsByTime: [{ Total: { UnblendedCost: { Amount: '15.75' } } }],
-    }),
-  })),
-  GetCostAndUsageCommand: jest.fn(),
-}));
+
 
 // Mock Stripe
 jest.mock('stripe', () => jest.fn().mockImplementation(() => ({
@@ -114,28 +97,22 @@ jest.mock('pdf-lib', () => ({
   rgb: jest.fn(),
 }));
 
-// Mock process.env
-process.env.DYNAMODB_TABLE = 'test-table';
-process.env.STRIPE_SECRET_KEY = 'test-key';
+// Reset mocks before each test
+beforeEach(() => {
+  mockDynamoGet.mockClear().mockReturnValue({ promise: jest.fn().mockResolvedValue({ Item: { supportLevel: 'premium' } })}); // Reset with default behaviour
+  mockDynamoPut.mockClear().mockReturnValue({ promise: jest.fn().mockResolvedValue({}) });
+  mockDynamoQuery.mockClear().mockReturnValue({ promise: jest.fn().mockResolvedValue({ Items: [] }) });
+  mockAssumeRole.mockClear().mockReturnValue({ promise: jest.fn().mockResolvedValue({ Credentials: { AccessKeyId: '...', SecretAccessKey: '...', SessionToken: '...' }})});
+  mockGetSecretValue.mockClear().mockReturnValue({ promise: jest.fn().mockResolvedValue({ SecretString: '{"key":"..."}'}) });
+  mockS3PutObject.mockClear().mockReturnValue({ promise: jest.fn().mockResolvedValue({}) });
+  mockSupportCreateCase.mockClear().mockReturnValue({ promise: jest.fn().mockResolvedValue({ caseId: 'case-123'})});
+  // Clear other mocks
+});
 
-const { CostExplorerClient } = require('@aws-sdk/client-cost-explorer');
-const AWS = require('aws-sdk');
-const stripe = require('stripe');
-
-// Create mock instances
-const mockSts = new AWS.STS();
-const mockDynamoDb = new AWS.DynamoDB.DocumentClient();
-const mockS3 = new AWS.S3();
-const mockSupport = new AWS.Support();
-const mockStepFunctions = new AWS.StepFunctions();
-const mockCostExplorer = new CostExplorerClient();
-const mockStripe = new stripe();
+// Import the functions AFTER mocking
+const { calculateImpact, checkSLA, generateReport, submitSupportTicket } = require('../functions/sla-workflow');
 
 describe('SLA Workflow Functions', () => {
-  beforeEach(() => {
-    // Limpa todos os mocks antes de cada teste
-    jest.clearAllMocks();
-  });
 
   // --- Testes para calculateImpact ---
   describe('calculateImpact', () => {
