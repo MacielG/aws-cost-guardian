@@ -209,9 +209,7 @@ export class CostGuardianStack extends cdk.Stack {
       runtime: lambda.Runtime.NODEJS_18_X,
       entry: path.join(__dirname, '../../backend/handler.js'),
       handler: 'app', // export do express + serverless é exposto como 'app' no handler.js
-      bundling: {
-        externalModules: ['@aws-sdk/*', 'aws-sdk'],
-      },
+      // A remoção de 'externalModules' permite que o esbuild empacote as dependências do SDK v3.
       environment: {
         DYNAMODB_TABLE: table.tableName,
         STRIPE_SECRET_ARN: stripeSecret.secretArn,
@@ -233,7 +231,7 @@ export class CostGuardianStack extends cdk.Stack {
       runtime: lambda.Runtime.NODEJS_18_X,
       entry: path.join(__dirname, '../../backend/functions/correlate-health.js'),
       handler: 'handler',
-      bundling: { externalModules: ['@aws-sdk/*', 'aws-sdk'] },
+      // A remoção de 'externalModules' permite que o esbuild empacote as dependências do SDK v3.
       environment: {
         DYNAMODB_TABLE: table.tableName,
         SFN_ARN: '', // Será preenchido abaixo
@@ -254,9 +252,6 @@ export class CostGuardianStack extends cdk.Stack {
       bundling: {
         format: lambda_nodejs.OutputFormat.ESM,
         minify: true,
-        // CORREÇÃO: Removido '@aws-sdk/*' para permitir que o esbuild
-        // empacote os clientes v3 necessários (ESM).
-        externalModules: ['aws-sdk'],
       },
     });
 
@@ -277,7 +272,7 @@ export class CostGuardianStack extends cdk.Stack {
       runtime: lambda.Runtime.NODEJS_18_X,
       entry: path.join(__dirname, '../../backend/functions/sla-workflow.js'),
       handler: 'calculateImpact',
-      bundling: { externalModules: ['@aws-sdk/*', 'aws-sdk'] },
+      // A remoção de 'externalModules' permite que o esbuild empacote as dependências do SDK v3.
       environment: {
         DYNAMODB_TABLE: table.tableName,
       },
@@ -303,7 +298,7 @@ export class CostGuardianStack extends cdk.Stack {
       runtime: lambda.Runtime.NODEJS_18_X,
       entry: path.join(__dirname, '../../backend/functions/sla-workflow.js'),
       handler: 'checkSLA',
-      bundling: { externalModules: ['@aws-sdk/*', 'aws-sdk'] },
+      // A remoção de 'externalModules' permite que o esbuild empacote as dependências do SDK v3.
       environment: { DYNAMODB_TABLE: table.tableName },
     });
 
@@ -311,7 +306,7 @@ export class CostGuardianStack extends cdk.Stack {
       runtime: lambda.Runtime.NODEJS_18_X,
       entry: path.join(__dirname, '../../backend/functions/sla-workflow.js'),
       handler: 'generateReport',
-      bundling: { externalModules: ['@aws-sdk/*', 'aws-sdk'] },
+      // A remoção de 'externalModules' permite que o esbuild empacote as dependências do SDK v3.
       environment: {
         DYNAMODB_TABLE: table.tableName,
         STRIPE_SECRET_ARN: stripeSecret.secretArn,
@@ -340,7 +335,7 @@ export class CostGuardianStack extends cdk.Stack {
       runtime: lambda.Runtime.NODEJS_18_X,
       entry: path.join(__dirname, '../../backend/functions/sla-workflow.js'),
       handler: 'submitSupportTicket',
-      bundling: { externalModules: ['@aws-sdk/*', 'aws-sdk'] },
+      // A remoção de 'externalModules' permite que o esbuild empacote as dependências do SDK v3.
       environment: { DYNAMODB_TABLE: table.tableName },
       role: new iam.Role(this, 'SlaSubmitRole', {
         assumedBy: new iam.ServicePrincipal('lambda.amazonaws.com'),
@@ -411,7 +406,7 @@ export class CostGuardianStack extends cdk.Stack {
       entry: path.join(__dirname, '../../backend/functions/ingest-costs.js'),
       handler: 'handler',
       timeout: cdk.Duration.minutes(5),
-      bundling: { externalModules: ['@aws-sdk/*', 'aws-sdk'] },
+      // A remoção de 'externalModules' permite que o esbuild empacote as dependências do SDK v3.
       environment: {
         DYNAMODB_TABLE: table.tableName,
         SNS_TOPIC_ARN: anomalyAlertsTopic.topicArn,
@@ -452,15 +447,12 @@ export class CostGuardianStack extends cdk.Stack {
     // 7.1. Lambdas para tarefas de automação
     const stopIdleInstancesLambda = new lambda_nodejs.NodejsFunction(this, 'StopIdleInstances', {
       runtime: lambda.Runtime.NODEJS_18_X,
-      entry: path.join(__dirname, '../../backend/functions/recommend-idle-instances.js'),
+      entry: path.join(__dirname, '../../backend/functions/execute-recommendation.js'),
       handler: 'handler',
       timeout: cdk.Duration.minutes(5),
       bundling: {
         format: lambda_nodejs.OutputFormat.ESM,
         minify: true,
-        // CORREÇÃO: Removido '@aws-sdk/*' para permitir que o esbuild
-        // empacote os clientes v3 necessários (ESM).
-        externalModules: ['aws-sdk']
       },
       environment: { DYNAMODB_TABLE: table.tableName },
       role: new iam.Role(this, 'StopIdleRole', {
@@ -484,9 +476,6 @@ export class CostGuardianStack extends cdk.Stack {
     bundling: {
     format: lambda_nodejs.OutputFormat.ESM,
     minify: true,
-    // CORREÇÃO: Removido '@aws-sdk/*' para permitir que o esbuild
-    // empacote os clientes v3 necessários (ESM).
-    externalModules: ['aws-sdk']
     },
       environment: { DYNAMODB_TABLE: table.tableName },
       role: new iam.Role(this, 'RecommendRdsRole', {
@@ -509,7 +498,7 @@ export class CostGuardianStack extends cdk.Stack {
       entry: path.join(__dirname, '../../backend/functions/delete-unused-ebs.js'),
       handler: 'handler',
       timeout: cdk.Duration.minutes(5),
-      bundling: { externalModules: ['@aws-sdk/*', 'aws-sdk'] },
+      // A remoção de 'externalModules' permite que o esbuild empacote as dependências do SDK v3.
       environment: { DYNAMODB_TABLE: table.tableName },
       role: new iam.Role(this, 'DeleteEbsRole', {
         assumedBy: new iam.ServicePrincipal('lambda.amazonaws.com'),
@@ -549,7 +538,7 @@ export class CostGuardianStack extends cdk.Stack {
       runtime: lambda.Runtime.NODEJS_18_X,
       entry: path.join(__dirname, '../../backend/functions/marketplace-metering.js'),
       handler: 'handler',
-      bundling: { externalModules: ['@aws-sdk/*', 'aws-sdk'] },
+      // A remoção de 'externalModules' permite que o esbuild empacote as dependências do SDK v3.
       environment: {
         DYNAMODB_TABLE: table.tableName,
         PRODUCT_CODE: 'your-product-code', // Substituir pelo código real do produto
