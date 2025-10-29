@@ -27,7 +27,7 @@ function isExcluded(resourceTags, exclusionTagsString) {
   return false;
 }
 
-export const handler = async (event) => {
+export const recommendIdleInstancesHandler = async (event) => {
   console.log('Executando automação: Recomendar Instâncias Ociosas (v3)');
 
   const queryParams = {

@@ -18,7 +18,7 @@ function isExcluded(resourceTags, exclusionTagsString) {
   return false;
 }
 
-exports.handler = async (event) => {
+exports.deleteUnusedEbsHandler = async (event) => {
   console.log('Executando automação: Excluir Volumes EBS Órfãos');
 
   // 1. Usar o novo GSI ActiveCustomerIndex para buscar clientes que habilitaram DELETE_UNUSED_EBS

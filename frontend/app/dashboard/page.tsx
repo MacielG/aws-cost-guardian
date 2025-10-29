@@ -19,7 +19,7 @@ interface Incident {
 }
 
 function DashboardContent() {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const router = useRouter();
   const [incidents, setIncidents] = useState<Incident[]>([]);
   const [costs, setCosts] = useState<any[]>([]);
@@ -30,6 +30,7 @@ function DashboardContent() {
   const [authError, setAuthError] = useState<string | null>(null);
   // Combine errors for display
   const error = authError || incidentError || costError;
+  const currentLang = i18n.language || 'en-US';
 
   const isValidIncident = (inc: any): inc is Incident => {
     return (
@@ -77,7 +78,11 @@ function DashboardContent() {
       .catch(err => {
         console.error('Erro ao buscar incidentes:', err);
         setIncidents([]);
-        setIncidentError(t('dashboard.error.network')); // Set only incident error
+        if (err.message === 'Request timeout') {
+          setIncidentError(t('dashboard.error.timeout')); // Set only incident error
+        } else {
+          setIncidentError(t('dashboard.error.network')); // Set only incident error
+        }
       });
   }, []);
 
@@ -156,7 +161,7 @@ function DashboardContent() {
         <DollarSign className="h-4 w-4 text-secondary-red" />
         </CardHeader>
         <CardContent>
-        <div data-testid="total-cost" className="heading-2 text-text-light">{formatCurrency(totalCost, 'pt-BR')}</div>
+        <div data-testid="total-cost" className="heading-2 text-text-light">{formatCurrency(totalCost, currentLang)}</div>
         <p className="text-xs text-secondary-red flex items-center">
         <TrendingDown className="w-3 h-3 mr-1" />
         +8% {t('dashboard.fromLastMonth')}
@@ -193,8 +198,8 @@ function DashboardContent() {
         <AlertCircle className="w-5 h-5 text-secondary-red" />
         <div>
         <p className="text-sm font-medium text-text-light" dangerouslySetInnerHTML={{ __html: sanitizeHtml(inc.service) }}></p>
-        <p data-testid="impact-value" className="text-xs text-text-medium">{t('dashboard.impact')}: ${inc.impact}</p>
-        <p data-testid="incident-date" className="text-xs text-text-medium">{formatDate(inc.timestamp, 'pt-BR')}</p>
+        <p data-testid="impact-value" className="text-xs text-text-medium">{t('dashboard.impact')}: {formatCurrency(inc.impact, currentLang)}</p>
+        <p data-testid="incident-date" className="text-xs text-text-medium">{formatDate(inc.timestamp, currentLang)}</p>
         </div>
         </div>
         <div className={`px-2 py-1 rounded-full text-xs font-medium ${

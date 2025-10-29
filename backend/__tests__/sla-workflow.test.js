@@ -5,6 +5,7 @@ const mockSend = jest.fn();
 const mockGetCostAndUsage = jest.fn();
 const mockAssumeRole = jest.fn();
 const mockSupportCreateCase = jest.fn();
+const mockS3PutObject = jest.fn();
 jest.mock('@aws-sdk/client-cost-explorer', () => ({
   CostExplorerClient: jest.fn(() => ({
     send: mockSend
@@ -54,8 +55,11 @@ CostExplorer: jest.fn(() => ({
     getCostAndUsage: mockGetCostAndUsage
  })),
 Support: jest.fn(() => ({
-    createCase: mockSupportCreateCase
- })),
+createCase: mockSupportCreateCase
+})),
+S3: jest.fn(() => ({
+    putObject: mockS3PutObject
+  })),
 // Adicione outros serviços V2 se sla-workflow.js os usar diretamente
 }));
 
@@ -66,6 +70,7 @@ mockDynamoUpdate_v2.mockClear().mockReturnValue({ promise: jest.fn().mockResolve
 mockAssumeRole.mockClear().mockReturnValue({ promise: jest.fn().mockResolvedValue({ Credentials: { AccessKeyId: 'ASIA...', SecretAccessKey: 'SECRET', SessionToken: 'TOKEN' } }) });
 mockGetCostAndUsage.mockClear().mockReturnValue({ promise: jest.fn().mockResolvedValue({ ResultsByTime: [{ Total: { BlendedCost: { Amount: '123.45' } } }] }) });
 mockSupportCreateCase.mockClear().mockReturnValue({ promise: jest.fn().mockResolvedValue({ caseId: 'case-123' }) });
+mockS3PutObject.mockClear().mockReturnValue({ promise: jest.fn().mockResolvedValue({}) });
 
  // Default successful resolutions for v3 send mock
   mockSend.mockImplementation(async (command) => {

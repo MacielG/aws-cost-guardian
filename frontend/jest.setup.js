@@ -1,3 +1,13 @@
+// Adiciona mock para IntersectionObserver para silenciar warnings do 'act'
+const mockIntersectionObserver = jest.fn();
+mockIntersectionObserver.mockReturnValue({
+  observe: () => null,
+  unobserve: () => null,
+  disconnect: () => null,
+});
+window.IntersectionObserver = mockIntersectionObserver;
+
+// Imports existentes
 import '@testing-library/jest-dom'
 
 // Mock Next.js router

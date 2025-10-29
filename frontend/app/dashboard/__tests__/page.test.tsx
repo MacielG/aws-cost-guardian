@@ -59,7 +59,10 @@ jest.mock('@/lib/api', () => ({
 
 // @ts-ignore
 jest.mock('react-i18next', () => ({
-  useTranslation: () => ({ t: (key: string) => defaultTranslations[key] || key }),
+  useTranslation: () => ({
+    t: (key: string) => defaultTranslations[key] || key,
+    i18n: { language: 'pt-BR' }
+  }),
 }));
 
 // Importações principais (APENAS UMA VEZ!)
@@ -371,9 +374,19 @@ describe('DashboardPage', () => {
             const incidentElements = screen.getAllByTestId('incident-item');
             const impactValues = incidentElements.map(el => {
               const textContent = within(el).getByTestId('impact-value').textContent || '';
-              // Extract number more robustly (handles '$' and potential formatting)
-              const numericValue = parseFloat(textContent.replace(/[^0-9.]/g, ''));
-              return isNaN(numericValue) ? 0 : numericValue; // Default to 0 if parsing fails
+              // Extract number for currency format (Impact: R$ 100,00 or $100.00 -> 100)
+              const match = textContent.match(/(R\$|\$) ?([\d,.]+)/);
+              let numericValue = 0;
+              if (match) {
+              const currency = match[1];
+              const amount = match[2];
+              if (currency === '$') {
+              numericValue = parseFloat(amount);
+              } else if (currency === 'R$') {
+              numericValue = parseFloat(amount.replace(',', '.'));
+              }
+              }
+              return numericValue; // Default to 0 if parsing fails
             });
 
             const sortedExpectedValues = sortedMockIncidents.slice(0, 5).map(inc => inc.impact); // Use sorted mock data for comparison base

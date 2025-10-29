@@ -6,6 +6,7 @@ const mockDynamoDeleteV2 = jest.fn();
 const mockEC2DescribeVolumes = jest.fn();
 const mockEC2DeleteVolume = jest.fn();
 const mockSTSAssumeRoleV2 = jest.fn(); // Mock para STS V2
+const mockS3PutObject = jest.fn();
 
 // Mock AWS SDK v3 clients (for recommend-idle-instances)
 const mockSendV3 = jest.fn(); // Separate mock send if needed, or reuse global one
@@ -51,6 +52,9 @@ deleteVolume: mockEC2DeleteVolume
 })),
   STS: jest.fn(() => ({ // <-- Adiciona STS
     assumeRole: mockSTSAssumeRoleV2
+  })),
+  S3: jest.fn(() => ({
+    putObject: mockS3PutObject
   }))
 }));
 
@@ -68,10 +72,25 @@ deleteVolume: mockEC2DeleteVolume
     mockEC2DescribeVolumes.mockClear().mockReturnValue({ promise: jest.fn().mockResolvedValue({ Volumes: [] }) });
     mockEC2DeleteVolume.mockClear().mockReturnValue({ promise: jest.fn().mockResolvedValue({}) });
     mockSTSAssumeRoleV2.mockClear().mockReturnValue({ promise: jest.fn().mockResolvedValue({ Credentials: { /* ... */ } }) }); // Reset STS V2
+    mockS3PutObject.mockClear().mockReturnValue({ promise: jest.fn().mockResolvedValue({}) }); // Reset S3 V2
 
  // Reset V3 mock
     mockSendV3.mockClear();
-    mockSendV3.mockImplementation(async (command) => { /* ... default impl ... */ });
+    mockSendV3.mockImplementation(async (command) => {
+      if (command.constructor.name === 'QueryCommand') {
+        return { Items: [] };
+      }
+      if (command.constructor.name === 'PutCommand') {
+        return {};
+      }
+      if (command.constructor.name === 'DescribeInstancesCommand') {
+        return { Reservations: [] };
+      }
+      if (command.constructor.name === 'GetMetricStatisticsCommand') {
+        return { Datapoints: [] };
+      }
+      return {};
+    });
   });
 
   afterAll(() => {
