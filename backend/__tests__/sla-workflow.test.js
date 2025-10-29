@@ -120,19 +120,27 @@ describe('SLA Workflow Functions', () => {
 
   describe('calculateImpact', () => {
      it('should handle invalid credentials after assumeRole', async () => {
-       // AssumeRole (v2 ou v3) funciona, mas o cliente CE (v3) falha ao usar
+       // Mock successful assumeRole (v2 SDK)
+       mockAssumeRole.mockReturnValueOnce({
+         promise: jest.fn().mockResolvedValue({
+           Credentials: {
+             AccessKeyId: 'ASIA...',
+             SecretAccessKey: 'SECRET',
+             SessionToken: 'TOKEN'
+           }
+         })
+       });
+       
+       // Mock CostExplorer send to fail with credential error
        mockSend.mockImplementationOnce(async (command) => {
-          if (command.constructor.name === 'AssumeRoleCommand') { // Se assumeRole for v3
-              return { Credentials: { AccessKeyId: 'ASIA...', SecretAccessKey: 'SECRET', SessionToken: 'TOKEN'}};
-          }
-          if (command.constructor.name === 'GetCostAndUsageCommand') {
-              // Simular erro de assinatura
+          if (command.input) { // This is GetCostAndUsageCommand
               const error = new Error("Resolved credential object is not valid");
               error.$metadata = { attempts: 1, totalRetryDelay: 0 };
               throw error;
           }
-          return {};
+          return { ResultsByTime: [] }; // Default return for other commands
        });
+       
        // Espera a mensagem de erro final lançada pela função calculateImpact
        await expect(calculateImpact(baseEvent)).rejects.toThrow('Falha ao calcular impacto: Resolved credential object is not valid');
      });
@@ -146,21 +154,32 @@ describe('SLA Workflow Functions', () => {
          // mockSend.mockImplementationOnce(async cmd => { if (cmd.constructor.name === 'AssumeRoleCommand') throw new Error('AssumeRole failed'); });
 
          // Espera a mensagem de erro lançada por calculateImpact após capturar o erro de assumeRole
-         await expect(calculateImpact(baseEvent)).rejects.toThrow('Falha ao calcular impacto: STS AssumeRole failed: AssumeRole failed');
+         // The actual error message changes to "Falha ao assumir role" when it detects "AssumeRole failed"
+         await expect(calculateImpact(baseEvent)).rejects.toThrow('Falha ao assumir role: STS AssumeRole failed: AssumeRole failed');
          expect(mockGetCostAndUsage).not.toHaveBeenCalled(); // V2
          expect(mockSend).not.toHaveBeenCalledWith(expect.objectContaining({ constructor: { name: 'GetCostAndUsageCommand' } })); // V3
      });
 
       // Teste de falha no Cost Explorer (após assumeRole bem-sucedido)
       it('should handle CostExplorer errors', async () => {
-          mockGetCostAndUsage.mockReturnValueOnce({ // V2 CE mock
-              promise: jest.fn().mockRejectedValue(new Error('CE Error'))
+          // Mock successful assumeRole (v2 SDK)
+          mockAssumeRole.mockReturnValueOnce({
+            promise: jest.fn().mockResolvedValue({
+              Credentials: {
+                AccessKeyId: 'ASIA...',
+                SecretAccessKey: 'SECRET',
+                SessionToken: 'TOKEN'
+              }
+            })
           });
-           // OU Mock V3 CE (após mock de assumeRole bem-sucedido)
-          // mockSend.mockImplementation(async cmd => {
-          //    if (cmd.constructor.name === 'AssumeRoleCommand') return { Credentials: { ... }};
-          //    if (cmd.constructor.name === 'GetCostAndUsageCommand') throw new Error('CE Error');
-          // });
+          
+          // Mock CostExplorer send to fail
+          mockSend.mockImplementationOnce(async (command) => {
+            if (command.input) { // This is GetCostAndUsageCommand
+              throw new Error('CE Error');
+            }
+            return { ResultsByTime: [] };
+          });
 
           // Espera a mensagem de erro final
           await expect(calculateImpact(baseEvent)).rejects.toThrow('Falha ao calcular impacto: CE Error');

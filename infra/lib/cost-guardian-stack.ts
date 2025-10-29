@@ -480,7 +480,13 @@ export class CostGuardianStack extends cdk.Stack {
     bundling: {
     format: lambda_nodejs.OutputFormat.ESM,
     minify: true,
-    externalModules: ['@aws-sdk/*', 'aws-sdk']
+    externalModules: [
+      '@aws-sdk/client-sts',
+      '@aws-sdk/client-rds',
+      '@aws-sdk/client-cloudwatch',
+      '@aws-sdk/client-dynamodb',
+      '@aws-sdk/lib-dynamodb'
+    ]
     },
       environment: { DYNAMODB_TABLE: table.tableName },
       role: new iam.Role(this, 'RecommendRdsRole', {
