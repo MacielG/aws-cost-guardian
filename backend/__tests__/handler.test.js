@@ -39,15 +39,20 @@ jest.mock('aws-sdk', () => ({
     }))
   },
   SecretsManager: jest.fn().mockImplementation(() => ({
-    getSecretValue: mockSecretsGetSecretValue.mockReturnValue({
-      promise: jest.fn().mockResolvedValue({ SecretString: '{}' })
-    })
+  getSecretValue: mockSecretsGetSecretValue.mockReturnValue({
+  promise: jest.fn().mockResolvedValue({ SecretString: '{}' })
+  })
   })),
-  StepFunctions: jest.fn().mockImplementation(() => ({
-    startExecution: jest.fn().mockReturnValue({
-      promise: jest.fn().mockResolvedValue({})
-    })
-  }))
+  // V-- Add EC2 mock constructor V--
+  EC2: jest.fn(() => ({
+  // Add mock methods if getAssumedClients calls any EC2 methods
+   // e.g., describeInstances: jest.fn().mockReturnValue({ promise: jest.fn() })
+  })),
+   StepFunctions: jest.fn().mockImplementation(() => ({
+     startExecution: jest.fn().mockReturnValue({
+       promise: jest.fn().mockResolvedValue({})
+     })
+   }))
 }));
 
 // Mock jsonwebtoken to bypass JWKS complexity in tests

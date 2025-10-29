@@ -16,7 +16,7 @@ jest.mock('aws-cdk-lib/aws-s3-deployment', () => {
           // Add other properties/methods if the mock complains
       }),
     },
-    BucketDeployment: jest.fn().mockImplementation((scope, id, props) => {
+    BucketDeployment: jest.fn().mockImplementation((_scope, _id, _props) => {
          // Return a mock construct or minimal object if needed
          // This basic mock prevents the constructor logic from running deeply
          return { node: { addDependency: jest.fn() } };

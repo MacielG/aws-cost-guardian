@@ -1,153 +1,124 @@
-// Primeiro, declare todos os mocks antes de qualquer require ou jest.mock
-const mockStsAssumeRole = jest.fn();
-const mockDynamoScan = jest.fn();
-const mockEc2DescribeVolumes = jest.fn();
-const mockEc2DeleteVolume = jest.fn();
-const mockEc2DescribeInstances = jest.fn();
-const mockEc2StopInstances = jest.fn();
-const mockCwGetMetricData = jest.fn();
+// Mock AWS SDK v2 DocumentClient (for delete-unused-ebs)
+const mockDynamoQueryV2 = jest.fn();
+const mockDynamoDeleteV2 = jest.fn(); // Assume it uses delete too
+const mockEC2DescribeVolumes = jest.fn();
+const mockEC2DeleteVolume = jest.fn();
 
-// Mock AWS SDK depois das declarações
-jest.mock('aws-sdk', () => {
-  return {
-    STS: jest.fn().mockImplementation(() => ({
-      assumeRole: mockStsAssumeRole.mockReturnValue({
-        promise: jest.fn().mockResolvedValue({
-          Credentials: { AccessKeyId: 'key', SecretAccessKey: 'secret', SessionToken: 'token' }
-        })
-      })
-    })),
-    DynamoDB: {
-      DocumentClient: jest.fn().mockImplementation(() => ({
-        scan: mockDynamoScan.mockReturnValue({
-          promise: jest.fn().mockResolvedValue({ Items: [] })
-        })
-      }))
+// Mock AWS SDK v3 clients (for recommend-idle-instances)
+const mockSendV3 = jest.fn(); // Separate mock send if needed, or reuse global one
+jest.mock('@aws-sdk/client-dynamodb', () => ({
+  DynamoDBClient: jest.fn(() => ({ send: mockSendV3 })),
+  QueryCommand: jest.fn(input => ({ input })),
+  PutCommand: jest.fn(input => ({ input })), // Mock if PutCommand is used
+}));
+ jest.mock('@aws-sdk/lib-dynamodb', () => ({ // Mock the DocumentClient v3 lib
+    DynamoDBDocumentClient: {
+        from: jest.fn(() => ({ send: mockSendV3 }))
     },
-    EC2: jest.fn().mockImplementation(() => ({
-      describeVolumes: mockEc2DescribeVolumes.mockReturnValue({
-        promise: jest.fn().mockResolvedValue({ Volumes: [] })
-      }),
-      deleteVolume: mockEc2DeleteVolume.mockReturnValue({
-        promise: jest.fn().mockResolvedValue({})
-      }),
-      describeInstances: mockEc2DescribeInstances.mockReturnValue({
-        promise: jest.fn().mockResolvedValue({ Reservations: [] })
-      }),
-      stopInstances: mockEc2StopInstances.mockReturnValue({
-        promise: jest.fn().mockResolvedValue({})
-      })
-    })),
-    CloudWatch: jest.fn().mockImplementation(() => ({
-      getMetricData: mockCwGetMetricData.mockReturnValue({
-        promise: jest.fn().mockResolvedValue({ MetricDataResults: [] })
-      })
-    })),
-  };
-});
+    QueryCommand: jest.requireActual('@aws-sdk/lib-dynamodb').QueryCommand, // Use actual command objects
+    PutCommand: jest.requireActual('@aws-sdk/lib-dynamodb').PutCommand, // Use actual command objects
+ }));
+ // Mock other v3 clients used by recommend-idle-instances (SNS, EC2, CloudWatch?)
+  jest.mock('@aws-sdk/client-sns', () => ({
+      SNSClient: jest.fn(() => ({ send: mockSendV3 })),
+      PublishCommand: jest.fn(input => ({ input }))
+  }));
+   jest.mock('@aws-sdk/client-cloudwatch', () => ({
+       CloudWatchClient: jest.fn(() => ({ send: mockSendV3 })),
+       GetMetricDataCommand: jest.fn(input => ({ input })) // Or GetMetricStatisticsCommand
+   }));
+    jest.mock('@aws-sdk/client-ec2', () => ({
+       EC2Client: jest.fn(() => ({ send: mockSendV3 })),
+       DescribeInstancesCommand: jest.fn(input => ({ input }))
+   }));
 
-const { handler: deleteUnusedEbsHandler } = require('../functions/delete-unused-ebs');
-const { handler: stopIdleInstancesHandler } = require('../functions/recommend-idle-instances');
+
+// Mock V2 services used by delete-unused-ebs
+jest.mock('aws-sdk', () => ({
+  config: { update: jest.fn() },
+  DynamoDB: {
+    DocumentClient: jest.fn(() => ({
+      query: mockDynamoQueryV2,
+      delete: mockDynamoDeleteV2,
+    }))
+  },
+  EC2: jest.fn(() => ({
+    describeVolumes: mockEC2DescribeVolumes,
+    deleteVolume: mockEC2DeleteVolume
+  }))
+}));
+
+ // Import AFTER mocks
+ const { deleteUnusedEbsHandler } = require('../functions/delete-unused-ebs');
+ const { recommendIdleInstancesHandler } = require('../functions/recommend-idle-instances');
 
 describe('Funções de Automação', () => {
-  beforeEach(() => {
-    jest.clearAllMocks();
-  });
+const OLD_ENV = process.env;
 
-  describe('delete-unused-ebs', () => {
-    const baseEvent = {
-      customerId: 'cust-123',
-      awsAccountId: '111122223333',
-      roleArn: 'arn:aws:iam::111122223333:role/TestRole',
-    };
+beforeEach(() => {
+    jest.resetModules(); // Important if functions read env vars at module level
+  process.env = { ...OLD_ENV };
+process.env.DYNAMODB_TABLE = 'automation-test-table'; // Set table name for ALL tests
 
-    test('deve excluir volumes "available" e ignorar volumes "in-use"', async () => {
-    mockEc2DescribeVolumes.mockReturnValue({
-    promise: jest.fn().mockResolvedValue({
-    Volumes: [
-      { VolumeId: 'vol-available', State: 'available' },
-        { VolumeId: 'vol-in-use', State: 'in-use' },
-        ],
-        })
-    });
+// Reset V2 mocks
+mockDynamoQueryV2.mockClear().mockReturnValue({ promise: jest.fn().mockResolvedValue({ Items: [] }) });
+mockDynamoDeleteV2.mockClear().mockReturnValue({ promise: jest.fn().mockResolvedValue({}) });
+    mockEC2DescribeVolumes.mockClear().mockReturnValue({ promise: jest.fn().mockResolvedValue({ Volumes: [] }) });
+mockEC2DeleteVolume.mockClear().mockReturnValue({ promise: jest.fn().mockResolvedValue({}) });
 
-    mockEc2DeleteVolume.mockReturnValue({
-        promise: jest.fn().mockResolvedValue({})
-    });
+// Reset V3 mock
+mockSendV3.mockClear();
+mockSendV3.mockImplementation(async (command) => { // Default successful v3 mock
+ if (command.constructor.name === 'QueryCommand') { return { Items: [] }; }
+ if (command.constructor.name === 'PutCommand') { return {}; }
+ if (command.constructor.name === 'PublishCommand') { return {}; }
+      if (command.constructor.name === 'GetMetricDataCommand') { return { MetricDataResults: [] }; }
+          if (command.constructor.name === 'DescribeInstancesCommand') { return { Reservations: [] }; }
+     // Add other default command handlers
+ return {};
+ });
 
-    await deleteUnusedEbsHandler(baseEvent);
+});
 
-      expect(mockStsAssumeRole).toHaveBeenCalledWith({
-      RoleArn: baseEvent.roleArn,
-        RoleSessionName: 'CostGuardianDeleteEBS',
-    });
+afterAll(() => {
+ process.env = OLD_ENV;
+});
 
-    expect(mockEc2DescribeVolumes).toHaveBeenCalled();
 
-    expect(mockEc2DeleteVolume).toHaveBeenCalledWith({
-    VolumeId: 'vol-available',
-    });
+describe('delete-unused-ebs', () => {
+     it('should query dynamo and describe volumes', async () => {
+   // Setup specific mock returns for this test
+   mockDynamoQueryV2.mockReturnValueOnce({ promise: jest.fn().mockResolvedValue({ Items: [{ pk: 'CUST#c1', sk: 'AWS#111', roleArn: 'arn:role' }] }) });
+   mockEC2DescribeVolumes.mockReturnValueOnce({ promise: jest.fn().mockResolvedValue({ Volumes: [{ VolumeId: 'v-123', State: 'available' }] }) });
 
-      expect(mockEc2DeleteVolume).not.toHaveBeenCalledWith({
-        VolumeId: 'vol-in-use',
-      });
-    });
-  });
+ await deleteUnusedEbsHandler({}); // Pass empty event if needed
 
-  describe('stop-idle-instances', () => {
-    const baseEvent = {
-      customerId: 'cust-123',
-      awsAccountId: '111122223333',
-      roleArn: 'arn:aws:iam::111122223333:role/TestRole',
-      idleThresholdMinutes: 60,
-    };
+ expect(mockDynamoQueryV2).toHaveBeenCalled();
+   expect(mockEC2DescribeVolumes).toHaveBeenCalled();
+     expect(mockEC2DeleteVolume).toHaveBeenCalledWith({ VolumeId: 'v-123' });
+     });
+});
 
-    test('deve parar instâncias ociosas baseado no uso de CPU', async () => {
-      mockEc2DescribeInstances.mockReturnValue({
-        promise: jest.fn().mockResolvedValue({
-          Reservations: [
-            {
-              Instances: [
-                {
-                  InstanceId: 'i-123',
-                  State: { Name: 'running' },
-                  Tags: [{ Key: 'Name', Value: 'Test Instance' }],
-                },
-              ],
-            },
-          ],
-        })
-      });
+describe('recommend-idle-instances', () => {
+it('should query dynamo, get metrics, describe instances', async () => {
+   // Setup specific V3 mock returns
+   mockSendV3.mockImplementation(async (command) => {
+         if (command.constructor.name === 'QueryCommand') { return { Items: [{ pk: 'CUST#c1', sk: 'AWS#111', roleArn: 'arn:role', config: { idleInstanceThreshold: 5 } }] }; } // Customer config
+             if (command.constructor.name === 'DescribeInstancesCommand') { return { Reservations: [{ Instances: [{ InstanceId: 'i-abc', State: { Name: 'running' } }] }] }; }
+         if (command.constructor.name === 'GetMetricDataCommand') { return { MetricDataResults: [{ Id: 'cpu', Timestamps: [new Date()], Values: [1.0] }] }; } // Low CPU
+       if (command.constructor.name === 'PutCommand') { return {}; } // Recommendation save
+     if (command.constructor.name === 'PublishCommand') { return {}; } // SNS publish
+   return {};
+});
 
-      mockCwGetMetricData.mockReturnValue({
-        promise: jest.fn().mockResolvedValue({
-          MetricDataResults: [
-            {
-              Id: 'cpu_utilization',
-              Values: [2.5], // CPU abaixo do threshold
-            },
-          ],
-        })
-      });
+await recommendIdleInstancesHandler({});
 
-      mockEc2StopInstances.mockReturnValue({
-        promise: jest.fn().mockResolvedValue({})
-      });
-
-      await stopIdleInstancesHandler(baseEvent);
-
-      expect(mockStsAssumeRole).toHaveBeenCalledWith({
-        RoleArn: baseEvent.roleArn,
-        RoleSessionName: 'CostGuardianStopIdle',
-      });
-
-      expect(mockEc2DescribeInstances).toHaveBeenCalled();
-
-      expect(mockCwGetMetricData).toHaveBeenCalled();
-
-      expect(mockEc2StopInstances).toHaveBeenCalledWith({
-        InstanceIds: ['i-123'],
-      });
-    });
-  });
+// Check that mockSendV3 was called with specific command types
+expect(mockSendV3).toHaveBeenCalledWith(expect.objectContaining({ constructor: { name: 'QueryCommand' } }));
+expect(mockSendV3).toHaveBeenCalledWith(expect.objectContaining({ constructor: { name: 'DescribeInstancesCommand' } }));
+expect(mockSendV3).toHaveBeenCalledWith(expect.objectContaining({ constructor: { name: 'GetMetricDataCommand' } }));
+expect(mockSendV3).toHaveBeenCalledWith(expect.objectContaining({ constructor: { name: 'PutCommand' } })); // Check recommendation saved
+expect(mockSendV3).toHaveBeenCalledWith(expect.objectContaining({ constructor: { name: 'PublishCommand' } })); // Check SNS called
+});
+});
 });

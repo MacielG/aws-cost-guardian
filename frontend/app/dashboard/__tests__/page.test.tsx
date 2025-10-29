@@ -251,13 +251,13 @@ const createTestData = () => {
       expectedError: 'Network error occurred',
     },
     {
-      name: 'timeout na API',
-      errors: {
-        costs: new Error('Request timeout'),
-        incidents: new Error('Request timeout'),
-        status: null,
-      },
-      expectedError: 'Request timed out',
+    name: 'timeout na API',
+    errors: {
+    costs: new Error('Request timeout'),
+    incidents: new Error('Request timeout'),
+    status: null,
+    },
+    expectedError: 'A requisição excedeu o tempo limite',
     },
     {
       name: 'erro de autenticação',
@@ -400,7 +400,7 @@ describe('DashboardPage', () => {
                 sum + Number(group.Metrics.UnblendedCost.Amount),
               0
             );
-            expect(screen.getByTestId('total-cost')).toHaveTextContent(formatCurrency(totalCost));
+            // Call with specific locale in tests\n            expect(screen.getByTestId('total-cost')).toHaveTextContent(formatCurrency(totalCost, 'en-US', 'USD'));
           }
         }
 

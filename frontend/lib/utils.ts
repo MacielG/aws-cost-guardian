@@ -5,12 +5,18 @@ export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
 }
 
-export const formatCurrency = (value: number): string => {
-  return new Intl.NumberFormat('pt-BR', {
-    style: 'currency',
-    currency: 'BRL'
-  }).format(value);
-};
+// Example allowing locale override
+export function formatCurrency(value: number, locale = 'pt-BR', currency = 'BRL'): string {
+  try {
+    return new Intl.NumberFormat(locale, {
+      style: 'currency',
+      currency: currency,
+    }).format(value);
+  } catch (e) {
+    console.error("Error formatting currency:", e);
+    return `${currency === 'BRL' ? 'R$' : '$'}${value.toFixed(2)}`; // Basic fallback
+  }
+}
 
 export const formatDate = (date: string): string => {
   return new Date(date).toLocaleDateString('en-US');
