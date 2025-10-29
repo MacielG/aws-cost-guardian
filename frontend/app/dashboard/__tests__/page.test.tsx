@@ -294,6 +294,9 @@ describe('DashboardPage', () => {
   afterEach(() => {
     jest.useRealTimers();
     jest.clearAllTimers();
+    jest.clearAllMocks(); // Limpa chamadas e instâncias
+    // Se você modificou mocks (ex: mockImplementation), talvez precise de restore:
+    jest.restoreAllMocks();
     abortControllers.forEach(controller => controller.abort());
     abortControllers = [];
   });

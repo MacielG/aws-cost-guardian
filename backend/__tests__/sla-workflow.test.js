@@ -107,7 +107,11 @@ describe('SLA Workflow Functions', () => {
   const baseEvent = {
       customerId: 'cust-123', awsAccountId: '111122223333',
       incidentId: 'INCIDENT#abc-123',
-      healthEvent: { /* ... dados do evento ... */ }
+      healthEvent: {
+        detail: {
+          affectedEntities: [{ entityValue: 'dummy-resource-arn' }]
+        }
+      }
   };
 
   describe('calculateImpact', () => {
