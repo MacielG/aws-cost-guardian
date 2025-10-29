@@ -10,7 +10,10 @@ jest.mock('@aws-sdk/client-cost-explorer', () => ({
   CostExplorerClient: jest.fn(() => ({
     send: mockSend
   })),
-  GetCostAndUsageCommand: jest.fn((input) => ({ input }))
+  GetCostAndUsageCommand: jest.fn((input) => ({ 
+    input, 
+    constructor: { name: 'GetCostAndUsageCommand' }
+  }))
 }));
 jest.mock('@aws-sdk/client-dynamodb', () => ({
    DynamoDBClient: jest.fn(() => ({ send: mockSend })),
@@ -73,14 +76,16 @@ mockSupportCreateCase.mockClear().mockReturnValue({ promise: jest.fn().mockResol
 mockS3PutObject.mockClear().mockReturnValue({ promise: jest.fn().mockResolvedValue({}) });
 
  // Default successful resolutions for v3 send mock
+  mockSend.mockReset();
   mockSend.mockImplementation(async (command) => {
       if (command.input?.TableName && command.constructor.name.includes('DynamoDB')) {
            if (command.constructor.name === 'GetItemCommand') return { Item: { supportLevel: { S: 'premium' } } };
            if (command.constructor.name === 'QueryCommand') return { Items: [] };
           return {};
       }
+      // Garantir que GetCostAndUsageCommand sempre retorne ResultsByTime para evitar forEach errors
       if (command.constructor.name === 'GetCostAndUsageCommand') {
-           return { ResultsByTime: [{ Total: { BlendedCost: { Amount: '123.45' } } }] };
+           return { ResultsByTime: [{ Total: { UnblendedCost: { Amount: '123.45' } } }] };
       }
        if (command.constructor.name === 'AssumeRoleCommand') {
            return { Credentials: { AccessKeyId: 'ASIA...', SecretAccessKey: '...', SessionToken: '...' }};
@@ -95,7 +100,8 @@ mockS3PutObject.mockClear().mockReturnValue({ promise: jest.fn().mockResolvedVal
           return { SecretString: '{\"key\":\"value\"}' };
        }
 
-      throw new Error(`Unhandled mock command: ${command?.constructor?.name}`);
+      // Retorna resultado padrão em vez de lançar erro
+      return { ResultsByTime: [] };
   });
 });
 

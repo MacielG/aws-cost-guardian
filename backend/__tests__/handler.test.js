@@ -53,6 +53,13 @@ jest.mock('aws-sdk', () => ({
       promise: jest.fn().mockResolvedValue({ DBInstances: [] })
     })
   })),
+  Support: jest.fn(() => ({
+    describeSeverityLevels: jest.fn().mockReturnValue({
+      promise: jest.fn().mockResolvedValue({ 
+        severityLevels: [{ code: 'low' }, { code: 'urgent' }] 
+      })
+    })
+  })),
    StepFunctions: jest.fn().mockImplementation(() => ({
      startExecution: jest.fn().mockReturnValue({
        promise: jest.fn().mockResolvedValue({})
