@@ -254,7 +254,7 @@ export class CostGuardianStack extends cdk.Stack {
       bundling: {
         format: lambda_nodejs.OutputFormat.ESM,
         minify: true,
-        externalModules: ['@aws-sdk/*', 'aws-sdk'],
+        externalModules: ['aws-sdk'],
       },
     });
 
@@ -456,7 +456,7 @@ export class CostGuardianStack extends cdk.Stack {
       bundling: {
         format: lambda_nodejs.OutputFormat.ESM,
         minify: true,
-        externalModules: ['@aws-sdk/*', 'aws-sdk'],
+        externalModules: ['aws-sdk'],
       },
       environment: { DYNAMODB_TABLE: table.tableName },
       role: new iam.Role(this, 'StopIdleRole', {
@@ -480,7 +480,7 @@ export class CostGuardianStack extends cdk.Stack {
     bundling: {
     format: lambda_nodejs.OutputFormat.ESM,
     minify: true,
-    externalModules: ['@aws-sdk/*', 'aws-sdk']
+    externalModules: ['aws-sdk']
     },
       environment: { DYNAMODB_TABLE: table.tableName },
       role: new iam.Role(this, 'RecommendRdsRole', {
