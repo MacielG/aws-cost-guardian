@@ -163,7 +163,6 @@ export class CostGuardianStack extends cdk.Stack {
      sources: [s3deploy.Source.asset(docsPath)], // Asset call only happens here
      include: ['cost-guardian-template.yaml'],
      destinationKeyPrefix: '',
-     objectNames: ['template.yaml'],
        destinationBucket: templateBucket,
         });
 
@@ -171,7 +170,6 @@ export class CostGuardianStack extends cdk.Stack {
      sources: [s3deploy.Source.asset(docsPath)], // Asset call only happens here
      include: ['cost-guardian-TRIAL-template.yaml'],
      destinationKeyPrefix: '',
-     objectNames: ['cost-guardian-TRIAL-template.yaml'],
        destinationBucket: templateBucket,
      });
     } else {
@@ -482,7 +480,7 @@ export class CostGuardianStack extends cdk.Stack {
     bundling: {
     format: lambda_nodejs.OutputFormat.ESM,
     minify: true,
-    externalModules: '@aws-sdk/*,aws-sdk'
+    externalModules: ['@aws-sdk/*', 'aws-sdk']
     },
       environment: { DYNAMODB_TABLE: table.tableName },
       role: new iam.Role(this, 'RecommendRdsRole', {

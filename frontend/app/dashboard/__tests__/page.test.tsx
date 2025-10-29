@@ -73,7 +73,7 @@ import { formatCurrency, formatDate } from '@/lib/utils';
 const mockApiFetch = (jest.requireMock('@/lib/api') as any).apiFetch as jest.Mock;
 
 // Helper functions
-const expectElementToBeInDocument = (element: HTMLElement | null) => {
+const expectElementToBeInDocument = (element: Element | null) => {
   expect(element).toBeInTheDocument();
 };
 
@@ -357,7 +357,7 @@ describe('DashboardPage', () => {
           // Check that *at least one* incident item is rendered
           expect(screen.queryAllByTestId('incident-item').length).toBeGreaterThan(0);
           // Check for text unique to the *last* item after sorting within the incidents card
-          expect(within(incidentsCard!).getByText(new RegExp(lastIncidentService, 'i'))).toBeInTheDocument();
+          expect(within(incidentsCard! as HTMLElement).getByText(new RegExp(lastIncidentService, 'i'))).toBeInTheDocument();
           });
           });
 
@@ -366,18 +366,40 @@ describe('DashboardPage', () => {
             const impactValues = incidentElements.map(el => {
               const textContent = within(el).getByTestId('impact-value').textContent || '';
               // Extract number for currency format (Impact: R$ 100,00 or $100.00 -> 100)
-              const match = textContent.match(/(R\$|\$) ?([\d,.]+)/);
+              const match = textContent.match(/(R\$|\$)\s?([\d,.]+)/);
               let numericValue = 0;
               if (match) {
-              const currency = match[1];
-              const amount = match[2];
-              if (currency === '$') {
-              numericValue = parseFloat(amount);
-              } else if (currency === 'R$') {
-              numericValue = parseFloat(amount.replace(',', '.'));
+                const currency = match[1];
+                const amountString = match[2];
+                
+                // Handle both US ($1,000.00) and BR (R$ 1.000,00) formats
+                if (amountString.includes(',') && amountString.includes('.')) {
+                  // Determine decimal separator by position
+                  const lastCommaPos = amountString.lastIndexOf(',');
+                  const lastDotPos = amountString.lastIndexOf('.');
+                  
+                  if (lastCommaPos > lastDotPos) {
+                    // pt-BR format: 1.000,00 -> comma is decimal
+                    numericValue = parseFloat(amountString.replace(/\./g, '').replace(',', '.'));
+                  } else {
+                    // en-US format: 1,000.00 -> period is decimal
+                    numericValue = parseFloat(amountString.replace(/,/g, ''));
+                  }
+                } else if (amountString.includes(',')) {
+                  // Only comma: could be decimal (100,50) or thousand separator (1,000)
+                  // Assume decimal if less than 3 digits after comma
+                  const parts = amountString.split(',');
+                  if (parts.length === 2 && parts[1].length <= 2) {
+                    numericValue = parseFloat(amountString.replace(',', '.'));
+                  } else {
+                    numericValue = parseFloat(amountString.replace(/,/g, ''));
+                  }
+                } else {
+                  // Only periods or no separators
+                  numericValue = parseFloat(amountString);
+                }
               }
-              }
-              return numericValue; // Default to 0 if parsing fails
+              return isNaN(numericValue) ? 0 : numericValue;
             });
 
             const sortedExpectedValues = sortedMockIncidents.slice(0, 5).map(inc => inc.impact); // Use sorted mock data for comparison base
@@ -421,6 +443,10 @@ describe('DashboardPage', () => {
     test.each(errorScenarios)(
       'deve lidar com $name',
       async ({ errors, expectedError }) => {
+        // Suppress expected console.error during error handling tests
+        const originalConsoleError = console.error;
+        console.error = jest.fn();
+
         mockApiFetch.mockImplementation((url: string) => {
           const controller = new AbortController();
           abortControllers.push(controller);
@@ -459,6 +485,9 @@ describe('DashboardPage', () => {
             unmount();
           });
         }
+
+        // Restore console.error
+        console.error = originalConsoleError;
       }
     );
   });

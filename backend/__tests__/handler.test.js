@@ -48,6 +48,11 @@ jest.mock('aws-sdk', () => ({
   // Add mock methods if getAssumedClients calls any EC2 methods
    // e.g., describeInstances: jest.fn().mockReturnValue({ promise: jest.fn() })
   })),
+  RDS: jest.fn(() => ({
+    describeDBInstances: jest.fn().mockReturnValue({
+      promise: jest.fn().mockResolvedValue({ DBInstances: [] })
+    })
+  })),
    StepFunctions: jest.fn().mockImplementation(() => ({
      startExecution: jest.fn().mockReturnValue({
        promise: jest.fn().mockResolvedValue({})

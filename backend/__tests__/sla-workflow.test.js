@@ -108,6 +108,10 @@ describe('SLA Workflow Functions', () => {
       customerId: 'cust-123', awsAccountId: '111122223333',
       incidentId: 'INCIDENT#abc-123',
       healthEvent: {
+        startTime: new Date().toISOString(),
+        endTime: new Date().toISOString(),
+        service: 'EC2',
+        resources: ['arn:aws:ec2:us-east-1:111122223333:instance/i-12345'],
         detail: {
           affectedEntities: [{ entityValue: 'dummy-resource-arn' }]
         }
