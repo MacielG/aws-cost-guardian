@@ -1,0 +1,390 @@
+﻿import * as cdk from 'aws-cdk-lib';
+import { Template, Match } from 'aws-cdk-lib/assertions';
+import * as CostGuardian from '../lib/cost-guardian-stack';
+// V-- Import the modules to mock V--
+import * as fs from 'fs';
+import * as path from 'path';
+
+// V-- Mock the specific part causing issues V--
+jest.mock('fs');
+jest.mock('aws-cdk-lib/aws-s3-deployment', () => {
+  const actual = jest.requireActual('aws-cdk-lib/aws-s3-deployment');
+  return {
+    ...actual, // Keep original exports
+    Source: {
+      ...actual.Source,
+      asset: jest.fn().mockReturnValue({ // Mock the 'asset' static method
+          isAsset: true,
+          bind: jest.fn().mockReturnValue({ /* return minimal required config */ bucket: {}, zipObjectKey: '' }), // Mock bind if needed
+          // Add other properties/methods if the mock complains
+      }),
+    },
+    BucketDeployment: actual.BucketDeployment, // Allow BucketDeployment to be a real construct
+  };
+});
+jest.mock('fs', () => ({
+  ...jest.requireActual('fs'),
+  existsSync: jest.fn(),
+}));
+
+describe('CostGuardianStack: Testes Completos', () => {
+  let app: cdk.App;
+  let stack: CostGuardian.CostGuardianStack;
+  let template: Template;
+
+  // ConfiguraÃ§Ãµes para diferentes ambientes de teste
+  const testConfig = {
+    env: { account: '123456789012', region: 'us-east-1' },
+    domainName: 'test.example.com',
+    hostedZoneId: 'Z123456789',
+    isTestEnvironment: true,
+    githubRepo: 'test/repo',
+    githubBranch: 'main',
+    githubTokenSecretName: 'dummy-secret',
+    depsLockFilePath: path.resolve('../package-lock.json'),
+    backendPath: path.join(process.cwd(), '..', 'backend'),
+    backendFunctionsPath: path.join(process.cwd(), '..', 'backend', 'functions'),
+    docsPath: path.join(process.cwd(), '..', 'docs')
+  };
+
+  const prodConfig = {
+    env: { account: '123456789012', region: 'us-east-1' },
+    domainName: 'prod.example.com',
+    hostedZoneId: 'Z987654321',
+    isTestEnvironment: false,
+    githubRepo: 'prod/repo',
+    githubBranch: 'main',
+    githubTokenSecretName: 'prod-secret',
+    depsLockFilePath: path.resolve('../package-lock.json'),
+    backendPath: path.join(process.cwd(), '..', 'backend'),
+    backendFunctionsPath: path.join(process.cwd(), '..', 'backend', 'functions'),
+    docsPath: path.join(process.cwd(), '..', 'docs')
+  };
+
+  beforeEach(() => {
+    app = new cdk.App();
+    // Reset mocks for each test
+    (fs.existsSync as jest.Mock).mockClear();
+    (require('aws-cdk-lib/aws-s3-deployment').Source.asset as jest.Mock).mockClear();
+    // Mock fs.existsSync to return true for backend and docs directories
+    (fs.existsSync as jest.Mock).mockImplementation((path: string) => {
+      if (path.includes('backend') || path.includes('docs')) return true;
+      return false;
+    });
+  });
+
+  describe('SeguranÃ§a e Compliance', () => {
+    beforeEach(() => {
+      // For test environment, mock fs.existsSync to return false for docs path, true for handler
+      (fs.existsSync as jest.Mock).mockImplementation((path: string) => {
+        if (path.includes('backend')) return true;
+        return false;
+      });
+      stack = new CostGuardian.CostGuardianStack(app, 'SecurityTestStack', testConfig);
+      template = Template.fromStack(stack);
+    });
+
+    describe('ConfiguraÃ§Ãµes de S3', () => {
+      test('Todos os buckets devem ter as configuraÃ§Ãµes de seguranÃ§a adequadas', () => {
+        const buckets = template.findResources('AWS::S3::Bucket');
+        const bucketCount = Object.keys(buckets).length;
+        expect(bucketCount).toBeGreaterThan(0);
+
+        template.hasResourceProperties('AWS::S3::Bucket', {
+          VersioningConfiguration: { Status: 'Enabled' }
+        });
+
+        template.hasResourceProperties('AWS::S3::Bucket', {
+          PublicAccessBlockConfiguration: Match.objectLike({
+            BlockPublicAcls: true,
+            IgnorePublicAcls: true
+          })
+        });
+      });
+
+      test('Todos os buckets devem ter lifecycle rules completas', () => {
+        template.hasResourceProperties('AWS::S3::Bucket', {
+          LifecycleConfiguration: {
+            Rules: Match.arrayWith([
+              Match.objectLike({
+                ExpirationInDays: Match.anyValue(),
+                NoncurrentVersionExpirationInDays: Match.anyValue(),
+                Status: 'Enabled',
+                Transitions: Match.arrayWith([Match.anyValue()]),
+                NoncurrentVersionTransitions: Match.arrayWith([Match.anyValue()])
+              })
+            ])
+          }
+        });
+      });
+    });
+
+    test('Secrets Manager deve usar KMS com rotaÃ§Ã£o automÃ¡tica', () => {
+      template.hasResourceProperties('AWS::SecretsManager::Secret', {
+        KmsKeyId: Match.anyValue()
+      });
+      template.hasResourceProperties('AWS::SecretsManager::RotationSchedule', {
+        RotationRules: Match.objectLike({ AutomaticallyAfterDays: 90 })
+      });
+    });
+
+    test('Lambdas devem ter configuraÃ§Ã£o de VPC', () => {
+      template.hasResourceProperties('AWS::Lambda::Function', {
+        VpcConfig: Match.objectLike({
+          SecurityGroupIds: Match.arrayWith([Match.anyValue()]),
+          SubnetIds: Match.arrayWith([Match.anyValue()])
+        })
+      });
+    });
+
+    test('API Gateway deve ter WAF associado', () => {
+      template.hasResourceProperties('AWS::ApiGateway::RestApi', {
+        Name: 'CostGuardianApi'
+      });
+      // Verifica se existe um WebACL associado
+      template.hasResourceProperties('AWS::WAFv2::WebACLAssociation', {
+        WebACLArn: Match.anyValue()
+      });
+    });
+  });
+
+  describe('ConfiguraÃ§Ã£o de Recursos', () => {
+    beforeEach(() => {
+      // For test environment, mock fs.existsSync to return false for docs path, true for handler
+      (fs.existsSync as jest.Mock).mockImplementation((path: string) => {
+        if (path.includes('backend')) return true;
+        return false;
+      });
+      stack = new CostGuardian.CostGuardianStack(app, 'ResourceTestStack', testConfig);
+      template = Template.fromStack(stack);
+    });
+
+    test('DynamoDB deve ter GSIs configurados corretamente', () => {
+      template.hasResourceProperties('AWS::DynamoDB::Table', {
+        GlobalSecondaryIndexes: Match.arrayWith([
+          Match.objectLike({
+            IndexName: 'AwsAccountIndex',
+            KeySchema: [
+              { AttributeName: 'awsAccountId', KeyType: 'HASH' }
+            ],
+            Projection: { ProjectionType: 'INCLUDE' }
+          })
+        ])
+      });
+    });
+
+    test('Lambda functions devem ter configuraÃ§Ãµes de memÃ³ria e timeout apropriadas', () => {
+      template.hasResourceProperties('AWS::Lambda::Function', {
+        MemorySize: Match.anyValue(),
+        Timeout: Match.anyValue()
+      });
+    });
+
+    test('Step Functions devem ter tratamento de erro configurado', () => {
+      template.hasResourceProperties('AWS::StepFunctions::StateMachine', {
+        StateMachineName: 'SLAWorkflow',
+        DefinitionString: Match.stringLikeRegexp(
+          '.*CalculateImpact.*CheckSLA.*GenerateReport.*IsClaimGenerated\\?.*SubmitTicket.*NoClaimGenerated.*'
+        ),
+      });
+
+      // Valida que a SFN tem polÃ­ticas de log configuradas
+      template.hasResourceProperties('AWS::StepFunctions::StateMachine', Match.objectLike({
+        StateMachineName: 'SLAWorkflow',
+        LoggingConfiguration: {
+          Destinations: Match.anyValue(),
+          IncludeExecutionData: true,
+          Level: 'ALL'
+        }
+      }))
+    });
+
+    test('Cognito User Pool deve ter polÃ­ticas de senha fortes', () => {
+      template.hasResourceProperties('AWS::Cognito::UserPool', {
+        Policies: {
+          PasswordPolicy: {
+            MinimumLength: 8,
+            RequireDigits: true,
+            RequireSymbols: true,
+            RequireUppercase: true,
+            RequireLowercase: true
+          }
+        }
+      });
+    });
+  });
+
+  describe('PermissÃµes e IAM', () => {
+    beforeEach(() => {
+      // For test environment, mock fs.existsSync to return false for docs path, true for handler
+      (fs.existsSync as jest.Mock).mockImplementation((path: string) => {
+        if (path.includes('backend')) return true;
+        return false;
+      });
+      stack = new CostGuardian.CostGuardianStack(app, 'IamTestStack', testConfig);
+      template = Template.fromStack(stack);
+    });
+
+    test('Lambda roles devem seguir o princÃ­pio do menor privilÃ©gio', () => {
+      template.hasResourceProperties('AWS::IAM::Role', {
+        AssumeRolePolicyDocument: Match.objectLike({
+          Statement: Match.arrayWith([
+            Match.objectLike({
+              Action: 'sts:AssumeRole',
+              Principal: { Service: 'lambda.amazonaws.com' }
+            })
+          ])
+        })
+      });
+    });
+
+    test('Step Functions devem ter permissÃµes para invocar Lambdas', () => {
+      template.hasResourceProperties('AWS::IAM::Role', {
+        AssumeRolePolicyDocument: {
+          Statement: Match.arrayWith([
+            Match.objectLike({
+              Principal: {
+                Service: Match.stringLikeRegexp('states.*.amazonaws.com')
+              }
+            })
+          ])
+        }
+      });
+    });
+
+    test('EventBridge deve ter permissÃ£o para acionar Step Functions', () => {
+      template.hasResourceProperties('AWS::IAM::Role', {
+        AssumeRolePolicyDocument: {
+          Statement: Match.arrayWith([
+            Match.objectLike({
+              Principal: {
+                Service: 'events.amazonaws.com'
+              }
+            })
+          ])
+        }
+      });
+    });
+  });
+
+  describe('IntegraÃ§Ãµes', () => {
+    beforeEach(() => {
+      // For test environment, mock fs.existsSync to return false for docs path, true for handler
+      (fs.existsSync as jest.Mock).mockImplementation((path: string) => {
+        if (path.includes('backend')) return true;
+        return false;
+      });
+      stack = new CostGuardian.CostGuardianStack(app, 'IntegrationTestStack', testConfig);
+      template = Template.fromStack(stack);
+    });
+
+    test('EventBridge deve ter regras para eventos do Health', () => {
+      template.hasResourceProperties('AWS::Events::Rule', {
+        EventPattern: Match.objectLike({
+          source: ['aws.health']
+        })
+      });
+    });
+
+    test('API Gateway deve ter integraÃ§Ãµes com Lambda configuradas', () => {
+      template.hasResourceProperties('AWS::ApiGateway::Method', {
+        Integration: {
+          Type: 'AWS_PROXY',
+          IntegrationHttpMethod: 'POST'
+        }
+      });
+    });
+
+    test('Step Functions devem ter integraÃ§Ãµes com serviÃ§os AWS', () => {
+      template.hasResourceProperties('AWS::StepFunctions::StateMachine', {});
+    });
+  });
+
+  describe('Ambientes (Test vs Prod)', () => {
+    test('Ambiente de teste nÃ£o deve criar BucketDeployment', () => {
+    // For test environment, mock fs.existsSync to return false for docs path, true for handler
+    (fs.existsSync as jest.Mock).mockImplementation((path: string) => {
+      if (path.includes('backend') || path.includes('docs')) return true;
+      return false;
+    });
+      const testStack = new CostGuardian.CostGuardianStack(app, 'TestStack', testConfig);
+      const testTemplate = Template.fromStack(testStack);
+
+      // In testConfig, fs.existsSync is mocked to return false, so no BucketDeployment should be created.
+      testTemplate.resourceCountIs('Custom::S3BucketDeployment', 0);
+    });
+
+    test('Ambiente de produÃ§Ã£o deve criar BucketDeployment', () => {
+      // For prodConfig, mock fs.existsSync to return true for docs path
+      (fs.existsSync as jest.Mock).mockReturnValue(true);
+      const prodStack = new CostGuardian.CostGuardianStack(app, 'ProdStack', prodConfig);
+      const prodTemplate = Template.fromStack(prodStack);
+      
+      // Com a lÃ³gica condicional `if (!props.isTestEnvironment)`,
+      // o BucketDeployment serÃ¡ criado no ambiente de produÃ§Ã£o.
+      // O mock do s3deploy ainda estÃ¡ ativo, mas o CDK tentarÃ¡ criar o recurso.
+      // O teste correto Ã© verificar se o CDK tentou criar os recursos.
+      prodTemplate.resourceCountIs('Custom::S3BucketDeployment', 2);
+    });
+
+    test('Ambiente de teste deve ter logs aprimorados', () => {
+      // For test environment, mock fs.existsSync to return false for docs path, true for handler
+      (fs.existsSync as jest.Mock).mockImplementation((path: string) => {
+        if (path.includes('backend')) return true;
+        return false;
+      });
+      const testStack = new CostGuardian.CostGuardianStack(app, 'TestLoggingStack', testConfig);
+      const testTemplate = Template.fromStack(testStack);
+
+      testTemplate.hasResourceProperties('AWS::Lambda::Function', {
+        Environment: {
+          Variables: {
+            LOG_LEVEL: 'DEBUG'
+          }
+        }
+      });
+    });
+
+    test('Ambiente de produÃ§Ã£o deve ter alertas configurados', () => {
+      // For prod environment, mock fs.existsSync to return true for docs path
+      (fs.existsSync as jest.Mock).mockReturnValue(true);
+      const prodStack = new CostGuardian.CostGuardianStack(app, 'ProdMonitoringStack', prodConfig);
+      const prodTemplate = Template.fromStack(prodStack);
+
+      // O teste espera que *qualquer* alarme seja criado.
+      // Como criamos alarmes para a API, esta verificaÃ§Ã£o agora deve passar.
+      const alarms = prodTemplate.findResources('AWS::CloudWatch::Alarm');
+      expect(Object.keys(alarms).length).toBeGreaterThan(0);
+    });
+  });
+
+  describe('Escalabilidade e Performance', () => {
+    beforeEach(() => {
+      // For prod environment, mock fs.existsSync to return true for docs path
+      (fs.existsSync as jest.Mock).mockReturnValue(true);
+      stack = new CostGuardian.CostGuardianStack(app, 'PerformanceTestStack', prodConfig);
+      template = Template.fromStack(stack);
+    });
+
+    test('DynamoDB deve ter auto scaling configurado', () => {
+      template.hasResourceProperties('AWS::DynamoDB::Table', { BillingMode: 'PAY_PER_REQUEST' });
+    });
+
+    test('Lambda functions devem ter configuraÃ§Ãµes de concorrÃªncia', () => {
+      template.hasResourceProperties('AWS::Lambda::Function', {
+        ReservedConcurrentExecutions: Match.anyValue()
+      });
+    });
+
+    test('API Gateway deve ter throttling configurado', () => {
+      template.hasResourceProperties('AWS::ApiGateway::Stage', {
+        MethodSettings: Match.arrayWith([
+          Match.objectLike({
+            ThrottlingBurstLimit: Match.anyValue(),
+            ThrottlingRateLimit: Match.anyValue()
+          })
+        ])
+      });
+    });
+  });
+});

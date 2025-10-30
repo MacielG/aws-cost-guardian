@@ -1,0 +1,697 @@
+
+> aws-cost-guardian-infra@0.1.0 test
+> jest -f
+
+  console.warn
+    [WARNING] aws-cdk-lib.aws_events.CfnEventBusPolicyProps#action is deprecated.
+      this property has been deprecated
+      This API will be removed in the next major release.
+
+    [0m [90m 610 |[39m     [90m// Isso mantém a capacidade cross-account (conta variável) mas evita[39m
+     [90m 611 |[39m     [90m// que contas arbitrárias enviem eventos ao barramento.[39m
+    [31m[1m>[22m[39m[90m 612 |[39m     [36mnew[39m events[33m.[39m[33mCfnEventBusPolicy[39m([36mthis[39m[33m,[39m [32m'EventBusPolicy'[39m[33m,[39m {
+     [90m     |[39m     [31m[1m^[22m[39m
+     [90m 613 |[39m       eventBusName[33m:[39m eventBus[33m.[39meventBusName[33m,[39m
+     [90m 614 |[39m       statementId[33m:[39m [32m'AllowClientHealthEvents'[39m[33m,[39m
+     [90m 615 |[39m       action[33m:[39m [32m'events:PutEvents'[39m[33m,[39m[0m
+
+      at print (../node_modules/aws-cdk-lib/.warnings.jsii.js:9:146)
+      at Object.aws_cdk_lib_aws_events_CfnEventBusPolicyProps (../node_modules/aws-cdk-lib/.warnings.jsii.js:5:324230)
+      at new CfnEventBusPolicy (../node_modules/aws-cdk-lib/aws-events/lib/events.generated.js:1:72756)
+      at new CostGuardianStack (lib/cost-guardian-stack.ts:612:5)
+      at Object.<anonymous> (__tests__/cost-guardian-stack.comprehensive.test.ts:314:25)
+
+  console.warn
+    [WARNING] aws-cdk-lib.aws_events.CfnEventBusPolicyProps#condition is deprecated.
+      this property has been deprecated
+      This API will be removed in the next major release.
+
+    [0m [90m 610 |[39m     [90m// Isso mantém a capacidade cross-account (conta variável) mas evita[39m
+     [90m 611 |[39m     [90m// que contas arbitrárias enviem eventos ao barramento.[39m
+    [31m[1m>[22m[39m[90m 612 |[39m     [36mnew[39m events[33m.[39m[33mCfnEventBusPolicy[39m([36mthis[39m[33m,[39m [32m'EventBusPolicy'[39m[33m,[39m {
+     [90m     |[39m     [31m[1m^[22m[39m
+     [90m 613 |[39m       eventBusName[33m:[39m eventBus[33m.[39meventBusName[33m,[39m
+     [90m 614 |[39m       statementId[33m:[39m [32m'AllowClientHealthEvents'[39m[33m,[39m
+     [90m 615 |[39m       action[33m:[39m [32m'events:PutEvents'[39m[33m,[39m[0m
+
+      at print (../node_modules/aws-cdk-lib/.warnings.jsii.js:9:146)
+      at Object.aws_cdk_lib_aws_events_CfnEventBusPolicyProps (../node_modules/aws-cdk-lib/.warnings.jsii.js:5:324345)
+      at new CfnEventBusPolicy (../node_modules/aws-cdk-lib/aws-events/lib/events.generated.js:1:72756)
+      at new CostGuardianStack (lib/cost-guardian-stack.ts:612:5)
+      at Object.<anonymous> (__tests__/cost-guardian-stack.comprehensive.test.ts:314:25)
+
+  console.warn
+    [WARNING] aws-cdk-lib.aws_events.CfnEventBusPolicyProps#principal is deprecated.
+      this property has been deprecated
+      This API will be removed in the next major release.
+
+    [0m [90m 610 |[39m     [90m// Isso mantém a capacidade cross-account (conta variável) mas evita[39m
+     [90m 611 |[39m     [90m// que contas arbitrárias enviem eventos ao barramento.[39m
+    [31m[1m>[22m[39m[90m 612 |[39m     [36mnew[39m events[33m.[39m[33mCfnEventBusPolicy[39m([36mthis[39m[33m,[39m [32m'EventBusPolicy'[39m[33m,[39m {
+     [90m     |[39m     [31m[1m^[22m[39m
+     [90m 613 |[39m       eventBusName[33m:[39m eventBus[33m.[39meventBusName[33m,[39m
+     [90m 614 |[39m       statementId[33m:[39m [32m'AllowClientHealthEvents'[39m[33m,[39m
+     [90m 615 |[39m       action[33m:[39m [32m'events:PutEvents'[39m[33m,[39m[0m
+
+      at print (../node_modules/aws-cdk-lib/.warnings.jsii.js:9:146)
+      at Object.aws_cdk_lib_aws_events_CfnEventBusPolicyProps (../node_modules/aws-cdk-lib/.warnings.jsii.js:5:324517)
+      at new CfnEventBusPolicy (../node_modules/aws-cdk-lib/aws-events/lib/events.generated.js:1:72756)
+      at new CostGuardianStack (lib/cost-guardian-stack.ts:612:5)
+      at Object.<anonymous> (__tests__/cost-guardian-stack.comprehensive.test.ts:314:25)
+
+  console.warn
+    [WARNING] aws-cdk-lib.aws_events.CfnEventBusPolicyProps#action is deprecated.
+      this property has been deprecated
+      This API will be removed in the next major release.
+
+    [0m [90m 610 |[39m     [90m// Isso mantém a capacidade cross-account (conta variável) mas evita[39m
+     [90m 611 |[39m     [90m// que contas arbitrárias enviem eventos ao barramento.[39m
+    [31m[1m>[22m[39m[90m 612 |[39m     [36mnew[39m events[33m.[39m[33mCfnEventBusPolicy[39m([36mthis[39m[33m,[39m [32m'EventBusPolicy'[39m[33m,[39m {
+     [90m     |[39m     [31m[1m^[22m[39m
+     [90m 613 |[39m       eventBusName[33m:[39m eventBus[33m.[39meventBusName[33m,[39m
+     [90m 614 |[39m       statementId[33m:[39m [32m'AllowClientHealthEvents'[39m[33m,[39m
+     [90m 615 |[39m       action[33m:[39m [32m'events:PutEvents'[39m[33m,[39m[0m
+
+      at print (../node_modules/aws-cdk-lib/.warnings.jsii.js:9:146)
+      at Object.aws_cdk_lib_aws_events_CfnEventBusPolicyProps (../node_modules/aws-cdk-lib/.warnings.jsii.js:5:324230)
+      at new CfnEventBusPolicy (../node_modules/aws-cdk-lib/aws-events/lib/events.generated.js:1:72756)
+      at new CostGuardianStack (lib/cost-guardian-stack.ts:612:5)
+      at Object.<anonymous> (__tests__/cost-guardian-stack.comprehensive.test.ts:345:25)
+
+  console.warn
+    [WARNING] aws-cdk-lib.aws_events.CfnEventBusPolicyProps#condition is deprecated.
+      this property has been deprecated
+      This API will be removed in the next major release.
+
+    [0m [90m 610 |[39m     [90m// Isso mantém a capacidade cross-account (conta variável) mas evita[39m
+     [90m 611 |[39m     [90m// que contas arbitrárias enviem eventos ao barramento.[39m
+    [31m[1m>[22m[39m[90m 612 |[39m     [36mnew[39m events[33m.[39m[33mCfnEventBusPolicy[39m([36mthis[39m[33m,[39m [32m'EventBusPolicy'[39m[33m,[39m {
+     [90m     |[39m     [31m[1m^[22m[39m
+     [90m 613 |[39m       eventBusName[33m:[39m eventBus[33m.[39meventBusName[33m,[39m
+     [90m 614 |[39m       statementId[33m:[39m [32m'AllowClientHealthEvents'[39m[33m,[39m
+     [90m 615 |[39m       action[33m:[39m [32m'events:PutEvents'[39m[33m,[39m[0m
+
+      at print (../node_modules/aws-cdk-lib/.warnings.jsii.js:9:146)
+      at Object.aws_cdk_lib_aws_events_CfnEventBusPolicyProps (../node_modules/aws-cdk-lib/.warnings.jsii.js:5:324345)
+      at new CfnEventBusPolicy (../node_modules/aws-cdk-lib/aws-events/lib/events.generated.js:1:72756)
+      at new CostGuardianStack (lib/cost-guardian-stack.ts:612:5)
+      at Object.<anonymous> (__tests__/cost-guardian-stack.comprehensive.test.ts:345:25)
+
+  console.warn
+    [WARNING] aws-cdk-lib.aws_events.CfnEventBusPolicyProps#principal is deprecated.
+      this property has been deprecated
+      This API will be removed in the next major release.
+
+    [0m [90m 610 |[39m     [90m// Isso mantém a capacidade cross-account (conta variável) mas evita[39m
+     [90m 611 |[39m     [90m// que contas arbitrárias enviem eventos ao barramento.[39m
+    [31m[1m>[22m[39m[90m 612 |[39m     [36mnew[39m events[33m.[39m[33mCfnEventBusPolicy[39m([36mthis[39m[33m,[39m [32m'EventBusPolicy'[39m[33m,[39m {
+     [90m     |[39m     [31m[1m^[22m[39m
+     [90m 613 |[39m       eventBusName[33m:[39m eventBus[33m.[39meventBusName[33m,[39m
+     [90m 614 |[39m       statementId[33m:[39m [32m'AllowClientHealthEvents'[39m[33m,[39m
+     [90m 615 |[39m       action[33m:[39m [32m'events:PutEvents'[39m[33m,[39m[0m
+
+      at print (../node_modules/aws-cdk-lib/.warnings.jsii.js:9:146)
+      at Object.aws_cdk_lib_aws_events_CfnEventBusPolicyProps (../node_modules/aws-cdk-lib/.warnings.jsii.js:5:324517)
+      at new CfnEventBusPolicy (../node_modules/aws-cdk-lib/aws-events/lib/events.generated.js:1:72756)
+      at new CostGuardianStack (lib/cost-guardian-stack.ts:612:5)
+      at Object.<anonymous> (__tests__/cost-guardian-stack.comprehensive.test.ts:345:25)
+
+  console.warn
+    [WARNING] aws-cdk-lib.aws_events.CfnEventBusPolicyProps#action is deprecated.
+      this property has been deprecated
+      This API will be removed in the next major release.
+
+    [0m [90m 610 |[39m     [90m// Isso mantém a capacidade cross-account (conta variável) mas evita[39m
+     [90m 611 |[39m     [90m// que contas arbitrárias enviem eventos ao barramento.[39m
+    [31m[1m>[22m[39m[90m 612 |[39m     [36mnew[39m events[33m.[39m[33mCfnEventBusPolicy[39m([36mthis[39m[33m,[39m [32m'EventBusPolicy'[39m[33m,[39m {
+     [90m     |[39m     [31m[1m^[22m[39m
+     [90m 613 |[39m       eventBusName[33m:[39m eventBus[33m.[39meventBusName[33m,[39m
+     [90m 614 |[39m       statementId[33m:[39m [32m'AllowClientHealthEvents'[39m[33m,[39m
+     [90m 615 |[39m       action[33m:[39m [32m'events:PutEvents'[39m[33m,[39m[0m
+
+      at print (../node_modules/aws-cdk-lib/.warnings.jsii.js:9:146)
+      at Object.aws_cdk_lib_aws_events_CfnEventBusPolicyProps (../node_modules/aws-cdk-lib/.warnings.jsii.js:5:324230)
+      at new CfnEventBusPolicy (../node_modules/aws-cdk-lib/aws-events/lib/events.generated.js:1:72756)
+      at new CostGuardianStack (lib/cost-guardian-stack.ts:612:5)
+      at Object.<anonymous> (__tests__/cost-guardian-stack.comprehensive.test.ts:359:15)
+
+  console.warn
+    [WARNING] aws-cdk-lib.aws_events.CfnEventBusPolicyProps#condition is deprecated.
+      this property has been deprecated
+      This API will be removed in the next major release.
+
+    [0m [90m 610 |[39m     [90m// Isso mantém a capacidade cross-account (conta variável) mas evita[39m
+     [90m 611 |[39m     [90m// que contas arbitrárias enviem eventos ao barramento.[39m
+    [31m[1m>[22m[39m[90m 612 |[39m     [36mnew[39m events[33m.[39m[33mCfnEventBusPolicy[39m([36mthis[39m[33m,[39m [32m'EventBusPolicy'[39m[33m,[39m {
+     [90m     |[39m     [31m[1m^[22m[39m
+     [90m 613 |[39m       eventBusName[33m:[39m eventBus[33m.[39meventBusName[33m,[39m
+     [90m 614 |[39m       statementId[33m:[39m [32m'AllowClientHealthEvents'[39m[33m,[39m
+     [90m 615 |[39m       action[33m:[39m [32m'events:PutEvents'[39m[33m,[39m[0m
+
+      at print (../node_modules/aws-cdk-lib/.warnings.jsii.js:9:146)
+      at Object.aws_cdk_lib_aws_events_CfnEventBusPolicyProps (../node_modules/aws-cdk-lib/.warnings.jsii.js:5:324345)
+      at new CfnEventBusPolicy (../node_modules/aws-cdk-lib/aws-events/lib/events.generated.js:1:72756)
+      at new CostGuardianStack (lib/cost-guardian-stack.ts:612:5)
+      at Object.<anonymous> (__tests__/cost-guardian-stack.comprehensive.test.ts:359:15)
+
+  console.warn
+    [WARNING] aws-cdk-lib.aws_events.CfnEventBusPolicyProps#principal is deprecated.
+      this property has been deprecated
+      This API will be removed in the next major release.
+
+    [0m [90m 610 |[39m     [90m// Isso mantém a capacidade cross-account (conta variável) mas evita[39m
+     [90m 611 |[39m     [90m// que contas arbitrárias enviem eventos ao barramento.[39m
+    [31m[1m>[22m[39m[90m 612 |[39m     [36mnew[39m events[33m.[39m[33mCfnEventBusPolicy[39m([36mthis[39m[33m,[39m [32m'EventBusPolicy'[39m[33m,[39m {
+     [90m     |[39m     [31m[1m^[22m[39m
+     [90m 613 |[39m       eventBusName[33m:[39m eventBus[33m.[39meventBusName[33m,[39m
+     [90m 614 |[39m       statementId[33m:[39m [32m'AllowClientHealthEvents'[39m[33m,[39m
+     [90m 615 |[39m       action[33m:[39m [32m'events:PutEvents'[39m[33m,[39m[0m
+
+      at print (../node_modules/aws-cdk-lib/.warnings.jsii.js:9:146)
+      at Object.aws_cdk_lib_aws_events_CfnEventBusPolicyProps (../node_modules/aws-cdk-lib/.warnings.jsii.js:5:324517)
+      at new CfnEventBusPolicy (../node_modules/aws-cdk-lib/aws-events/lib/events.generated.js:1:72756)
+      at new CostGuardianStack (lib/cost-guardian-stack.ts:612:5)
+      at Object.<anonymous> (__tests__/cost-guardian-stack.comprehensive.test.ts:359:15)
+
+  console.warn
+    [WARNING] aws-cdk-lib.aws_events.CfnEventBusPolicyProps#action is deprecated.
+      this property has been deprecated
+      This API will be removed in the next major release.
+
+    [0m [90m 610 |[39m     [90m// Isso mantém a capacidade cross-account (conta variável) mas evita[39m
+     [90m 611 |[39m     [90m// que contas arbitrárias enviem eventos ao barramento.[39m
+    [31m[1m>[22m[39m[90m 612 |[39m     [36mnew[39m events[33m.[39m[33mCfnEventBusPolicy[39m([36mthis[39m[33m,[39m [32m'EventBusPolicy'[39m[33m,[39m {
+     [90m     |[39m     [31m[1m^[22m[39m
+     [90m 613 |[39m       eventBusName[33m:[39m eventBus[33m.[39meventBusName[33m,[39m
+     [90m 614 |[39m       statementId[33m:[39m [32m'AllowClientHealthEvents'[39m[33m,[39m
+     [90m 615 |[39m       action[33m:[39m [32m'events:PutEvents'[39m[33m,[39m[0m
+
+      at print (../node_modules/aws-cdk-lib/.warnings.jsii.js:9:146)
+      at Object.aws_cdk_lib_aws_events_CfnEventBusPolicyProps (../node_modules/aws-cdk-lib/.warnings.jsii.js:5:324230)
+      at new CfnEventBusPolicy (../node_modules/aws-cdk-lib/aws-events/lib/events.generated.js:1:72756)
+      at new CostGuardianStack (lib/cost-guardian-stack.ts:612:5)
+      at Object.<anonymous> (__tests__/cost-guardian-stack.comprehensive.test.ts:359:15)
+
+  console.warn
+    [WARNING] aws-cdk-lib.aws_events.CfnEventBusPolicyProps#condition is deprecated.
+      this property has been deprecated
+      This API will be removed in the next major release.
+
+    [0m [90m 610 |[39m     [90m// Isso mantém a capacidade cross-account (conta variável) mas evita[39m
+     [90m 611 |[39m     [90m// que contas arbitrárias enviem eventos ao barramento.[39m
+    [31m[1m>[22m[39m[90m 612 |[39m     [36mnew[39m events[33m.[39m[33mCfnEventBusPolicy[39m([36mthis[39m[33m,[39m [32m'EventBusPolicy'[39m[33m,[39m {
+     [90m     |[39m     [31m[1m^[22m[39m
+     [90m 613 |[39m       eventBusName[33m:[39m eventBus[33m.[39meventBusName[33m,[39m
+     [90m 614 |[39m       statementId[33m:[39m [32m'AllowClientHealthEvents'[39m[33m,[39m
+     [90m 615 |[39m       action[33m:[39m [32m'events:PutEvents'[39m[33m,[39m[0m
+
+      at print (../node_modules/aws-cdk-lib/.warnings.jsii.js:9:146)
+      at Object.aws_cdk_lib_aws_events_CfnEventBusPolicyProps (../node_modules/aws-cdk-lib/.warnings.jsii.js:5:324345)
+      at new CfnEventBusPolicy (../node_modules/aws-cdk-lib/aws-events/lib/events.generated.js:1:72756)
+      at new CostGuardianStack (lib/cost-guardian-stack.ts:612:5)
+      at Object.<anonymous> (__tests__/cost-guardian-stack.comprehensive.test.ts:359:15)
+
+  console.warn
+    [WARNING] aws-cdk-lib.aws_events.CfnEventBusPolicyProps#principal is deprecated.
+      this property has been deprecated
+      This API will be removed in the next major release.
+
+    [0m [90m 610 |[39m     [90m// Isso mantém a capacidade cross-account (conta variável) mas evita[39m
+     [90m 611 |[39m     [90m// que contas arbitrárias enviem eventos ao barramento.[39m
+    [31m[1m>[22m[39m[90m 612 |[39m     [36mnew[39m events[33m.[39m[33mCfnEventBusPolicy[39m([36mthis[39m[33m,[39m [32m'EventBusPolicy'[39m[33m,[39m {
+     [90m     |[39m     [31m[1m^[22m[39m
+     [90m 613 |[39m       eventBusName[33m:[39m eventBus[33m.[39meventBusName[33m,[39m
+     [90m 614 |[39m       statementId[33m:[39m [32m'AllowClientHealthEvents'[39m[33m,[39m
+     [90m 615 |[39m       action[33m:[39m [32m'events:PutEvents'[39m[33m,[39m[0m
+
+      at print (../node_modules/aws-cdk-lib/.warnings.jsii.js:9:146)
+      at Object.aws_cdk_lib_aws_events_CfnEventBusPolicyProps (../node_modules/aws-cdk-lib/.warnings.jsii.js:5:324517)
+      at new CfnEventBusPolicy (../node_modules/aws-cdk-lib/aws-events/lib/events.generated.js:1:72756)
+      at new CostGuardianStack (lib/cost-guardian-stack.ts:612:5)
+      at Object.<anonymous> (__tests__/cost-guardian-stack.comprehensive.test.ts:359:15)
+
+  console.warn
+    [WARNING] aws-cdk-lib.aws_events.CfnEventBusPolicyProps#action is deprecated.
+      this property has been deprecated
+      This API will be removed in the next major release.
+
+    [0m [90m 610 |[39m     [90m// Isso mantém a capacidade cross-account (conta variável) mas evita[39m
+     [90m 611 |[39m     [90m// que contas arbitrárias enviem eventos ao barramento.[39m
+    [31m[1m>[22m[39m[90m 612 |[39m     [36mnew[39m events[33m.[39m[33mCfnEventBusPolicy[39m([36mthis[39m[33m,[39m [32m'EventBusPolicy'[39m[33m,[39m {
+     [90m     |[39m     [31m[1m^[22m[39m
+     [90m 613 |[39m       eventBusName[33m:[39m eventBus[33m.[39meventBusName[33m,[39m
+     [90m 614 |[39m       statementId[33m:[39m [32m'AllowClientHealthEvents'[39m[33m,[39m
+     [90m 615 |[39m       action[33m:[39m [32m'events:PutEvents'[39m[33m,[39m[0m
+
+      at print (../node_modules/aws-cdk-lib/.warnings.jsii.js:9:146)
+      at Object.aws_cdk_lib_aws_events_CfnEventBusPolicyProps (../node_modules/aws-cdk-lib/.warnings.jsii.js:5:324230)
+      at new CfnEventBusPolicy (../node_modules/aws-cdk-lib/aws-events/lib/events.generated.js:1:72756)
+      at new CostGuardianStack (lib/cost-guardian-stack.ts:612:5)
+      at Object.<anonymous> (__tests__/cost-guardian-stack.comprehensive.test.ts:359:15)
+
+  console.warn
+    [WARNING] aws-cdk-lib.aws_events.CfnEventBusPolicyProps#condition is deprecated.
+      this property has been deprecated
+      This API will be removed in the next major release.
+
+    [0m [90m 610 |[39m     [90m// Isso mantém a capacidade cross-account (conta variável) mas evita[39m
+     [90m 611 |[39m     [90m// que contas arbitrárias enviem eventos ao barramento.[39m
+    [31m[1m>[22m[39m[90m 612 |[39m     [36mnew[39m events[33m.[39m[33mCfnEventBusPolicy[39m([36mthis[39m[33m,[39m [32m'EventBusPolicy'[39m[33m,[39m {
+     [90m     |[39m     [31m[1m^[22m[39m
+     [90m 613 |[39m       eventBusName[33m:[39m eventBus[33m.[39meventBusName[33m,[39m
+     [90m 614 |[39m       statementId[33m:[39m [32m'AllowClientHealthEvents'[39m[33m,[39m
+     [90m 615 |[39m       action[33m:[39m [32m'events:PutEvents'[39m[33m,[39m[0m
+
+      at print (../node_modules/aws-cdk-lib/.warnings.jsii.js:9:146)
+      at Object.aws_cdk_lib_aws_events_CfnEventBusPolicyProps (../node_modules/aws-cdk-lib/.warnings.jsii.js:5:324345)
+      at new CfnEventBusPolicy (../node_modules/aws-cdk-lib/aws-events/lib/events.generated.js:1:72756)
+      at new CostGuardianStack (lib/cost-guardian-stack.ts:612:5)
+      at Object.<anonymous> (__tests__/cost-guardian-stack.comprehensive.test.ts:359:15)
+
+  console.warn
+    [WARNING] aws-cdk-lib.aws_events.CfnEventBusPolicyProps#principal is deprecated.
+      this property has been deprecated
+      This API will be removed in the next major release.
+
+    [0m [90m 610 |[39m     [90m// Isso mantém a capacidade cross-account (conta variável) mas evita[39m
+     [90m 611 |[39m     [90m// que contas arbitrárias enviem eventos ao barramento.[39m
+    [31m[1m>[22m[39m[90m 612 |[39m     [36mnew[39m events[33m.[39m[33mCfnEventBusPolicy[39m([36mthis[39m[33m,[39m [32m'EventBusPolicy'[39m[33m,[39m {
+     [90m     |[39m     [31m[1m^[22m[39m
+     [90m 613 |[39m       eventBusName[33m:[39m eventBus[33m.[39meventBusName[33m,[39m
+     [90m 614 |[39m       statementId[33m:[39m [32m'AllowClientHealthEvents'[39m[33m,[39m
+     [90m 615 |[39m       action[33m:[39m [32m'events:PutEvents'[39m[33m,[39m[0m
+
+      at print (../node_modules/aws-cdk-lib/.warnings.jsii.js:9:146)
+      at Object.aws_cdk_lib_aws_events_CfnEventBusPolicyProps (../node_modules/aws-cdk-lib/.warnings.jsii.js:5:324517)
+      at new CfnEventBusPolicy (../node_modules/aws-cdk-lib/aws-events/lib/events.generated.js:1:72756)
+      at new CostGuardianStack (lib/cost-guardian-stack.ts:612:5)
+      at Object.<anonymous> (__tests__/cost-guardian-stack.comprehensive.test.ts:359:15)
+
+FAIL __tests__/cost-guardian-stack.comprehensive.test.ts (54.38 s)
+  CostGuardianStack: Testes Completos
+    Segurança e Compliance
+      × Secrets Manager deve usar KMS com rotação automática (56 ms)
+      × Lambdas devem ter configuração de VPC (58 ms)
+      × API Gateway deve ter WAF associado (79 ms)
+      Configurações de S3
+        × Todos os buckets devem ter as configurações de segurança adequadas (2428 ms)
+        × Todos os buckets devem ter lifecycle rules completas (73 ms)
+    Configuração de Recursos
+      × DynamoDB deve ter GSIs configurados corretamente (52 ms)
+      × Lambda functions devem ter configurações de memória e timeout apropriadas (45 ms)
+      × Step Functions devem ter tratamento de erro configurado (43 ms)
+      × Cognito User Pool deve ter políticas de senha fortes (66 ms)
+    Permissões e IAM
+      × Lambda roles devem seguir o princípio do menor privilégio (64 ms)
+      × Step Functions devem ter permissões para invocar Lambdas (50 ms)
+      × EventBridge deve ter permissão para acionar Step Functions (53 ms)
+    Integrações
+      × EventBridge deve ter regras para eventos do Health (81 ms)
+      × API Gateway deve ter integrações com Lambda configuradas (40 ms)
+      × Step Functions devem ter integrações com serviços AWS (37 ms)
+    Ambientes (Test vs Prod)
+      × Ambiente de teste não deve criar BucketDeployment (1021 ms)
+      × Ambiente de produção deve criar BucketDeployment (5892 ms)
+      × Ambiente de teste deve ter logs aprimorados (48 ms)
+      √ Ambiente de produção deve ter alertas configurados (3688 ms)
+    Escalabilidade e Performance
+      √ DynamoDB deve ter auto scaling configurado (2894 ms)
+      √ Lambda functions devem ter configurações de concorrência (2657 ms)
+      √ API Gateway deve ter throttling configurado (2907 ms)
+
+  ● CostGuardianStack: Testes Completos › Segurança e Compliance › Configurações de S3 › Todos os buckets devem ter as configurações de segurança adequadas
+
+    ValidationError: Cannot find asset at G:\aws-cost-guardian\backend
+        at path [SecurityTestStack/ApiHandler/Code/Stage] in aws-cdk-lib.AssetStaging
+
+    [0m [90m 340 |[39m
+     [90m 341 |[39m     [90m// 1. Lambda para o API Gateway (Monolito Express)[39m
+    [31m[1m>[22m[39m[90m 342 |[39m     [36mconst[39m apiHandlerLambda [33m=[39m [36mnew[39m lambda[33m.[39m[33mFunction[39m([36mthis[39m[33m,[39m [32m'ApiHandler'[39m[33m,[39m {
+     [90m     |[39m                              [31m[1m^[22m[39m
+     [90m 343 |[39m       runtime[33m:[39m lambda[33m.[39m[33mRuntime[39m[33m.[39m[33mNODEJS_18_X[39m[33m,[39m
+     [90m 344 |[39m       code[33m:[39m lambda[33m.[39m[33mCode[39m[33m.[39mfromAsset(path[33m.[39mjoin(__dirname[33m,[39m [32m'../../backend'[39m))[33m,[39m
+     [90m 345 |[39m       handler[33m:[39m [32m'handler.app'[39m[33m,[39m [90m// export do express + serverless é exposto como 'app' no handler.js[39m[0m
+
+      at new Asset (../node_modules/aws-cdk-lib/aws-s3-assets/lib/asset.js:1:1551)
+      at AssetCode.bind (../node_modules/aws-cdk-lib/aws-lambda/lib/code.js:5:4415)
+      at new Function2 (../node_modules/aws-cdk-lib/aws-lambda/lib/function.js:1:14880)
+      at new Function2 (../node_modules/aws-cdk-lib/core/lib/prop-injectable.js:1:783)
+      at new CostGuardianStack (lib/cost-guardian-stack.ts:342:30)
+      at Object.<anonymous> (__tests__/cost-guardian-stack.comprehensive.test.ts:77:15)
+
+  ● CostGuardianStack: Testes Completos › Segurança e Compliance › Configurações de S3 › Todos os buckets devem ter lifecycle rules completas
+
+    ValidationError: Cannot find asset at G:\aws-cost-guardian\backend
+        at path [SecurityTestStack/ApiHandler/Code/Stage] in aws-cdk-lib.AssetStaging
+
+    [0m [90m 340 |[39m
+     [90m 341 |[39m     [90m// 1. Lambda para o API Gateway (Monolito Express)[39m
+    [31m[1m>[22m[39m[90m 342 |[39m     [36mconst[39m apiHandlerLambda [33m=[39m [36mnew[39m lambda[33m.[39m[33mFunction[39m([36mthis[39m[33m,[39m [32m'ApiHandler'[39m[33m,[39m {
+     [90m     |[39m                              [31m[1m^[22m[39m
+     [90m 343 |[39m       runtime[33m:[39m lambda[33m.[39m[33mRuntime[39m[33m.[39m[33mNODEJS_18_X[39m[33m,[39m
+     [90m 344 |[39m       code[33m:[39m lambda[33m.[39m[33mCode[39m[33m.[39mfromAsset(path[33m.[39mjoin(__dirname[33m,[39m [32m'../../backend'[39m))[33m,[39m
+     [90m 345 |[39m       handler[33m:[39m [32m'handler.app'[39m[33m,[39m [90m// export do express + serverless é exposto como 'app' no handler.js[39m[0m
+
+      at new Asset (../node_modules/aws-cdk-lib/aws-s3-assets/lib/asset.js:1:1551)
+      at AssetCode.bind (../node_modules/aws-cdk-lib/aws-lambda/lib/code.js:5:4415)
+      at new Function2 (../node_modules/aws-cdk-lib/aws-lambda/lib/function.js:1:14880)
+      at new Function2 (../node_modules/aws-cdk-lib/core/lib/prop-injectable.js:1:783)
+      at new CostGuardianStack (lib/cost-guardian-stack.ts:342:30)
+      at Object.<anonymous> (__tests__/cost-guardian-stack.comprehensive.test.ts:77:15)
+
+  ● CostGuardianStack: Testes Completos › Segurança e Compliance › Secrets Manager deve usar KMS com rotação automática
+
+    ValidationError: Cannot find asset at G:\aws-cost-guardian\backend
+        at path [SecurityTestStack/ApiHandler/Code/Stage] in aws-cdk-lib.AssetStaging
+
+    [0m [90m 340 |[39m
+     [90m 341 |[39m     [90m// 1. Lambda para o API Gateway (Monolito Express)[39m
+    [31m[1m>[22m[39m[90m 342 |[39m     [36mconst[39m apiHandlerLambda [33m=[39m [36mnew[39m lambda[33m.[39m[33mFunction[39m([36mthis[39m[33m,[39m [32m'ApiHandler'[39m[33m,[39m {
+     [90m     |[39m                              [31m[1m^[22m[39m
+     [90m 343 |[39m       runtime[33m:[39m lambda[33m.[39m[33mRuntime[39m[33m.[39m[33mNODEJS_18_X[39m[33m,[39m
+     [90m 344 |[39m       code[33m:[39m lambda[33m.[39m[33mCode[39m[33m.[39mfromAsset(path[33m.[39mjoin(__dirname[33m,[39m [32m'../../backend'[39m))[33m,[39m
+     [90m 345 |[39m       handler[33m:[39m [32m'handler.app'[39m[33m,[39m [90m// export do express + serverless é exposto como 'app' no handler.js[39m[0m
+
+      at new Asset (../node_modules/aws-cdk-lib/aws-s3-assets/lib/asset.js:1:1551)
+      at AssetCode.bind (../node_modules/aws-cdk-lib/aws-lambda/lib/code.js:5:4415)
+      at new Function2 (../node_modules/aws-cdk-lib/aws-lambda/lib/function.js:1:14880)
+      at new Function2 (../node_modules/aws-cdk-lib/core/lib/prop-injectable.js:1:783)
+      at new CostGuardianStack (lib/cost-guardian-stack.ts:342:30)
+      at Object.<anonymous> (__tests__/cost-guardian-stack.comprehensive.test.ts:77:15)
+
+  ● CostGuardianStack: Testes Completos › Segurança e Compliance › Lambdas devem ter configuração de VPC
+
+    ValidationError: Cannot find asset at G:\aws-cost-guardian\backend
+        at path [SecurityTestStack/ApiHandler/Code/Stage] in aws-cdk-lib.AssetStaging
+
+    [0m [90m 340 |[39m
+     [90m 341 |[39m     [90m// 1. Lambda para o API Gateway (Monolito Express)[39m
+    [31m[1m>[22m[39m[90m 342 |[39m     [36mconst[39m apiHandlerLambda [33m=[39m [36mnew[39m lambda[33m.[39m[33mFunction[39m([36mthis[39m[33m,[39m [32m'ApiHandler'[39m[33m,[39m {
+     [90m     |[39m                              [31m[1m^[22m[39m
+     [90m 343 |[39m       runtime[33m:[39m lambda[33m.[39m[33mRuntime[39m[33m.[39m[33mNODEJS_18_X[39m[33m,[39m
+     [90m 344 |[39m       code[33m:[39m lambda[33m.[39m[33mCode[39m[33m.[39mfromAsset(path[33m.[39mjoin(__dirname[33m,[39m [32m'../../backend'[39m))[33m,[39m
+     [90m 345 |[39m       handler[33m:[39m [32m'handler.app'[39m[33m,[39m [90m// export do express + serverless é exposto como 'app' no handler.js[39m[0m
+
+      at new Asset (../node_modules/aws-cdk-lib/aws-s3-assets/lib/asset.js:1:1551)
+      at AssetCode.bind (../node_modules/aws-cdk-lib/aws-lambda/lib/code.js:5:4415)
+      at new Function2 (../node_modules/aws-cdk-lib/aws-lambda/lib/function.js:1:14880)
+      at new Function2 (../node_modules/aws-cdk-lib/core/lib/prop-injectable.js:1:783)
+      at new CostGuardianStack (lib/cost-guardian-stack.ts:342:30)
+      at Object.<anonymous> (__tests__/cost-guardian-stack.comprehensive.test.ts:77:15)
+
+  ● CostGuardianStack: Testes Completos › Segurança e Compliance › API Gateway deve ter WAF associado
+
+    ValidationError: Cannot find asset at G:\aws-cost-guardian\backend
+        at path [SecurityTestStack/ApiHandler/Code/Stage] in aws-cdk-lib.AssetStaging
+
+    [0m [90m 340 |[39m
+     [90m 341 |[39m     [90m// 1. Lambda para o API Gateway (Monolito Express)[39m
+    [31m[1m>[22m[39m[90m 342 |[39m     [36mconst[39m apiHandlerLambda [33m=[39m [36mnew[39m lambda[33m.[39m[33mFunction[39m([36mthis[39m[33m,[39m [32m'ApiHandler'[39m[33m,[39m {
+     [90m     |[39m                              [31m[1m^[22m[39m
+     [90m 343 |[39m       runtime[33m:[39m lambda[33m.[39m[33mRuntime[39m[33m.[39m[33mNODEJS_18_X[39m[33m,[39m
+     [90m 344 |[39m       code[33m:[39m lambda[33m.[39m[33mCode[39m[33m.[39mfromAsset(path[33m.[39mjoin(__dirname[33m,[39m [32m'../../backend'[39m))[33m,[39m
+     [90m 345 |[39m       handler[33m:[39m [32m'handler.app'[39m[33m,[39m [90m// export do express + serverless é exposto como 'app' no handler.js[39m[0m
+
+      at new Asset (../node_modules/aws-cdk-lib/aws-s3-assets/lib/asset.js:1:1551)
+      at AssetCode.bind (../node_modules/aws-cdk-lib/aws-lambda/lib/code.js:5:4415)
+      at new Function2 (../node_modules/aws-cdk-lib/aws-lambda/lib/function.js:1:14880)
+      at new Function2 (../node_modules/aws-cdk-lib/core/lib/prop-injectable.js:1:783)
+      at new CostGuardianStack (lib/cost-guardian-stack.ts:342:30)
+      at Object.<anonymous> (__tests__/cost-guardian-stack.comprehensive.test.ts:77:15)
+
+  ● CostGuardianStack: Testes Completos › Configuração de Recursos › DynamoDB deve ter GSIs configurados corretamente
+
+    ValidationError: Cannot find asset at G:\aws-cost-guardian\backend
+        at path [ResourceTestStack/ApiHandler/Code/Stage] in aws-cdk-lib.AssetStaging
+
+    [0m [90m 340 |[39m
+     [90m 341 |[39m     [90m// 1. Lambda para o API Gateway (Monolito Express)[39m
+    [31m[1m>[22m[39m[90m 342 |[39m     [36mconst[39m apiHandlerLambda [33m=[39m [36mnew[39m lambda[33m.[39m[33mFunction[39m([36mthis[39m[33m,[39m [32m'ApiHandler'[39m[33m,[39m {
+     [90m     |[39m                              [31m[1m^[22m[39m
+     [90m 343 |[39m       runtime[33m:[39m lambda[33m.[39m[33mRuntime[39m[33m.[39m[33mNODEJS_18_X[39m[33m,[39m
+     [90m 344 |[39m       code[33m:[39m lambda[33m.[39m[33mCode[39m[33m.[39mfromAsset(path[33m.[39mjoin(__dirname[33m,[39m [32m'../../backend'[39m))[33m,[39m
+     [90m 345 |[39m       handler[33m:[39m [32m'handler.app'[39m[33m,[39m [90m// export do express + serverless é exposto como 'app' no handler.js[39m[0m
+
+      at new Asset (../node_modules/aws-cdk-lib/aws-s3-assets/lib/asset.js:1:1551)
+      at AssetCode.bind (../node_modules/aws-cdk-lib/aws-lambda/lib/code.js:5:4415)
+      at new Function2 (../node_modules/aws-cdk-lib/aws-lambda/lib/function.js:1:14880)
+      at new Function2 (../node_modules/aws-cdk-lib/core/lib/prop-injectable.js:1:783)
+      at new CostGuardianStack (lib/cost-guardian-stack.ts:342:30)
+      at Object.<anonymous> (__tests__/cost-guardian-stack.comprehensive.test.ts:152:15)
+
+  ● CostGuardianStack: Testes Completos › Configuração de Recursos › Lambda functions devem ter configurações de memória e timeout apropriadas
+
+    ValidationError: Cannot find asset at G:\aws-cost-guardian\backend
+        at path [ResourceTestStack/ApiHandler/Code/Stage] in aws-cdk-lib.AssetStaging
+
+    [0m [90m 340 |[39m
+     [90m 341 |[39m     [90m// 1. Lambda para o API Gateway (Monolito Express)[39m
+    [31m[1m>[22m[39m[90m 342 |[39m     [36mconst[39m apiHandlerLambda [33m=[39m [36mnew[39m lambda[33m.[39m[33mFunction[39m([36mthis[39m[33m,[39m [32m'ApiHandler'[39m[33m,[39m {
+     [90m     |[39m                              [31m[1m^[22m[39m
+     [90m 343 |[39m       runtime[33m:[39m lambda[33m.[39m[33mRuntime[39m[33m.[39m[33mNODEJS_18_X[39m[33m,[39m
+     [90m 344 |[39m       code[33m:[39m lambda[33m.[39m[33mCode[39m[33m.[39mfromAsset(path[33m.[39mjoin(__dirname[33m,[39m [32m'../../backend'[39m))[33m,[39m
+     [90m 345 |[39m       handler[33m:[39m [32m'handler.app'[39m[33m,[39m [90m// export do express + serverless é exposto como 'app' no handler.js[39m[0m
+
+      at new Asset (../node_modules/aws-cdk-lib/aws-s3-assets/lib/asset.js:1:1551)
+      at AssetCode.bind (../node_modules/aws-cdk-lib/aws-lambda/lib/code.js:5:4415)
+      at new Function2 (../node_modules/aws-cdk-lib/aws-lambda/lib/function.js:1:14880)
+      at new Function2 (../node_modules/aws-cdk-lib/core/lib/prop-injectable.js:1:783)
+      at new CostGuardianStack (lib/cost-guardian-stack.ts:342:30)
+      at Object.<anonymous> (__tests__/cost-guardian-stack.comprehensive.test.ts:152:15)
+
+  ● CostGuardianStack: Testes Completos › Configuração de Recursos › Step Functions devem ter tratamento de erro configurado
+
+    ValidationError: Cannot find asset at G:\aws-cost-guardian\backend
+        at path [ResourceTestStack/ApiHandler/Code/Stage] in aws-cdk-lib.AssetStaging
+
+    [0m [90m 340 |[39m
+     [90m 341 |[39m     [90m// 1. Lambda para o API Gateway (Monolito Express)[39m
+    [31m[1m>[22m[39m[90m 342 |[39m     [36mconst[39m apiHandlerLambda [33m=[39m [36mnew[39m lambda[33m.[39m[33mFunction[39m([36mthis[39m[33m,[39m [32m'ApiHandler'[39m[33m,[39m {
+     [90m     |[39m                              [31m[1m^[22m[39m
+     [90m 343 |[39m       runtime[33m:[39m lambda[33m.[39m[33mRuntime[39m[33m.[39m[33mNODEJS_18_X[39m[33m,[39m
+     [90m 344 |[39m       code[33m:[39m lambda[33m.[39m[33mCode[39m[33m.[39mfromAsset(path[33m.[39mjoin(__dirname[33m,[39m [32m'../../backend'[39m))[33m,[39m
+     [90m 345 |[39m       handler[33m:[39m [32m'handler.app'[39m[33m,[39m [90m// export do express + serverless é exposto como 'app' no handler.js[39m[0m
+
+      at new Asset (../node_modules/aws-cdk-lib/aws-s3-assets/lib/asset.js:1:1551)
+      at AssetCode.bind (../node_modules/aws-cdk-lib/aws-lambda/lib/code.js:5:4415)
+      at new Function2 (../node_modules/aws-cdk-lib/aws-lambda/lib/function.js:1:14880)
+      at new Function2 (../node_modules/aws-cdk-lib/core/lib/prop-injectable.js:1:783)
+      at new CostGuardianStack (lib/cost-guardian-stack.ts:342:30)
+      at Object.<anonymous> (__tests__/cost-guardian-stack.comprehensive.test.ts:152:15)
+
+  ● CostGuardianStack: Testes Completos › Configuração de Recursos › Cognito User Pool deve ter políticas de senha fortes
+
+    ValidationError: Cannot find asset at G:\aws-cost-guardian\backend
+        at path [ResourceTestStack/ApiHandler/Code/Stage] in aws-cdk-lib.AssetStaging
+
+    [0m [90m 340 |[39m
+     [90m 341 |[39m     [90m// 1. Lambda para o API Gateway (Monolito Express)[39m
+    [31m[1m>[22m[39m[90m 342 |[39m     [36mconst[39m apiHandlerLambda [33m=[39m [36mnew[39m lambda[33m.[39m[33mFunction[39m([36mthis[39m[33m,[39m [32m'ApiHandler'[39m[33m,[39m {
+     [90m     |[39m                              [31m[1m^[22m[39m
+     [90m 343 |[39m       runtime[33m:[39m lambda[33m.[39m[33mRuntime[39m[33m.[39m[33mNODEJS_18_X[39m[33m,[39m
+     [90m 344 |[39m       code[33m:[39m lambda[33m.[39m[33mCode[39m[33m.[39mfromAsset(path[33m.[39mjoin(__dirname[33m,[39m [32m'../../backend'[39m))[33m,[39m
+     [90m 345 |[39m       handler[33m:[39m [32m'handler.app'[39m[33m,[39m [90m// export do express + serverless é exposto como 'app' no handler.js[39m[0m
+
+      at new Asset (../node_modules/aws-cdk-lib/aws-s3-assets/lib/asset.js:1:1551)
+      at AssetCode.bind (../node_modules/aws-cdk-lib/aws-lambda/lib/code.js:5:4415)
+      at new Function2 (../node_modules/aws-cdk-lib/aws-lambda/lib/function.js:1:14880)
+      at new Function2 (../node_modules/aws-cdk-lib/core/lib/prop-injectable.js:1:783)
+      at new CostGuardianStack (lib/cost-guardian-stack.ts:342:30)
+      at Object.<anonymous> (__tests__/cost-guardian-stack.comprehensive.test.ts:152:15)
+
+  ● CostGuardianStack: Testes Completos › Permissões e IAM › Lambda roles devem seguir o princípio do menor privilégio
+
+    ValidationError: Cannot find asset at G:\aws-cost-guardian\backend
+        at path [IamTestStack/ApiHandler/Code/Stage] in aws-cdk-lib.AssetStaging
+
+    [0m [90m 340 |[39m
+     [90m 341 |[39m     [90m// 1. Lambda para o API Gateway (Monolito Express)[39m
+    [31m[1m>[22m[39m[90m 342 |[39m     [36mconst[39m apiHandlerLambda [33m=[39m [36mnew[39m lambda[33m.[39m[33mFunction[39m([36mthis[39m[33m,[39m [32m'ApiHandler'[39m[33m,[39m {
+     [90m     |[39m                              [31m[1m^[22m[39m
+     [90m 343 |[39m       runtime[33m:[39m lambda[33m.[39m[33mRuntime[39m[33m.[39m[33mNODEJS_18_X[39m[33m,[39m
+     [90m 344 |[39m       code[33m:[39m lambda[33m.[39m[33mCode[39m[33m.[39mfromAsset(path[33m.[39mjoin(__dirname[33m,[39m [32m'../../backend'[39m))[33m,[39m
+     [90m 345 |[39m       handler[33m:[39m [32m'handler.app'[39m[33m,[39m [90m// export do express + serverless é exposto como 'app' no handler.js[39m[0m
+
+      at new Asset (../node_modules/aws-cdk-lib/aws-s3-assets/lib/asset.js:1:1551)
+      at AssetCode.bind (../node_modules/aws-cdk-lib/aws-lambda/lib/code.js:5:4415)
+      at new Function2 (../node_modules/aws-cdk-lib/aws-lambda/lib/function.js:1:14880)
+      at new Function2 (../node_modules/aws-cdk-lib/core/lib/prop-injectable.js:1:783)
+      at new CostGuardianStack (lib/cost-guardian-stack.ts:342:30)
+      at Object.<anonymous> (__tests__/cost-guardian-stack.comprehensive.test.ts:218:15)
+
+  ● CostGuardianStack: Testes Completos › Permissões e IAM › Step Functions devem ter permissões para invocar Lambdas
+
+    ValidationError: Cannot find asset at G:\aws-cost-guardian\backend
+        at path [IamTestStack/ApiHandler/Code/Stage] in aws-cdk-lib.AssetStaging
+
+    [0m [90m 340 |[39m
+     [90m 341 |[39m     [90m// 1. Lambda para o API Gateway (Monolito Express)[39m
+    [31m[1m>[22m[39m[90m 342 |[39m     [36mconst[39m apiHandlerLambda [33m=[39m [36mnew[39m lambda[33m.[39m[33mFunction[39m([36mthis[39m[33m,[39m [32m'ApiHandler'[39m[33m,[39m {
+     [90m     |[39m                              [31m[1m^[22m[39m
+     [90m 343 |[39m       runtime[33m:[39m lambda[33m.[39m[33mRuntime[39m[33m.[39m[33mNODEJS_18_X[39m[33m,[39m
+     [90m 344 |[39m       code[33m:[39m lambda[33m.[39m[33mCode[39m[33m.[39mfromAsset(path[33m.[39mjoin(__dirname[33m,[39m [32m'../../backend'[39m))[33m,[39m
+     [90m 345 |[39m       handler[33m:[39m [32m'handler.app'[39m[33m,[39m [90m// export do express + serverless é exposto como 'app' no handler.js[39m[0m
+
+      at new Asset (../node_modules/aws-cdk-lib/aws-s3-assets/lib/asset.js:1:1551)
+      at AssetCode.bind (../node_modules/aws-cdk-lib/aws-lambda/lib/code.js:5:4415)
+      at new Function2 (../node_modules/aws-cdk-lib/aws-lambda/lib/function.js:1:14880)
+      at new Function2 (../node_modules/aws-cdk-lib/core/lib/prop-injectable.js:1:783)
+      at new CostGuardianStack (lib/cost-guardian-stack.ts:342:30)
+      at Object.<anonymous> (__tests__/cost-guardian-stack.comprehensive.test.ts:218:15)
+
+  ● CostGuardianStack: Testes Completos › Permissões e IAM › EventBridge deve ter permissão para acionar Step Functions
+
+    ValidationError: Cannot find asset at G:\aws-cost-guardian\backend
+        at path [IamTestStack/ApiHandler/Code/Stage] in aws-cdk-lib.AssetStaging
+
+    [0m [90m 340 |[39m
+     [90m 341 |[39m     [90m// 1. Lambda para o API Gateway (Monolito Express)[39m
+    [31m[1m>[22m[39m[90m 342 |[39m     [36mconst[39m apiHandlerLambda [33m=[39m [36mnew[39m lambda[33m.[39m[33mFunction[39m([36mthis[39m[33m,[39m [32m'ApiHandler'[39m[33m,[39m {
+     [90m     |[39m                              [31m[1m^[22m[39m
+     [90m 343 |[39m       runtime[33m:[39m lambda[33m.[39m[33mRuntime[39m[33m.[39m[33mNODEJS_18_X[39m[33m,[39m
+     [90m 344 |[39m       code[33m:[39m lambda[33m.[39m[33mCode[39m[33m.[39mfromAsset(path[33m.[39mjoin(__dirname[33m,[39m [32m'../../backend'[39m))[33m,[39m
+     [90m 345 |[39m       handler[33m:[39m [32m'handler.app'[39m[33m,[39m [90m// export do express + serverless é exposto como 'app' no handler.js[39m[0m
+
+      at new Asset (../node_modules/aws-cdk-lib/aws-s3-assets/lib/asset.js:1:1551)
+      at AssetCode.bind (../node_modules/aws-cdk-lib/aws-lambda/lib/code.js:5:4415)
+      at new Function2 (../node_modules/aws-cdk-lib/aws-lambda/lib/function.js:1:14880)
+      at new Function2 (../node_modules/aws-cdk-lib/core/lib/prop-injectable.js:1:783)
+      at new CostGuardianStack (lib/cost-guardian-stack.ts:342:30)
+      at Object.<anonymous> (__tests__/cost-guardian-stack.comprehensive.test.ts:218:15)
+
+  ● CostGuardianStack: Testes Completos › Integrações › EventBridge deve ter regras para eventos do Health
+
+    ValidationError: Cannot find asset at G:\aws-cost-guardian\backend
+        at path [IntegrationTestStack/ApiHandler/Code/Stage] in aws-cdk-lib.AssetStaging
+
+    [0m [90m 340 |[39m
+     [90m 341 |[39m     [90m// 1. Lambda para o API Gateway (Monolito Express)[39m
+    [31m[1m>[22m[39m[90m 342 |[39m     [36mconst[39m apiHandlerLambda [33m=[39m [36mnew[39m lambda[33m.[39m[33mFunction[39m([36mthis[39m[33m,[39m [32m'ApiHandler'[39m[33m,[39m {
+     [90m     |[39m                              [31m[1m^[22m[39m
+     [90m 343 |[39m       runtime[33m:[39m lambda[33m.[39m[33mRuntime[39m[33m.[39m[33mNODEJS_18_X[39m[33m,[39m
+     [90m 344 |[39m       code[33m:[39m lambda[33m.[39m[33mCode[39m[33m.[39mfromAsset(path[33m.[39mjoin(__dirname[33m,[39m [32m'../../backend'[39m))[33m,[39m
+     [90m 345 |[39m       handler[33m:[39m [32m'handler.app'[39m[33m,[39m [90m// export do express + serverless é exposto como 'app' no handler.js[39m[0m
+
+      at new Asset (../node_modules/aws-cdk-lib/aws-s3-assets/lib/asset.js:1:1551)
+      at AssetCode.bind (../node_modules/aws-cdk-lib/aws-lambda/lib/code.js:5:4415)
+      at new Function2 (../node_modules/aws-cdk-lib/aws-lambda/lib/function.js:1:14880)
+      at new Function2 (../node_modules/aws-cdk-lib/core/lib/prop-injectable.js:1:783)
+      at new CostGuardianStack (lib/cost-guardian-stack.ts:342:30)
+      at Object.<anonymous> (__tests__/cost-guardian-stack.comprehensive.test.ts:271:15)
+
+  ● CostGuardianStack: Testes Completos › Integrações › API Gateway deve ter integrações com Lambda configuradas
+
+    ValidationError: Cannot find asset at G:\aws-cost-guardian\backend
+        at path [IntegrationTestStack/ApiHandler/Code/Stage] in aws-cdk-lib.AssetStaging
+
+    [0m [90m 340 |[39m
+     [90m 341 |[39m     [90m// 1. Lambda para o API Gateway (Monolito Express)[39m
+    [31m[1m>[22m[39m[90m 342 |[39m     [36mconst[39m apiHandlerLambda [33m=[39m [36mnew[39m lambda[33m.[39m[33mFunction[39m([36mthis[39m[33m,[39m [32m'ApiHandler'[39m[33m,[39m {
+     [90m     |[39m                              [31m[1m^[22m[39m
+     [90m 343 |[39m       runtime[33m:[39m lambda[33m.[39m[33mRuntime[39m[33m.[39m[33mNODEJS_18_X[39m[33m,[39m
+     [90m 344 |[39m       code[33m:[39m lambda[33m.[39m[33mCode[39m[33m.[39mfromAsset(path[33m.[39mjoin(__dirname[33m,[39m [32m'../../backend'[39m))[33m,[39m
+     [90m 345 |[39m       handler[33m:[39m [32m'handler.app'[39m[33m,[39m [90m// export do express + serverless é exposto como 'app' no handler.js[39m[0m
+
+      at new Asset (../node_modules/aws-cdk-lib/aws-s3-assets/lib/asset.js:1:1551)
+      at AssetCode.bind (../node_modules/aws-cdk-lib/aws-lambda/lib/code.js:5:4415)
+      at new Function2 (../node_modules/aws-cdk-lib/aws-lambda/lib/function.js:1:14880)
+      at new Function2 (../node_modules/aws-cdk-lib/core/lib/prop-injectable.js:1:783)
+      at new CostGuardianStack (lib/cost-guardian-stack.ts:342:30)
+      at Object.<anonymous> (__tests__/cost-guardian-stack.comprehensive.test.ts:271:15)
+
+  ● CostGuardianStack: Testes Completos › Integrações › Step Functions devem ter integrações com serviços AWS
+
+    ValidationError: Cannot find asset at G:\aws-cost-guardian\backend
+        at path [IntegrationTestStack/ApiHandler/Code/Stage] in aws-cdk-lib.AssetStaging
+
+    [0m [90m 340 |[39m
+     [90m 341 |[39m     [90m// 1. Lambda para o API Gateway (Monolito Express)[39m
+    [31m[1m>[22m[39m[90m 342 |[39m     [36mconst[39m apiHandlerLambda [33m=[39m [36mnew[39m lambda[33m.[39m[33mFunction[39m([36mthis[39m[33m,[39m [32m'ApiHandler'[39m[33m,[39m {
+     [90m     |[39m                              [31m[1m^[22m[39m
+     [90m 343 |[39m       runtime[33m:[39m lambda[33m.[39m[33mRuntime[39m[33m.[39m[33mNODEJS_18_X[39m[33m,[39m
+     [90m 344 |[39m       code[33m:[39m lambda[33m.[39m[33mCode[39m[33m.[39mfromAsset(path[33m.[39mjoin(__dirname[33m,[39m [32m'../../backend'[39m))[33m,[39m
+     [90m 345 |[39m       handler[33m:[39m [32m'handler.app'[39m[33m,[39m [90m// export do express + serverless é exposto como 'app' no handler.js[39m[0m
+
+      at new Asset (../node_modules/aws-cdk-lib/aws-s3-assets/lib/asset.js:1:1551)
+      at AssetCode.bind (../node_modules/aws-cdk-lib/aws-lambda/lib/code.js:5:4415)
+      at new Function2 (../node_modules/aws-cdk-lib/aws-lambda/lib/function.js:1:14880)
+      at new Function2 (../node_modules/aws-cdk-lib/core/lib/prop-injectable.js:1:783)
+      at new CostGuardianStack (lib/cost-guardian-stack.ts:342:30)
+      at Object.<anonymous> (__tests__/cost-guardian-stack.comprehensive.test.ts:271:15)
+
+  ● CostGuardianStack: Testes Completos › Ambientes (Test vs Prod) › Ambiente de teste não deve criar BucketDeployment
+
+    ValidationError: cannot find G:\aws-cost-guardian\node_modules\aws-cdk-lib\custom-resource-handlers\dist\aws-s3\auto-delete-objects-handler/index.js
+
+    [0m [90m 524 |[39m
+     [90m 525 |[39m     [90m// Criar bucket S3 para armazenar relatórios PDF gerados pela Lambda[39m
+    [31m[1m>[22m[39m[90m 526 |[39m     [36mconst[39m reportsBucket [33m=[39m [36mnew[39m s3[33m.[39m[33mBucket[39m([36mthis[39m[33m,[39m [32m'ReportsBucket'[39m[33m,[39m {
+     [90m     |[39m                           [31m[1m^[22m[39m
+     [90m 527 |[39m       removalPolicy[33m:[39m cdk[33m.[39m[33mRemovalPolicy[39m[33m.[39m[33mDESTROY[39m[33m,[39m
+     [90m 528 |[39m       autoDeleteObjects[33m:[39m [36mtrue[39m[33m,[39m
+     [90m 529 |[39m       blockPublicAccess[33m:[39m s3[33m.[39m[33mBlockPublicAccess[39m[33m.[39m[33mBLOCK_ALL[39m[33m,[39m [90m// Bloquear todo acesso público (Task 2)[39m[0m
+
+      at path [TestStack/Custom::S3AutoDeleteObjectsCustomResourceProvider] in aws-cdk-lib.CustomResourceProviderBase
+      at Function.getOrCreateProvider (../node_modules/aws-cdk-lib/custom-resource-handlers/dist/aws-s3/auto-delete-objects-provider.generated.js:1:612)
+      at WrappedClass.enableAutoDeleteObjects (../node_modules/aws-cdk-lib/aws-s3/lib/bucket.js:1:50204)
+      at new Bucket2 (../node_modules/aws-cdk-lib/aws-s3/lib/bucket.js:1:33034)
+      at new Bucket2 (../node_modules/aws-cdk-lib/core/lib/prop-injectable.js:1:783)
+      at new CostGuardianStack (lib/cost-guardian-stack.ts:526:27)
+      at Object.<anonymous> (__tests__/cost-guardian-stack.comprehensive.test.ts:304:25)
+
+  ● CostGuardianStack: Testes Completos › Ambientes (Test vs Prod) › Ambiente de produção deve criar BucketDeployment
+
+    Expected value   undefined
+    Received:
+      undefined
+
+    Message:
+      Expected 2 resources of type Custom::S3BucketDeployment but found 0
+
+    Difference:
+
+    Compared values have no visual difference.
+
+    [0m [90m 319 |[39m       [90m// O mock do s3deploy ainda está ativo, mas o CDK tentará criar o recurso.[39m
+     [90m 320 |[39m       [90m// O teste correto é verificar se o CDK tentou criar os recursos.[39m
+    [31m[1m>[22m[39m[90m 321 |[39m       prodTemplate[33m.[39mresourceCountIs([32m'Custom::S3BucketDeployment'[39m[33m,[39m [35m2[39m)[33m;[39m
+     [90m     |[39m                    [31m[1m^[22m[39m
+     [90m 322 |[39m     })[33m;[39m
+     [90m 323 |[39m
+     [90m 324 |[39m     test([32m'Ambiente de teste deve ter logs aprimorados'[39m[33m,[39m () [33m=>[39m {[0m
+
+      at Template.resourceCountIs (../node_modules/aws-cdk-lib/assertions/lib/template.js:1:2818)
+      at Object.<anonymous> (__tests__/cost-guardian-stack.comprehensive.test.ts:321:20)
+
+  ● CostGuardianStack: Testes Completos › Ambientes (Test vs Prod) › Ambiente de teste deve ter logs aprimorados
+
+    ValidationError: Cannot find asset at G:\aws-cost-guardian\backend
+        at path [TestLoggingStack/ApiHandler/Code/Stage] in aws-cdk-lib.AssetStaging
+
+    [0m [90m 340 |[39m
+     [90m 341 |[39m     [90m// 1. Lambda para o API Gateway (Monolito Express)[39m
+    [31m[1m>[22m[39m[90m 342 |[39m     [36mconst[39m apiHandlerLambda [33m=[39m [36mnew[39m lambda[33m.[39m[33mFunction[39m([36mthis[39m[33m,[39m [32m'ApiHandler'[39m[33m,[39m {
+     [90m     |[39m                              [31m[1m^[22m[39m
+     [90m 343 |[39m       runtime[33m:[39m lambda[33m.[39m[33mRuntime[39m[33m.[39m[33mNODEJS_18_X[39m[33m,[39m
+     [90m 344 |[39m       code[33m:[39m lambda[33m.[39m[33mCode[39m[33m.[39mfromAsset(path[33m.[39mjoin(__dirname[33m,[39m [32m'../../backend'[39m))[33m,[39m
+     [90m 345 |[39m       handler[33m:[39m [32m'handler.app'[39m[33m,[39m [90m// export do express + serverless é exposto como 'app' no handler.js[39m[0m
+
+      at new Asset (../node_modules/aws-cdk-lib/aws-s3-assets/lib/asset.js:1:1551)
+      at AssetCode.bind (../node_modules/aws-cdk-lib/aws-lambda/lib/code.js:5:4415)
+      at new Function2 (../node_modules/aws-cdk-lib/aws-lambda/lib/function.js:1:14880)
+      at new Function2 (../node_modules/aws-cdk-lib/core/lib/prop-injectable.js:1:783)
+      at new CostGuardianStack (lib/cost-guardian-stack.ts:342:30)
+      at Object.<anonymous> (__tests__/cost-guardian-stack.comprehensive.test.ts:330:25)
+
+Test Suites: 1 failed, 1 total
+Tests:       18 failed, 4 passed, 22 total
+Snapshots:   0 total
+Time:        56.104 s, estimated 63 s
+Ran all test suites.
+npm error Lifecycle script `test` failed with error:
+npm error code 1
+npm error path g:\aws-cost-guardian\infra
+npm error workspace aws-cost-guardian-infra@0.1.0
+npm error location g:\aws-cost-guardian\infra
+npm error command failed
+npm error command C:\Windows\system32\cmd.exe /d /s /c jest -f

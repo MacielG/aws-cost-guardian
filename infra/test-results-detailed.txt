@@ -1,0 +1,3 @@
+npm error No workspaces found:
+npm error   --workspace=infra
+npm error A complete log of this run can be found in: C:\Users\Guilherme\AppData\Local\npm-cache\_logs\2025-10-30T10_43_39_912Z-debug-0.log

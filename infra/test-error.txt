@@ -1,0 +1,59 @@
+
+> aws-cost-guardian-infra@0.1.0 test
+> jest --testNamePattern=Secrets Manager
+
+FAIL __tests__/cost-guardian-stack.comprehensive.test.ts (42.934 s)
+  ● Console
+
+    console.log
+      [CostGuardianStack] Asset paths:
+
+      at new CostGuardianStack (lib/cost-guardian-stack.ts:68:13)
+
+    console.log
+        backendPath: g:\aws-cost-guardian\backend - exists: true
+
+      at new CostGuardianStack (lib/cost-guardian-stack.ts:69:13)
+
+    console.log
+        backendFunctionsPath: g:\aws-cost-guardian\backend\functions - exists: true
+
+      at new CostGuardianStack (lib/cost-guardian-stack.ts:70:13)
+
+    console.log
+        docsPath: g:\aws-cost-guardian\docs - exists: false
+
+      at new CostGuardianStack (lib/cost-guardian-stack.ts:71:13)
+
+  ● CostGuardianStack: Testes Completos › Segurança e Compliance › Secrets Manager deve usar KMS com rotação automática
+
+    ValidationError: cannot find G:\aws-cost-guardian\node_modules\aws-cdk-lib\custom-resource-handlers\dist\aws-s3\auto-delete-objects-handler/index.js
+
+    [0m [90m 546 |[39m
+     [90m 547 |[39m     [90m// Criar bucket S3 para armazenar relatórios PDF gerados pela Lambda[39m
+    [31m[1m>[22m[39m[90m 548 |[39m     [36mconst[39m reportsBucket [33m=[39m [36mnew[39m s3[33m.[39m[33mBucket[39m([36mthis[39m[33m,[39m [32m'ReportsBucket'[39m[33m,[39m {
+     [90m     |[39m                           [31m[1m^[22m[39m
+     [90m 549 |[39m       removalPolicy[33m:[39m cdk[33m.[39m[33mRemovalPolicy[39m[33m.[39m[33mDESTROY[39m[33m,[39m
+     [90m 550 |[39m       autoDeleteObjects[33m:[39m [36mtrue[39m[33m,[39m
+     [90m 551 |[39m       blockPublicAccess[33m:[39m s3[33m.[39m[33mBlockPublicAccess[39m[33m.[39m[33mBLOCK_ALL[39m[33m,[39m [90m// Bloquear todo acesso público (Task 2)[39m[0m
+
+      at path [SecurityTestStack/Custom::S3AutoDeleteObjectsCustomResourceProvider] in aws-cdk-lib.CustomResourceProviderBase
+      at Function.getOrCreateProvider (../node_modules/aws-cdk-lib/custom-resource-handlers/dist/aws-s3/auto-delete-objects-provider.generated.js:1:612)
+      at WrappedClass.enableAutoDeleteObjects (../node_modules/aws-cdk-lib/aws-s3/lib/bucket.js:1:50204)
+      at new Bucket2 (../node_modules/aws-cdk-lib/aws-s3/lib/bucket.js:1:33034)
+      at new Bucket2 (../node_modules/aws-cdk-lib/core/lib/prop-injectable.js:1:783)
+      at new CostGuardianStack (lib/cost-guardian-stack.ts:548:27)
+      at Object.<anonymous> (__tests__/cost-guardian-stack.comprehensive.test.ts:83:15)
+
+Test Suites: 1 failed, 1 skipped, 1 of 2 total
+Tests:       1 failed, 27 skipped, 28 total
+Snapshots:   0 total
+Time:        46.695 s
+Ran all test suites with tests matching "Secrets Manager".
+npm error Lifecycle script `test` failed with error:
+npm error code 1
+npm error path g:\aws-cost-guardian\infra
+npm error workspace aws-cost-guardian-infra@0.1.0
+npm error location g:\aws-cost-guardian\infra
+npm error command failed
+npm error command C:\Windows\system32\cmd.exe /d /s /c jest ^^^"--testNamePattern=Secrets^^^ Manager^^^"

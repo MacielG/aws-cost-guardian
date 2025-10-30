@@ -2,115 +2,6 @@
 
 exports[`CostGuardianStack: Testes de Asserção e Segurança Snapshot do Stack está consistente 1`] = `
 {
-  "Mappings": {
-    "ServiceprincipalMap": {
-      "af-south-1": {
-        "states": "states.af-south-1.amazonaws.com",
-      },
-      "ap-east-1": {
-        "states": "states.ap-east-1.amazonaws.com",
-      },
-      "ap-northeast-1": {
-        "states": "states.ap-northeast-1.amazonaws.com",
-      },
-      "ap-northeast-2": {
-        "states": "states.ap-northeast-2.amazonaws.com",
-      },
-      "ap-northeast-3": {
-        "states": "states.ap-northeast-3.amazonaws.com",
-      },
-      "ap-south-1": {
-        "states": "states.ap-south-1.amazonaws.com",
-      },
-      "ap-south-2": {
-        "states": "states.ap-south-2.amazonaws.com",
-      },
-      "ap-southeast-1": {
-        "states": "states.ap-southeast-1.amazonaws.com",
-      },
-      "ap-southeast-2": {
-        "states": "states.ap-southeast-2.amazonaws.com",
-      },
-      "ap-southeast-3": {
-        "states": "states.ap-southeast-3.amazonaws.com",
-      },
-      "ap-southeast-4": {
-        "states": "states.ap-southeast-4.amazonaws.com",
-      },
-      "ca-central-1": {
-        "states": "states.ca-central-1.amazonaws.com",
-      },
-      "cn-north-1": {
-        "states": "states.cn-north-1.amazonaws.com",
-      },
-      "cn-northwest-1": {
-        "states": "states.cn-northwest-1.amazonaws.com",
-      },
-      "eu-central-1": {
-        "states": "states.eu-central-1.amazonaws.com",
-      },
-      "eu-central-2": {
-        "states": "states.eu-central-2.amazonaws.com",
-      },
-      "eu-north-1": {
-        "states": "states.eu-north-1.amazonaws.com",
-      },
-      "eu-south-1": {
-        "states": "states.eu-south-1.amazonaws.com",
-      },
-      "eu-south-2": {
-        "states": "states.eu-south-2.amazonaws.com",
-      },
-      "eu-west-1": {
-        "states": "states.eu-west-1.amazonaws.com",
-      },
-      "eu-west-2": {
-        "states": "states.eu-west-2.amazonaws.com",
-      },
-      "eu-west-3": {
-        "states": "states.eu-west-3.amazonaws.com",
-      },
-      "il-central-1": {
-        "states": "states.il-central-1.amazonaws.com",
-      },
-      "me-central-1": {
-        "states": "states.me-central-1.amazonaws.com",
-      },
-      "me-south-1": {
-        "states": "states.me-south-1.amazonaws.com",
-      },
-      "sa-east-1": {
-        "states": "states.sa-east-1.amazonaws.com",
-      },
-      "us-east-1": {
-        "states": "states.us-east-1.amazonaws.com",
-      },
-      "us-east-2": {
-        "states": "states.us-east-2.amazonaws.com",
-      },
-      "us-gov-east-1": {
-        "states": "states.us-gov-east-1.amazonaws.com",
-      },
-      "us-gov-west-1": {
-        "states": "states.us-gov-west-1.amazonaws.com",
-      },
-      "us-iso-east-1": {
-        "states": "states.amazonaws.com",
-      },
-      "us-iso-west-1": {
-        "states": "states.amazonaws.com",
-      },
-      "us-isob-east-1": {
-        "states": "states.amazonaws.com",
-      },
-      "us-west-1": {
-        "states": "states.us-west-1.amazonaws.com",
-      },
-      "us-west-2": {
-        "states": "states.us-west-2.amazonaws.com",
-      },
-    },
-  },
   "Outputs": {
     "APIUrl": {
       "Value": {
@@ -140,20 +31,7 @@ exports[`CostGuardianStack: Testes de Asserção e Segurança Snapshot do Stack 
     },
     "CfnTemplateUrl": {
       "Description": "URL do template do CloudFormation para o onboarding do cliente. Use esta URL no frontend.",
-      "Value": {
-        "Fn::Join": [
-          "",
-          [
-            {
-              "Fn::GetAtt": [
-                "CfnTemplateBucket4840C65E",
-                "WebsiteURL",
-              ],
-            },
-            "/template.yaml",
-          ],
-        ],
-      },
+      "Value": "test-full-url",
     },
     "CostGuardianAPIEndpoint220630FB": {
       "Value": {
@@ -233,17 +111,20 @@ exports[`CostGuardianStack: Testes de Asserção e Segurança Snapshot do Stack 
       "DependsOn": [
         "ApiHandlerServiceRoleDefaultPolicy10321D87",
         "ApiHandlerServiceRole592E70E9",
+        "CostGuardianVpcPrivateSubnet1DefaultRouteF69618E7",
+        "CostGuardianVpcPrivateSubnet1RouteTableAssociation93CAD386",
+        "CostGuardianVpcPrivateSubnet2DefaultRoute2AE993EA",
+        "CostGuardianVpcPrivateSubnet2RouteTableAssociation5D775D04",
       ],
       "Properties": {
         "Code": {
           "S3Bucket": {
             "Fn::Sub": "cdk-hnb659fds-assets-\${AWS::AccountId}-\${AWS::Region}",
           },
-          "S3Key": "0a647b60d348b3f9c381a4990b6dd3055b0c21ec0c2fca4ce214f4caeb5b28a7.zip",
+          "S3Key": "b84b3d7bd6fff67da8b2d5f6fd16682fdca478b7fd7fa9b63feb80ce889cf9e6.zip",
         },
         "Environment": {
           "Variables": {
-            "AWS_NODEJS_CONNECTION_REUSE_ENABLED": "1",
             "DYNAMODB_TABLE": {
               "Ref": "CostGuardianTable970FEF22",
             },
@@ -256,20 +137,8 @@ exports[`CostGuardianStack: Testes de Asserção e Segurança Snapshot do Stack 
             "EXECUTE_RECOMMENDATION_LAMBDA_NAME": {
               "Ref": "ExecuteRecommendation661572F9",
             },
-            "FULL_TEMPLATE_URL": {
-              "Fn::Join": [
-                "",
-                [
-                  {
-                    "Fn::GetAtt": [
-                      "CfnTemplateBucket4840C65E",
-                      "WebsiteURL",
-                    ],
-                  },
-                  "/cost-guardian-template.yaml",
-                ],
-              ],
-            },
+            "FULL_TEMPLATE_URL": "test-full-url",
+            "LOG_LEVEL": "DEBUG",
             "PLATFORM_ACCOUNT_ID": {
               "Ref": "AWS::AccountId",
             },
@@ -279,20 +148,7 @@ exports[`CostGuardianStack: Testes de Asserção e Segurança Snapshot do Stack 
             "STRIPE_WEBHOOK_SECRET_ARN": {
               "Ref": "StripeWebhookSecretFCDDBC6A",
             },
-            "TRIAL_TEMPLATE_URL": {
-              "Fn::Join": [
-                "",
-                [
-                  {
-                    "Fn::GetAtt": [
-                      "CfnTemplateBucket4840C65E",
-                      "WebsiteURL",
-                    ],
-                  },
-                  "/cost-guardian-TRIAL-template.yaml",
-                ],
-              ],
-            },
+            "TRIAL_TEMPLATE_URL": "test-trial-url",
             "USER_POOL_CLIENT_ID": {
               "Ref": "CostGuardianUserPoolClient13CE29CE",
             },
@@ -301,7 +157,14 @@ exports[`CostGuardianStack: Testes de Asserção e Segurança Snapshot do Stack 
             },
           },
         },
-        "Handler": "index.app",
+        "Handler": "handler.app",
+        "LoggingConfig": {
+          "LogGroup": {
+            "Ref": "ApiHandlerLogGroup4D57C896",
+          },
+        },
+        "MemorySize": 1024,
+        "ReservedConcurrentExecutions": 100,
         "Role": {
           "Fn::GetAtt": [
             "ApiHandlerServiceRole592E70E9",
@@ -309,10 +172,49 @@ exports[`CostGuardianStack: Testes de Asserção e Segurança Snapshot do Stack 
           ],
         },
         "Runtime": "nodejs18.x",
+        "Timeout": 29,
+        "VpcConfig": {
+          "SecurityGroupIds": [
+            {
+              "Fn::GetAtt": [
+                "LambdaSecurityGroup0BD9FC99",
+                "GroupId",
+              ],
+            },
+          ],
+          "SubnetIds": [
+            {
+              "Ref": "CostGuardianVpcPrivateSubnet1Subnet97B65F1D",
+            },
+            {
+              "Ref": "CostGuardianVpcPrivateSubnet2SubnetB71E218F",
+            },
+          ],
+        },
       },
       "Type": "AWS::Lambda::Function",
     },
+    "ApiHandlerLogGroup4D57C896": {
+      "DeletionPolicy": "Delete",
+      "Properties": {
+        "KmsKeyId": {
+          "Fn::GetAtt": [
+            "LogGroupKmsKey694BE21C",
+            "Arn",
+          ],
+        },
+        "RetentionInDays": 365,
+      },
+      "Type": "AWS::Logs::LogGroup",
+      "UpdateReplacePolicy": "Delete",
+    },
     "ApiHandlerServiceRole592E70E9": {
+      "DependsOn": [
+        "CostGuardianVpcPrivateSubnet1DefaultRouteF69618E7",
+        "CostGuardianVpcPrivateSubnet1RouteTableAssociation93CAD386",
+        "CostGuardianVpcPrivateSubnet2DefaultRoute2AE993EA",
+        "CostGuardianVpcPrivateSubnet2RouteTableAssociation5D775D04",
+      ],
       "Properties": {
         "AssumeRolePolicyDocument": {
           "Statement": [
@@ -339,28 +241,39 @@ exports[`CostGuardianStack: Testes de Asserção e Segurança Snapshot do Stack 
               ],
             ],
           },
+          {
+            "Fn::Join": [
+              "",
+              [
+                "arn:",
+                {
+                  "Ref": "AWS::Partition",
+                },
+                ":iam::aws:policy/service-role/AWSLambdaVPCAccessExecutionRole",
+              ],
+            ],
+          },
         ],
       },
       "Type": "AWS::IAM::Role",
     },
     "ApiHandlerServiceRoleDefaultPolicy10321D87": {
+      "DependsOn": [
+        "CostGuardianVpcPrivateSubnet1DefaultRouteF69618E7",
+        "CostGuardianVpcPrivateSubnet1RouteTableAssociation93CAD386",
+        "CostGuardianVpcPrivateSubnet2DefaultRoute2AE993EA",
+        "CostGuardianVpcPrivateSubnet2RouteTableAssociation5D775D04",
+      ],
       "Properties": {
         "PolicyDocument": {
           "Statement": [
             {
               "Action": [
-                "dynamodb:BatchGetItem",
-                "dynamodb:GetRecords",
-                "dynamodb:GetShardIterator",
+                "dynamodb:PutItem",
+                "dynamodb:UpdateItem",
                 "dynamodb:Query",
                 "dynamodb:GetItem",
                 "dynamodb:Scan",
-                "dynamodb:ConditionCheckItem",
-                "dynamodb:BatchWriteItem",
-                "dynamodb:PutItem",
-                "dynamodb:UpdateItem",
-                "dynamodb:DeleteItem",
-                "dynamodb:DescribeTable",
               ],
               "Effect": "Allow",
               "Resource": [
@@ -444,6 +357,88 @@ exports[`CostGuardianStack: Testes de Asserção e Segurança Snapshot do Stack 
       },
       "Type": "AWS::IAM::Policy",
     },
+    "ApiWaf": {
+      "Properties": {
+        "DefaultAction": {
+          "Allow": {},
+        },
+        "Rules": [
+          {
+            "Name": "AWS-AWSManagedRulesCommonRuleSet",
+            "OverrideAction": {
+              "None": {},
+            },
+            "Priority": 1,
+            "Statement": {
+              "ManagedRuleGroupStatement": {
+                "Name": "AWSManagedRulesCommonRuleSet",
+                "VendorName": "AWS",
+              },
+            },
+            "VisibilityConfig": {
+              "CloudWatchMetricsEnabled": true,
+              "MetricName": "awsCommonRules",
+              "SampledRequestsEnabled": true,
+            },
+          },
+        ],
+        "Scope": "REGIONAL",
+        "VisibilityConfig": {
+          "CloudWatchMetricsEnabled": true,
+          "MetricName": "ApiWaf",
+          "SampledRequestsEnabled": true,
+        },
+      },
+      "Type": "AWS::WAFv2::WebACL",
+    },
+    "ApiWafAssociation": {
+      "Properties": {
+        "ResourceArn": {
+          "Fn::Join": [
+            "",
+            [
+              "arn:",
+              {
+                "Ref": "AWS::Partition",
+              },
+              ":apigateway:",
+              {
+                "Ref": "AWS::Region",
+              },
+              "::/restapis/",
+              {
+                "Ref": "CostGuardianAPID69A7606",
+              },
+              "/stages/",
+              {
+                "Ref": "CostGuardianAPIDeploymentStageprod2322FA4F",
+              },
+            ],
+          ],
+        },
+        "WebACLArn": {
+          "Fn::GetAtt": [
+            "ApiWaf",
+            "Arn",
+          ],
+        },
+      },
+      "Type": "AWS::WAFv2::WebACLAssociation",
+    },
+    "AutomationSfnLogGroupEFB6F455": {
+      "DeletionPolicy": "Delete",
+      "Properties": {
+        "KmsKeyId": {
+          "Fn::GetAtt": [
+            "LogGroupKmsKey694BE21C",
+            "Arn",
+          ],
+        },
+        "RetentionInDays": 731,
+      },
+      "Type": "AWS::Logs::LogGroup",
+      "UpdateReplacePolicy": "Delete",
+    },
     "AutomationWorkflow31EDE987": {
       "DeletionPolicy": "Delete",
       "DependsOn": [
@@ -455,7 +450,7 @@ exports[`CostGuardianStack: Testes de Asserção e Segurança Snapshot do Stack 
           "Fn::Join": [
             "",
             [
-              "{"StartAt":"RunAllAutomations","States":{"RunAllAutomations":{"Type":"Parallel","End":true,"Branches":[{"StartAt":"StopIdleResources","States":{"StopIdleResources":{"End":true,"Retry":[{"ErrorEquals":["Lambda.ClientExecutionTimeoutException","Lambda.ServiceException","Lambda.AWSLambdaException","Lambda.SdkClientException"],"IntervalSeconds":2,"MaxAttempts":6,"BackoffRate":2}],"Type":"Task","OutputPath":"$.Payload","Resource":"arn:",
+              "{"StartAt":"RunAllAutomations","States":{"RunAllAutomations":{"Type":"Parallel","End":true,"Branches":[{"StartAt":"StopIdleResources","States":{"StopIdleResources":{"End":true,"Retry":[{"ErrorEquals":["Lambda.ClientExecutionTimeoutException","Lambda.ServiceException","Lambda.AWSLambdaException","Lambda.SdkClientException"],"IntervalSeconds":2,"MaxAttempts":6,"BackoffRate":2},{"ErrorEquals":["States.TaskFailed"],"IntervalSeconds":2,"MaxAttempts":3,"BackoffRate":2}],"Catch":[{"ErrorEquals":["States.ALL"],"ResultPath":"$.error","Next":"StopIdleFailed"}],"Type":"Task","OutputPath":"$.Payload","Resource":"arn:",
               {
                 "Ref": "AWS::Partition",
               },
@@ -466,7 +461,7 @@ exports[`CostGuardianStack: Testes de Asserção e Segurança Snapshot do Stack 
                   "Arn",
                 ],
               },
-              "","Payload.$":"$"}}}},{"StartAt":"DeleteUnusedVolumes","States":{"DeleteUnusedVolumes":{"End":true,"Retry":[{"ErrorEquals":["Lambda.ClientExecutionTimeoutException","Lambda.ServiceException","Lambda.AWSLambdaException","Lambda.SdkClientException"],"IntervalSeconds":2,"MaxAttempts":6,"BackoffRate":2}],"Type":"Task","OutputPath":"$.Payload","Resource":"arn:",
+              "","Payload.$":"$"}},"StopIdleFailed":{"Type":"Fail","Error":"StopIdleError","Cause":"Stop idle resources failed"}}},{"StartAt":"DeleteUnusedVolumes","States":{"DeleteUnusedVolumes":{"End":true,"Retry":[{"ErrorEquals":["Lambda.ClientExecutionTimeoutException","Lambda.ServiceException","Lambda.AWSLambdaException","Lambda.SdkClientException"],"IntervalSeconds":2,"MaxAttempts":6,"BackoffRate":2},{"ErrorEquals":["States.TaskFailed"],"IntervalSeconds":2,"MaxAttempts":3,"BackoffRate":2}],"Catch":[{"ErrorEquals":["States.ALL"],"ResultPath":"$.error","Next":"DeleteEbsFailed"}],"Type":"Task","OutputPath":"$.Payload","Resource":"arn:",
               {
                 "Ref": "AWS::Partition",
               },
@@ -477,7 +472,7 @@ exports[`CostGuardianStack: Testes de Asserção e Segurança Snapshot do Stack 
                   "Arn",
                 ],
               },
-              "","Payload.$":"$"}}}},{"StartAt":"RecommendIdleRds","States":{"RecommendIdleRds":{"End":true,"Retry":[{"ErrorEquals":["Lambda.ClientExecutionTimeoutException","Lambda.ServiceException","Lambda.AWSLambdaException","Lambda.SdkClientException"],"IntervalSeconds":2,"MaxAttempts":6,"BackoffRate":2}],"Type":"Task","OutputPath":"$.Payload","Resource":"arn:",
+              "","Payload.$":"$"}},"DeleteEbsFailed":{"Type":"Fail","Error":"DeleteEbsError","Cause":"Delete unused volumes failed"}}},{"StartAt":"RecommendIdleRds","States":{"RecommendIdleRds":{"End":true,"Retry":[{"ErrorEquals":["Lambda.ClientExecutionTimeoutException","Lambda.ServiceException","Lambda.AWSLambdaException","Lambda.SdkClientException"],"IntervalSeconds":2,"MaxAttempts":6,"BackoffRate":2},{"ErrorEquals":["States.TaskFailed"],"IntervalSeconds":2,"MaxAttempts":3,"BackoffRate":2}],"Catch":[{"ErrorEquals":["States.ALL"],"ResultPath":"$.error","Next":"RecommendRdsFailed"}],"Type":"Task","OutputPath":"$.Payload","Resource":"arn:",
               {
                 "Ref": "AWS::Partition",
               },
@@ -488,15 +483,34 @@ exports[`CostGuardianStack: Testes de Asserção e Segurança Snapshot do Stack 
                   "Arn",
                 ],
               },
-              "","Payload.$":"$"}}}}]}}}",
+              "","Payload.$":"$"}},"RecommendRdsFailed":{"Type":"Fail","Error":"RecommendRdsError","Cause":"Recommend idle RDS failed"}}}]}}}",
             ],
           ],
+        },
+        "LoggingConfiguration": {
+          "Destinations": [
+            {
+              "CloudWatchLogsLogGroup": {
+                "LogGroupArn": {
+                  "Fn::GetAtt": [
+                    "AutomationSfnLogGroupEFB6F455",
+                    "Arn",
+                  ],
+                },
+              },
+            },
+          ],
+          "Level": "ALL",
         },
         "RoleArn": {
           "Fn::GetAtt": [
             "AutomationWorkflowRole7528A909",
             "Arn",
           ],
+        },
+        "StateMachineName": "AutomationWorkflow",
+        "TracingConfiguration": {
+          "Enabled": true,
         },
       },
       "Type": "AWS::StepFunctions::StateMachine",
@@ -550,15 +564,7 @@ exports[`CostGuardianStack: Testes de Asserção e Segurança Snapshot do Stack 
               "Action": "sts:AssumeRole",
               "Effect": "Allow",
               "Principal": {
-                "Service": {
-                  "Fn::FindInMap": [
-                    "ServiceprincipalMap",
-                    {
-                      "Ref": "AWS::Region",
-                    },
-                    "states",
-                  ],
-                },
+                "Service": "states.amazonaws.com",
               },
             },
           ],
@@ -649,6 +655,30 @@ exports[`CostGuardianStack: Testes de Asserção e Segurança Snapshot do Stack 
                 },
               ],
             },
+            {
+              "Action": [
+                "logs:CreateLogDelivery",
+                "logs:GetLogDelivery",
+                "logs:UpdateLogDelivery",
+                "logs:DeleteLogDelivery",
+                "logs:ListLogDeliveries",
+                "logs:PutResourcePolicy",
+                "logs:DescribeResourcePolicies",
+                "logs:DescribeLogGroups",
+              ],
+              "Effect": "Allow",
+              "Resource": "*",
+            },
+            {
+              "Action": [
+                "xray:PutTraceSegments",
+                "xray:PutTelemetryRecords",
+                "xray:GetSamplingRules",
+                "xray:GetSamplingTargets",
+              ],
+              "Effect": "Allow",
+              "Resource": "*",
+            },
           ],
           "Version": "2012-10-17",
         },
@@ -664,42 +694,59 @@ exports[`CostGuardianStack: Testes de Asserção e Segurança Snapshot do Stack 
     "CfnTemplateBucket4840C65E": {
       "DeletionPolicy": "Delete",
       "Properties": {
+        "BucketEncryption": {
+          "ServerSideEncryptionConfiguration": [
+            {
+              "KMSMasterKeyID": {
+                "Fn::GetAtt": [
+                  "S3Key58EFA89C",
+                  "Arn",
+                ],
+              },
+              "ServerSideEncryptionByDefault": {
+                "SSEAlgorithm": "AES256",
+              },
+            },
+          ],
+        },
+        "LifecycleConfiguration": {
+          "Rules": [
+            {
+              "ExpirationInDays": 90,
+              "Id": "DefaultLifecycle",
+              "NoncurrentVersionExpiration": {
+                "NoncurrentDays": 30,
+              },
+              "NoncurrentVersionTransitions": [
+                {
+                  "StorageClass": "GLACIER",
+                  "TransitionInDays": 30,
+                },
+              ],
+              "Status": "Enabled",
+              "Transitions": [
+                {
+                  "StorageClass": "INTELLIGENT_TIERING",
+                  "TransitionInDays": 90,
+                },
+              ],
+            },
+          ],
+        },
         "PublicAccessBlockConfiguration": {
           "BlockPublicAcls": true,
           "BlockPublicPolicy": false,
           "IgnorePublicAcls": true,
           "RestrictPublicBuckets": false,
         },
-        "Tags": [
-          {
-            "Key": "aws-cdk:auto-delete-objects",
-            "Value": "true",
-          },
-        ],
+        "VersioningConfiguration": {
+          "Status": "Enabled",
+        },
         "WebsiteConfiguration": {
           "IndexDocument": "template.yaml",
         },
       },
       "Type": "AWS::S3::Bucket",
-      "UpdateReplacePolicy": "Delete",
-    },
-    "CfnTemplateBucketAutoDeleteObjectsCustomResourceDD52B89D": {
-      "DeletionPolicy": "Delete",
-      "DependsOn": [
-        "CfnTemplateBucketPolicyCC45C421",
-      ],
-      "Properties": {
-        "BucketName": {
-          "Ref": "CfnTemplateBucket4840C65E",
-        },
-        "ServiceToken": {
-          "Fn::GetAtt": [
-            "CustomS3AutoDeleteObjectsCustomResourceProviderHandler9D90184F",
-            "Arn",
-          ],
-        },
-      },
-      "Type": "Custom::S3AutoDeleteObjects",
       "UpdateReplacePolicy": "Delete",
     },
     "CfnTemplateBucketPolicyCC45C421": {
@@ -729,45 +776,6 @@ exports[`CostGuardianStack: Testes de Asserção e Segurança Snapshot do Stack 
                   ],
                 ],
               },
-            },
-            {
-              "Action": [
-                "s3:PutBucketPolicy",
-                "s3:GetBucket*",
-                "s3:List*",
-                "s3:DeleteObject*",
-              ],
-              "Effect": "Allow",
-              "Principal": {
-                "AWS": {
-                  "Fn::GetAtt": [
-                    "CustomS3AutoDeleteObjectsCustomResourceProviderRole3B1BD092",
-                    "Arn",
-                  ],
-                },
-              },
-              "Resource": [
-                {
-                  "Fn::GetAtt": [
-                    "CfnTemplateBucket4840C65E",
-                    "Arn",
-                  ],
-                },
-                {
-                  "Fn::Join": [
-                    "",
-                    [
-                      {
-                        "Fn::GetAtt": [
-                          "CfnTemplateBucket4840C65E",
-                          "Arn",
-                        ],
-                      },
-                      "/*",
-                    ],
-                  ],
-                },
-              ],
             },
           ],
           "Version": "2012-10-17",
@@ -845,11 +853,11 @@ exports[`CostGuardianStack: Testes de Asserção e Segurança Snapshot do Stack 
     },
     "CostGuardianAPID69A7606": {
       "Properties": {
-        "Name": "Cost Guardian API",
+        "Name": "CostGuardianApi",
       },
       "Type": "AWS::ApiGateway::RestApi",
     },
-    "CostGuardianAPIDeployment48440B889fa8713e5a4abcf62b80e7df8354a686": {
+    "CostGuardianAPIDeployment48440B88c3236c76c197bb3744f72b0c884475ed": {
       "DependsOn": [
         "CostGuardianAPIapiaccepttermsOPTIONS45388E88",
         "CostGuardianAPIapiaccepttermsPOSTD1D1BAEE",
@@ -935,6 +943,9 @@ exports[`CostGuardianStack: Testes de Asserção e Segurança Snapshot do Stack 
         "CostGuardianAPIapiupgrade1D7FAC45",
         "CostGuardianAPIOPTIONS325659A2",
       ],
+      "Metadata": {
+        "aws:cdk:do-not-refactor": true,
+      },
       "Properties": {
         "Description": "Automatically created by the RestApi construct",
         "RestApiId": {
@@ -949,12 +960,29 @@ exports[`CostGuardianStack: Testes de Asserção e Segurança Snapshot do Stack 
       ],
       "Properties": {
         "DeploymentId": {
-          "Ref": "CostGuardianAPIDeployment48440B889fa8713e5a4abcf62b80e7df8354a686",
+          "Ref": "CostGuardianAPIDeployment48440B88c3236c76c197bb3744f72b0c884475ed",
         },
+        "MethodSettings": [
+          {
+            "DataTraceEnabled": false,
+            "HttpMethod": "*",
+            "ResourcePath": "/*",
+            "ThrottlingBurstLimit": 50,
+            "ThrottlingRateLimit": 100,
+          },
+          {
+            "DataTraceEnabled": false,
+            "HttpMethod": "*",
+            "ResourcePath": "/*",
+            "ThrottlingBurstLimit": 50,
+            "ThrottlingRateLimit": 100,
+          },
+        ],
         "RestApiId": {
           "Ref": "CostGuardianAPID69A7606",
         },
         "StageName": "prod",
+        "TracingEnabled": true,
       },
       "Type": "AWS::ApiGateway::Stage",
     },
@@ -5217,179 +5245,6 @@ exports[`CostGuardianStack: Testes de Asserção e Segurança Snapshot do Stack 
       },
       "Type": "AWS::Lambda::Permission",
     },
-    "CostGuardianFrontend9C277927": {
-      "Properties": {
-        "BasicAuthConfig": {
-          "EnableBasicAuth": false,
-        },
-        "BuildSpec": {
-          "Fn::Join": [
-            "",
-            [
-              "version: "1.0"
-frontend:
-  phases:
-    preBuild:
-      commands:
-        - cd frontend
-        - npm ci
-    build:
-      commands:
-        - echo "NEXT_PUBLIC_AWS_REGION=",
-              {
-                "Ref": "AWS::Region",
-              },
-              "" >> .env.production
-        - echo "NEXT_PUBLIC_API_URL=https://",
-              {
-                "Ref": "CostGuardianAPID69A7606",
-              },
-              ".execute-api.",
-              {
-                "Ref": "AWS::Region",
-              },
-              ".",
-              {
-                "Ref": "AWS::URLSuffix",
-              },
-              "/",
-              {
-                "Ref": "CostGuardianAPIDeploymentStageprod2322FA4F",
-              },
-              "/" >> .env.production
-        - echo "NEXT_PUBLIC_COGNITO_USER_POOL_ID=",
-              {
-                "Ref": "CostGuardianPoolF8005E80",
-              },
-              "" >> .env.production
-        - echo "NEXT_PUBLIC_COGNITO_USER_POOL_CLIENT_ID=",
-              {
-                "Ref": "CostGuardianUserPoolClient13CE29CE",
-              },
-              "" >> .env.production
-        - echo "NEXT_PUBLIC_COGNITO_IDENTITY_POOL_ID=",
-              {
-                "Ref": "CostGuardianIdentityPool",
-              },
-              "" >> .env.production
-        - echo "NEXT_PUBLIC_CFN_TEMPLATE_URL=",
-              {
-                "Fn::GetAtt": [
-                  "CfnTemplateBucket4840C65E",
-                  "WebsiteURL",
-                ],
-              },
-              "/template.yaml" >> .env.production
-        - npm run build
-  artifacts:
-    baseDirectory: frontend/.next
-    files:
-      - "**/*"
-  cache:
-    paths:
-      - frontend/node_modules/**/*
-",
-            ],
-          ],
-        },
-        "EnvironmentVariables": [
-          {
-            "Name": "_LIVE_UPDATES",
-            "Value": "[{"pkg":"@aws-amplify/cli","type":"npm","version":"latest"}]",
-          },
-          {
-            "Name": "AMPLIFY_NODE_VERSION",
-            "Value": "18",
-          },
-        ],
-        "IAMServiceRole": {
-          "Fn::GetAtt": [
-            "CostGuardianFrontendRole3C415262",
-            "Arn",
-          ],
-        },
-        "Name": "CostGuardianApp",
-        "OauthToken": "{{resolve:secretsmanager:dummy-secret:SecretString:github-token::}}",
-        "Platform": "WEB",
-        "Repository": "https://github.com/test/repo",
-      },
-      "Type": "AWS::Amplify::App",
-    },
-    "CostGuardianFrontendRole3C415262": {
-      "Properties": {
-        "AssumeRolePolicyDocument": {
-          "Statement": [
-            {
-              "Action": "sts:AssumeRole",
-              "Effect": "Allow",
-              "Principal": {
-                "Service": "amplify.amazonaws.com",
-              },
-            },
-          ],
-          "Version": "2012-10-17",
-        },
-      },
-      "Type": "AWS::IAM::Role",
-    },
-    "CostGuardianFrontendmain353DA911": {
-      "Properties": {
-        "AppId": {
-          "Fn::GetAtt": [
-            "CostGuardianFrontend9C277927",
-            "AppId",
-          ],
-        },
-        "BranchName": "main",
-        "EnableAutoBuild": true,
-        "EnablePullRequestPreview": true,
-        "Stage": "PRODUCTION",
-      },
-      "Type": "AWS::Amplify::Branch",
-    },
-    "CostGuardianFrontendtestexamplecomD20722AE": {
-      "Properties": {
-        "AppId": {
-          "Fn::GetAtt": [
-            "CostGuardianFrontend9C277927",
-            "AppId",
-          ],
-        },
-        "AutoSubDomainCreationPatterns": [
-          "*",
-          "pr*",
-        ],
-        "AutoSubDomainIAMRole": {
-          "Fn::GetAtt": [
-            "CostGuardianFrontendRole3C415262",
-            "Arn",
-          ],
-        },
-        "DomainName": "test.example.com",
-        "EnableAutoSubDomain": true,
-        "SubDomainSettings": [
-          {
-            "BranchName": {
-              "Fn::GetAtt": [
-                "CostGuardianFrontendmain353DA911",
-                "BranchName",
-              ],
-            },
-            "Prefix": "www",
-          },
-          {
-            "BranchName": {
-              "Fn::GetAtt": [
-                "CostGuardianFrontendmain353DA911",
-                "BranchName",
-              ],
-            },
-            "Prefix": "",
-          },
-        ],
-      },
-      "Type": "AWS::Amplify::Domain",
-    },
     "CostGuardianIdentityPool": {
       "Properties": {
         "AllowUnauthenticatedIdentities": false,
@@ -5410,7 +5265,7 @@ frontend:
       "Type": "AWS::Cognito::IdentityPool",
     },
     "CostGuardianPoolF8005E80": {
-      "DeletionPolicy": "Retain",
+      "DeletionPolicy": "Delete",
       "Properties": {
         "AccountRecoverySetting": {
           "RecoveryMechanisms": [
@@ -5432,6 +5287,15 @@ frontend:
         ],
         "EmailVerificationMessage": "The verification code to your new account is {####}",
         "EmailVerificationSubject": "Verify your new account",
+        "Policies": {
+          "PasswordPolicy": {
+            "MinimumLength": 8,
+            "RequireLowercase": true,
+            "RequireNumbers": true,
+            "RequireSymbols": true,
+            "RequireUppercase": true,
+          },
+        },
         "SmsVerificationMessage": "The verification code to your new account is {####}",
         "UsernameAttributes": [
           "email",
@@ -5444,10 +5308,10 @@ frontend:
         },
       },
       "Type": "AWS::Cognito::UserPool",
-      "UpdateReplacePolicy": "Retain",
+      "UpdateReplacePolicy": "Delete",
     },
     "CostGuardianTable970FEF22": {
-      "DeletionPolicy": "Delete",
+      "DeletionPolicy": "Retain",
       "Properties": {
         "AttributeDefinitions": [
           {
@@ -5647,12 +5511,44 @@ frontend:
             "KeyType": "RANGE",
           },
         ],
+        "PointInTimeRecoverySpecification": {
+          "PointInTimeRecoveryEnabled": true,
+        },
+        "SSESpecification": {
+          "KMSMasterKeyId": {
+            "Fn::GetAtt": [
+              "DynamoKmsKeyD42E803B",
+              "Arn",
+            ],
+          },
+          "SSEEnabled": true,
+          "SSEType": "KMS",
+        },
         "StreamSpecification": {
           "StreamViewType": "NEW_AND_OLD_IMAGES",
         },
+        "TableName": "CostGuardianTable",
+        "Tags": [
+          {
+            "Key": "Environment",
+            "Value": "Test",
+          },
+          {
+            "Key": "Project",
+            "Value": "CostGuardian",
+          },
+          {
+            "Key": "Owner",
+            "Value": "FinOpsTeam",
+          },
+          {
+            "Key": "CostCenter",
+            "Value": "12345",
+          },
+        ],
       },
       "Type": "AWS::DynamoDB::Table",
-      "UpdateReplacePolicy": "Delete",
+      "UpdateReplacePolicy": "Retain",
     },
     "CostGuardianUserPoolClient13CE29CE": {
       "Properties": {
@@ -5681,8 +5577,485 @@ frontend:
       },
       "Type": "AWS::Cognito::UserPoolClient",
     },
+    "CostGuardianVpcB2B7D188": {
+      "Properties": {
+        "CidrBlock": "10.0.0.0/16",
+        "EnableDnsHostnames": true,
+        "EnableDnsSupport": true,
+        "InstanceTenancy": "default",
+        "Tags": [
+          {
+            "Key": "Name",
+            "Value": "MyTestStack/CostGuardianVpc",
+          },
+        ],
+      },
+      "Type": "AWS::EC2::VPC",
+    },
+    "CostGuardianVpcDynamoDBEndpoint742CE152": {
+      "Properties": {
+        "RouteTableIds": [
+          {
+            "Ref": "CostGuardianVpcPrivateSubnet1RouteTable0BC6C19F",
+          },
+          {
+            "Ref": "CostGuardianVpcPrivateSubnet2RouteTableB72412A7",
+          },
+          {
+            "Ref": "CostGuardianVpcPublicSubnet1RouteTable8A5E96A4",
+          },
+          {
+            "Ref": "CostGuardianVpcPublicSubnet2RouteTable7A770E16",
+          },
+        ],
+        "ServiceName": {
+          "Fn::Join": [
+            "",
+            [
+              "com.amazonaws.",
+              {
+                "Ref": "AWS::Region",
+              },
+              ".dynamodb",
+            ],
+          ],
+        },
+        "Tags": [
+          {
+            "Key": "Name",
+            "Value": "MyTestStack/CostGuardianVpc",
+          },
+        ],
+        "VpcEndpointType": "Gateway",
+        "VpcId": {
+          "Ref": "CostGuardianVpcB2B7D188",
+        },
+      },
+      "Type": "AWS::EC2::VPCEndpoint",
+    },
+    "CostGuardianVpcIGW3210E578": {
+      "Properties": {
+        "Tags": [
+          {
+            "Key": "Name",
+            "Value": "MyTestStack/CostGuardianVpc",
+          },
+        ],
+      },
+      "Type": "AWS::EC2::InternetGateway",
+    },
+    "CostGuardianVpcPrivateSubnet1DefaultRouteF69618E7": {
+      "Properties": {
+        "DestinationCidrBlock": "0.0.0.0/0",
+        "NatGatewayId": {
+          "Ref": "CostGuardianVpcPublicSubnet1NATGateway6EBA96D6",
+        },
+        "RouteTableId": {
+          "Ref": "CostGuardianVpcPrivateSubnet1RouteTable0BC6C19F",
+        },
+      },
+      "Type": "AWS::EC2::Route",
+    },
+    "CostGuardianVpcPrivateSubnet1RouteTable0BC6C19F": {
+      "Properties": {
+        "Tags": [
+          {
+            "Key": "Name",
+            "Value": "MyTestStack/CostGuardianVpc/PrivateSubnet1",
+          },
+        ],
+        "VpcId": {
+          "Ref": "CostGuardianVpcB2B7D188",
+        },
+      },
+      "Type": "AWS::EC2::RouteTable",
+    },
+    "CostGuardianVpcPrivateSubnet1RouteTableAssociation93CAD386": {
+      "Properties": {
+        "RouteTableId": {
+          "Ref": "CostGuardianVpcPrivateSubnet1RouteTable0BC6C19F",
+        },
+        "SubnetId": {
+          "Ref": "CostGuardianVpcPrivateSubnet1Subnet97B65F1D",
+        },
+      },
+      "Type": "AWS::EC2::SubnetRouteTableAssociation",
+    },
+    "CostGuardianVpcPrivateSubnet1Subnet97B65F1D": {
+      "Properties": {
+        "AvailabilityZone": {
+          "Fn::Select": [
+            0,
+            {
+              "Fn::GetAZs": "",
+            },
+          ],
+        },
+        "CidrBlock": "10.0.2.0/24",
+        "MapPublicIpOnLaunch": false,
+        "Tags": [
+          {
+            "Key": "aws-cdk:subnet-name",
+            "Value": "Private",
+          },
+          {
+            "Key": "aws-cdk:subnet-type",
+            "Value": "Private",
+          },
+          {
+            "Key": "Name",
+            "Value": "MyTestStack/CostGuardianVpc/PrivateSubnet1",
+          },
+        ],
+        "VpcId": {
+          "Ref": "CostGuardianVpcB2B7D188",
+        },
+      },
+      "Type": "AWS::EC2::Subnet",
+    },
+    "CostGuardianVpcPrivateSubnet2DefaultRoute2AE993EA": {
+      "Properties": {
+        "DestinationCidrBlock": "0.0.0.0/0",
+        "NatGatewayId": {
+          "Ref": "CostGuardianVpcPublicSubnet2NATGateway6123009C",
+        },
+        "RouteTableId": {
+          "Ref": "CostGuardianVpcPrivateSubnet2RouteTableB72412A7",
+        },
+      },
+      "Type": "AWS::EC2::Route",
+    },
+    "CostGuardianVpcPrivateSubnet2RouteTableAssociation5D775D04": {
+      "Properties": {
+        "RouteTableId": {
+          "Ref": "CostGuardianVpcPrivateSubnet2RouteTableB72412A7",
+        },
+        "SubnetId": {
+          "Ref": "CostGuardianVpcPrivateSubnet2SubnetB71E218F",
+        },
+      },
+      "Type": "AWS::EC2::SubnetRouteTableAssociation",
+    },
+    "CostGuardianVpcPrivateSubnet2RouteTableB72412A7": {
+      "Properties": {
+        "Tags": [
+          {
+            "Key": "Name",
+            "Value": "MyTestStack/CostGuardianVpc/PrivateSubnet2",
+          },
+        ],
+        "VpcId": {
+          "Ref": "CostGuardianVpcB2B7D188",
+        },
+      },
+      "Type": "AWS::EC2::RouteTable",
+    },
+    "CostGuardianVpcPrivateSubnet2SubnetB71E218F": {
+      "Properties": {
+        "AvailabilityZone": {
+          "Fn::Select": [
+            1,
+            {
+              "Fn::GetAZs": "",
+            },
+          ],
+        },
+        "CidrBlock": "10.0.3.0/24",
+        "MapPublicIpOnLaunch": false,
+        "Tags": [
+          {
+            "Key": "aws-cdk:subnet-name",
+            "Value": "Private",
+          },
+          {
+            "Key": "aws-cdk:subnet-type",
+            "Value": "Private",
+          },
+          {
+            "Key": "Name",
+            "Value": "MyTestStack/CostGuardianVpc/PrivateSubnet2",
+          },
+        ],
+        "VpcId": {
+          "Ref": "CostGuardianVpcB2B7D188",
+        },
+      },
+      "Type": "AWS::EC2::Subnet",
+    },
+    "CostGuardianVpcPublicSubnet1DefaultRoute6062545C": {
+      "DependsOn": [
+        "CostGuardianVpcVPCGW34FBF78F",
+      ],
+      "Properties": {
+        "DestinationCidrBlock": "0.0.0.0/0",
+        "GatewayId": {
+          "Ref": "CostGuardianVpcIGW3210E578",
+        },
+        "RouteTableId": {
+          "Ref": "CostGuardianVpcPublicSubnet1RouteTable8A5E96A4",
+        },
+      },
+      "Type": "AWS::EC2::Route",
+    },
+    "CostGuardianVpcPublicSubnet1EIPA9B6AFE2": {
+      "Properties": {
+        "Domain": "vpc",
+        "Tags": [
+          {
+            "Key": "Name",
+            "Value": "MyTestStack/CostGuardianVpc/PublicSubnet1",
+          },
+        ],
+      },
+      "Type": "AWS::EC2::EIP",
+    },
+    "CostGuardianVpcPublicSubnet1NATGateway6EBA96D6": {
+      "DependsOn": [
+        "CostGuardianVpcPublicSubnet1DefaultRoute6062545C",
+        "CostGuardianVpcPublicSubnet1RouteTableAssociation04EB322C",
+      ],
+      "Properties": {
+        "AllocationId": {
+          "Fn::GetAtt": [
+            "CostGuardianVpcPublicSubnet1EIPA9B6AFE2",
+            "AllocationId",
+          ],
+        },
+        "SubnetId": {
+          "Ref": "CostGuardianVpcPublicSubnet1Subnet637DA783",
+        },
+        "Tags": [
+          {
+            "Key": "Name",
+            "Value": "MyTestStack/CostGuardianVpc/PublicSubnet1",
+          },
+        ],
+      },
+      "Type": "AWS::EC2::NatGateway",
+    },
+    "CostGuardianVpcPublicSubnet1RouteTable8A5E96A4": {
+      "Properties": {
+        "Tags": [
+          {
+            "Key": "Name",
+            "Value": "MyTestStack/CostGuardianVpc/PublicSubnet1",
+          },
+        ],
+        "VpcId": {
+          "Ref": "CostGuardianVpcB2B7D188",
+        },
+      },
+      "Type": "AWS::EC2::RouteTable",
+    },
+    "CostGuardianVpcPublicSubnet1RouteTableAssociation04EB322C": {
+      "Properties": {
+        "RouteTableId": {
+          "Ref": "CostGuardianVpcPublicSubnet1RouteTable8A5E96A4",
+        },
+        "SubnetId": {
+          "Ref": "CostGuardianVpcPublicSubnet1Subnet637DA783",
+        },
+      },
+      "Type": "AWS::EC2::SubnetRouteTableAssociation",
+    },
+    "CostGuardianVpcPublicSubnet1Subnet637DA783": {
+      "Properties": {
+        "AvailabilityZone": {
+          "Fn::Select": [
+            0,
+            {
+              "Fn::GetAZs": "",
+            },
+          ],
+        },
+        "CidrBlock": "10.0.0.0/24",
+        "MapPublicIpOnLaunch": true,
+        "Tags": [
+          {
+            "Key": "aws-cdk:subnet-name",
+            "Value": "Public",
+          },
+          {
+            "Key": "aws-cdk:subnet-type",
+            "Value": "Public",
+          },
+          {
+            "Key": "Name",
+            "Value": "MyTestStack/CostGuardianVpc/PublicSubnet1",
+          },
+        ],
+        "VpcId": {
+          "Ref": "CostGuardianVpcB2B7D188",
+        },
+      },
+      "Type": "AWS::EC2::Subnet",
+    },
+    "CostGuardianVpcPublicSubnet2DefaultRoute7CB45562": {
+      "DependsOn": [
+        "CostGuardianVpcVPCGW34FBF78F",
+      ],
+      "Properties": {
+        "DestinationCidrBlock": "0.0.0.0/0",
+        "GatewayId": {
+          "Ref": "CostGuardianVpcIGW3210E578",
+        },
+        "RouteTableId": {
+          "Ref": "CostGuardianVpcPublicSubnet2RouteTable7A770E16",
+        },
+      },
+      "Type": "AWS::EC2::Route",
+    },
+    "CostGuardianVpcPublicSubnet2EIP67496377": {
+      "Properties": {
+        "Domain": "vpc",
+        "Tags": [
+          {
+            "Key": "Name",
+            "Value": "MyTestStack/CostGuardianVpc/PublicSubnet2",
+          },
+        ],
+      },
+      "Type": "AWS::EC2::EIP",
+    },
+    "CostGuardianVpcPublicSubnet2NATGateway6123009C": {
+      "DependsOn": [
+        "CostGuardianVpcPublicSubnet2DefaultRoute7CB45562",
+        "CostGuardianVpcPublicSubnet2RouteTableAssociationA4E555A9",
+      ],
+      "Properties": {
+        "AllocationId": {
+          "Fn::GetAtt": [
+            "CostGuardianVpcPublicSubnet2EIP67496377",
+            "AllocationId",
+          ],
+        },
+        "SubnetId": {
+          "Ref": "CostGuardianVpcPublicSubnet2Subnet6BE53447",
+        },
+        "Tags": [
+          {
+            "Key": "Name",
+            "Value": "MyTestStack/CostGuardianVpc/PublicSubnet2",
+          },
+        ],
+      },
+      "Type": "AWS::EC2::NatGateway",
+    },
+    "CostGuardianVpcPublicSubnet2RouteTable7A770E16": {
+      "Properties": {
+        "Tags": [
+          {
+            "Key": "Name",
+            "Value": "MyTestStack/CostGuardianVpc/PublicSubnet2",
+          },
+        ],
+        "VpcId": {
+          "Ref": "CostGuardianVpcB2B7D188",
+        },
+      },
+      "Type": "AWS::EC2::RouteTable",
+    },
+    "CostGuardianVpcPublicSubnet2RouteTableAssociationA4E555A9": {
+      "Properties": {
+        "RouteTableId": {
+          "Ref": "CostGuardianVpcPublicSubnet2RouteTable7A770E16",
+        },
+        "SubnetId": {
+          "Ref": "CostGuardianVpcPublicSubnet2Subnet6BE53447",
+        },
+      },
+      "Type": "AWS::EC2::SubnetRouteTableAssociation",
+    },
+    "CostGuardianVpcPublicSubnet2Subnet6BE53447": {
+      "Properties": {
+        "AvailabilityZone": {
+          "Fn::Select": [
+            1,
+            {
+              "Fn::GetAZs": "",
+            },
+          ],
+        },
+        "CidrBlock": "10.0.1.0/24",
+        "MapPublicIpOnLaunch": true,
+        "Tags": [
+          {
+            "Key": "aws-cdk:subnet-name",
+            "Value": "Public",
+          },
+          {
+            "Key": "aws-cdk:subnet-type",
+            "Value": "Public",
+          },
+          {
+            "Key": "Name",
+            "Value": "MyTestStack/CostGuardianVpc/PublicSubnet2",
+          },
+        ],
+        "VpcId": {
+          "Ref": "CostGuardianVpcB2B7D188",
+        },
+      },
+      "Type": "AWS::EC2::Subnet",
+    },
+    "CostGuardianVpcS3EndpointBFE718A3": {
+      "Properties": {
+        "RouteTableIds": [
+          {
+            "Ref": "CostGuardianVpcPrivateSubnet1RouteTable0BC6C19F",
+          },
+          {
+            "Ref": "CostGuardianVpcPrivateSubnet2RouteTableB72412A7",
+          },
+          {
+            "Ref": "CostGuardianVpcPublicSubnet1RouteTable8A5E96A4",
+          },
+          {
+            "Ref": "CostGuardianVpcPublicSubnet2RouteTable7A770E16",
+          },
+        ],
+        "ServiceName": {
+          "Fn::Join": [
+            "",
+            [
+              "com.amazonaws.",
+              {
+                "Ref": "AWS::Region",
+              },
+              ".s3",
+            ],
+          ],
+        },
+        "Tags": [
+          {
+            "Key": "Name",
+            "Value": "MyTestStack/CostGuardianVpc",
+          },
+        ],
+        "VpcEndpointType": "Gateway",
+        "VpcId": {
+          "Ref": "CostGuardianVpcB2B7D188",
+        },
+      },
+      "Type": "AWS::EC2::VPCEndpoint",
+    },
+    "CostGuardianVpcVPCGW34FBF78F": {
+      "Properties": {
+        "InternetGatewayId": {
+          "Ref": "CostGuardianVpcIGW3210E578",
+        },
+        "VpcId": {
+          "Ref": "CostGuardianVpcB2B7D188",
+        },
+      },
+      "Type": "AWS::EC2::VPCGatewayAttachment",
+    },
     "CostIngestor0963D669": {
       "DependsOn": [
+        "CostGuardianVpcPrivateSubnet1DefaultRouteF69618E7",
+        "CostGuardianVpcPrivateSubnet1RouteTableAssociation93CAD386",
+        "CostGuardianVpcPrivateSubnet2DefaultRoute2AE993EA",
+        "CostGuardianVpcPrivateSubnet2RouteTableAssociation5D775D04",
         "CostIngestorRoleDefaultPolicy26EC9573",
         "CostIngestorRole3830D4D6",
       ],
@@ -5691,11 +6064,10 @@ frontend:
           "S3Bucket": {
             "Fn::Sub": "cdk-hnb659fds-assets-\${AWS::AccountId}-\${AWS::Region}",
           },
-          "S3Key": "495c6132680d9c271c2aa7e8d7248ac47ee8c4e81f6645e32cca6e139cd931d3.zip",
+          "S3Key": "824a0f45aea4c612d4cc99cc891140f4c7dd1568dfc937e242554bfd26192498.zip",
         },
         "Environment": {
           "Variables": {
-            "AWS_NODEJS_CONNECTION_REUSE_ENABLED": "1",
             "DYNAMODB_TABLE": {
               "Ref": "CostGuardianTable970FEF22",
             },
@@ -5704,7 +6076,13 @@ frontend:
             },
           },
         },
-        "Handler": "index.handler",
+        "Handler": "ingest-costs.handler",
+        "LoggingConfig": {
+          "LogGroup": {
+            "Ref": "CostIngestorLogGroup5E3431BE",
+          },
+        },
+        "ReservedConcurrentExecutions": 5,
         "Role": {
           "Fn::GetAtt": [
             "CostIngestorRole3830D4D6",
@@ -5713,8 +6091,40 @@ frontend:
         },
         "Runtime": "nodejs18.x",
         "Timeout": 300,
+        "VpcConfig": {
+          "SecurityGroupIds": [
+            {
+              "Fn::GetAtt": [
+                "LambdaSecurityGroup0BD9FC99",
+                "GroupId",
+              ],
+            },
+          ],
+          "SubnetIds": [
+            {
+              "Ref": "CostGuardianVpcPrivateSubnet1Subnet97B65F1D",
+            },
+            {
+              "Ref": "CostGuardianVpcPrivateSubnet2SubnetB71E218F",
+            },
+          ],
+        },
       },
       "Type": "AWS::Lambda::Function",
+    },
+    "CostIngestorLogGroup5E3431BE": {
+      "DeletionPolicy": "Delete",
+      "Properties": {
+        "KmsKeyId": {
+          "Fn::GetAtt": [
+            "LogGroupKmsKey694BE21C",
+            "Arn",
+          ],
+        },
+        "RetentionInDays": 30,
+      },
+      "Type": "AWS::Logs::LogGroup",
+      "UpdateReplacePolicy": "Delete",
     },
     "CostIngestorRole3830D4D6": {
       "Properties": {
@@ -5794,6 +6204,19 @@ frontend:
           "Statement": [
             {
               "Action": [
+                "kms:Decrypt",
+                "kms:DescribeKey",
+              ],
+              "Effect": "Allow",
+              "Resource": {
+                "Fn::GetAtt": [
+                  "DynamoKmsKeyD42E803B",
+                  "Arn",
+                ],
+              },
+            },
+            {
+              "Action": [
                 "dynamodb:BatchGetItem",
                 "dynamodb:GetRecords",
                 "dynamodb:GetShardIterator",
@@ -5845,64 +6268,6 @@ frontend:
         ],
       },
       "Type": "AWS::IAM::Policy",
-    },
-    "CustomS3AutoDeleteObjectsCustomResourceProviderHandler9D90184F": {
-      "DependsOn": [
-        "CustomS3AutoDeleteObjectsCustomResourceProviderRole3B1BD092",
-      ],
-      "Properties": {
-        "Code": {
-          "S3Bucket": {
-            "Fn::Sub": "cdk-hnb659fds-assets-\${AWS::AccountId}-\${AWS::Region}",
-          },
-          "S3Key": "b7f33614a69548d6bafe224d751a7ef238cde19097415e553fe8b63a4c8fd8a6.zip",
-        },
-        "Description": {
-          "Fn::Join": [
-            "",
-            [
-              "Lambda function for auto-deleting objects in ",
-              {
-                "Ref": "CfnTemplateBucket4840C65E",
-              },
-              " S3 bucket.",
-            ],
-          ],
-        },
-        "Handler": "index.handler",
-        "MemorySize": 128,
-        "Role": {
-          "Fn::GetAtt": [
-            "CustomS3AutoDeleteObjectsCustomResourceProviderRole3B1BD092",
-            "Arn",
-          ],
-        },
-        "Runtime": "nodejs18.x",
-        "Timeout": 900,
-      },
-      "Type": "AWS::Lambda::Function",
-    },
-    "CustomS3AutoDeleteObjectsCustomResourceProviderRole3B1BD092": {
-      "Properties": {
-        "AssumeRolePolicyDocument": {
-          "Statement": [
-            {
-              "Action": "sts:AssumeRole",
-              "Effect": "Allow",
-              "Principal": {
-                "Service": "lambda.amazonaws.com",
-              },
-            },
-          ],
-          "Version": "2012-10-17",
-        },
-        "ManagedPolicyArns": [
-          {
-            "Fn::Sub": "arn:\${AWS::Partition}:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole",
-          },
-        ],
-      },
-      "Type": "AWS::IAM::Role",
     },
     "DailyCostIngestionRule42566126": {
       "Properties": {
@@ -6023,6 +6388,19 @@ frontend:
           "Statement": [
             {
               "Action": [
+                "kms:Decrypt",
+                "kms:DescribeKey",
+              ],
+              "Effect": "Allow",
+              "Resource": {
+                "Fn::GetAtt": [
+                  "DynamoKmsKeyD42E803B",
+                  "Arn",
+                ],
+              },
+            },
+            {
+              "Action": [
                 "dynamodb:BatchGetItem",
                 "dynamodb:GetRecords",
                 "dynamodb:GetShardIterator",
@@ -6070,6 +6448,10 @@ frontend:
     },
     "DeleteUnusedEbs3A5FAC7B": {
       "DependsOn": [
+        "CostGuardianVpcPrivateSubnet1DefaultRouteF69618E7",
+        "CostGuardianVpcPrivateSubnet1RouteTableAssociation93CAD386",
+        "CostGuardianVpcPrivateSubnet2DefaultRoute2AE993EA",
+        "CostGuardianVpcPrivateSubnet2RouteTableAssociation5D775D04",
         "DeleteEbsRoleDefaultPolicyBE30F538",
         "DeleteEbsRole476B95CD",
       ],
@@ -6078,17 +6460,23 @@ frontend:
           "S3Bucket": {
             "Fn::Sub": "cdk-hnb659fds-assets-\${AWS::AccountId}-\${AWS::Region}",
           },
-          "S3Key": "2d24da6d4634f0ee3393a13cc05cbcda7708351ef54660e24b17168618687f7a.zip",
+          "S3Key": "824a0f45aea4c612d4cc99cc891140f4c7dd1568dfc937e242554bfd26192498.zip",
         },
         "Environment": {
           "Variables": {
-            "AWS_NODEJS_CONNECTION_REUSE_ENABLED": "1",
             "DYNAMODB_TABLE": {
               "Ref": "CostGuardianTable970FEF22",
             },
           },
         },
-        "Handler": "index.handler",
+        "FunctionName": "DeleteUnusedEbs",
+        "Handler": "delete-unused-ebs.handler",
+        "LoggingConfig": {
+          "LogGroup": {
+            "Ref": "DeleteUnusedEbsLogGroupD36C5C82",
+          },
+        },
+        "ReservedConcurrentExecutions": 10,
         "Role": {
           "Fn::GetAtt": [
             "DeleteEbsRole476B95CD",
@@ -6097,25 +6485,111 @@ frontend:
         },
         "Runtime": "nodejs18.x",
         "Timeout": 300,
+        "VpcConfig": {
+          "SecurityGroupIds": [
+            {
+              "Fn::GetAtt": [
+                "LambdaSecurityGroup0BD9FC99",
+                "GroupId",
+              ],
+            },
+          ],
+          "SubnetIds": [
+            {
+              "Ref": "CostGuardianVpcPrivateSubnet1Subnet97B65F1D",
+            },
+            {
+              "Ref": "CostGuardianVpcPrivateSubnet2SubnetB71E218F",
+            },
+          ],
+        },
       },
       "Type": "AWS::Lambda::Function",
     },
+    "DeleteUnusedEbsLogGroupD36C5C82": {
+      "DeletionPolicy": "Delete",
+      "Properties": {
+        "KmsKeyId": {
+          "Fn::GetAtt": [
+            "LogGroupKmsKey694BE21C",
+            "Arn",
+          ],
+        },
+        "RetentionInDays": 30,
+      },
+      "Type": "AWS::Logs::LogGroup",
+      "UpdateReplacePolicy": "Delete",
+    },
+    "DynamoKmsKeyD42E803B": {
+      "DeletionPolicy": "Delete",
+      "Properties": {
+        "Description": "KMS key for DynamoDB table encryption",
+        "EnableKeyRotation": true,
+        "KeyPolicy": {
+          "Statement": [
+            {
+              "Action": "kms:*",
+              "Effect": "Allow",
+              "Principal": {
+                "AWS": {
+                  "Fn::Join": [
+                    "",
+                    [
+                      "arn:",
+                      {
+                        "Ref": "AWS::Partition",
+                      },
+                      ":iam::",
+                      {
+                        "Ref": "AWS::AccountId",
+                      },
+                      ":root",
+                    ],
+                  ],
+                },
+              },
+              "Resource": "*",
+            },
+          ],
+          "Version": "2012-10-17",
+        },
+      },
+      "Type": "AWS::KMS::Key",
+      "UpdateReplacePolicy": "Delete",
+    },
     "EventBusPolicy": {
       "Properties": {
-        "Action": "events:PutEvents",
-        "Condition": {
-          "Key": "aws:PrincipalArn",
-          "Type": "StringEquals",
-          "Value": "arn:aws:iam::*:role/EventBusRole",
-        },
         "EventBusName": "default",
-        "Principal": "*",
+        "Statement": {
+          "Fn::Join": [
+            "",
+            [
+              "{"Effect":"Allow","Principal":"*","Action":"events:PutEvents","Resource":"arn:",
+              {
+                "Ref": "AWS::Partition",
+              },
+              ":events:",
+              {
+                "Ref": "AWS::Region",
+              },
+              ":",
+              {
+                "Ref": "AWS::AccountId",
+              },
+              ":event-bus/default","Condition":{"StringEquals":{"aws:PrincipalArn":"arn:aws:iam::*:role/EventBusRole"}}}",
+            ],
+          ],
+        },
         "StatementId": "AllowClientHealthEvents",
       },
       "Type": "AWS::Events::EventBusPolicy",
     },
     "ExecuteRecommendation661572F9": {
       "DependsOn": [
+        "CostGuardianVpcPrivateSubnet1DefaultRouteF69618E7",
+        "CostGuardianVpcPrivateSubnet1RouteTableAssociation93CAD386",
+        "CostGuardianVpcPrivateSubnet2DefaultRoute2AE993EA",
+        "CostGuardianVpcPrivateSubnet2RouteTableAssociation5D775D04",
         "ExecuteRecommendationServiceRoleDefaultPolicy3123CFC9",
         "ExecuteRecommendationServiceRoleBA12FBD4",
       ],
@@ -6124,18 +6598,24 @@ frontend:
           "S3Bucket": {
             "Fn::Sub": "cdk-hnb659fds-assets-\${AWS::AccountId}-\${AWS::Region}",
           },
-          "S3Key": "658c6a8101e806bdcc10436405f7a5120b036fbb4cc3f93e2f60559465c9fd79.zip",
+          "S3Key": "824a0f45aea4c612d4cc99cc891140f4c7dd1568dfc937e242554bfd26192498.zip",
         },
         "Environment": {
           "Variables": {
-            "AWS_NODEJS_CONNECTION_REUSE_ENABLED": "1",
             "DYNAMODB_TABLE": {
               "Ref": "CostGuardianTable970FEF22",
             },
           },
         },
-        "Handler": "index.handler",
+        "FunctionName": "ExecuteRecommendation",
+        "Handler": "execute-recommendation.handler",
+        "LoggingConfig": {
+          "LogGroup": {
+            "Ref": "ExecuteRecommendationLogGroupC085BE40",
+          },
+        },
         "MemorySize": 256,
+        "ReservedConcurrentExecutions": 10,
         "Role": {
           "Fn::GetAtt": [
             "ExecuteRecommendationServiceRoleBA12FBD4",
@@ -6144,10 +6624,48 @@ frontend:
         },
         "Runtime": "nodejs18.x",
         "Timeout": 300,
+        "VpcConfig": {
+          "SecurityGroupIds": [
+            {
+              "Fn::GetAtt": [
+                "LambdaSecurityGroup0BD9FC99",
+                "GroupId",
+              ],
+            },
+          ],
+          "SubnetIds": [
+            {
+              "Ref": "CostGuardianVpcPrivateSubnet1Subnet97B65F1D",
+            },
+            {
+              "Ref": "CostGuardianVpcPrivateSubnet2SubnetB71E218F",
+            },
+          ],
+        },
       },
       "Type": "AWS::Lambda::Function",
     },
+    "ExecuteRecommendationLogGroupC085BE40": {
+      "DeletionPolicy": "Delete",
+      "Properties": {
+        "KmsKeyId": {
+          "Fn::GetAtt": [
+            "LogGroupKmsKey694BE21C",
+            "Arn",
+          ],
+        },
+        "RetentionInDays": 30,
+      },
+      "Type": "AWS::Logs::LogGroup",
+      "UpdateReplacePolicy": "Delete",
+    },
     "ExecuteRecommendationServiceRoleBA12FBD4": {
+      "DependsOn": [
+        "CostGuardianVpcPrivateSubnet1DefaultRouteF69618E7",
+        "CostGuardianVpcPrivateSubnet1RouteTableAssociation93CAD386",
+        "CostGuardianVpcPrivateSubnet2DefaultRoute2AE993EA",
+        "CostGuardianVpcPrivateSubnet2RouteTableAssociation5D775D04",
+      ],
       "Properties": {
         "AssumeRolePolicyDocument": {
           "Statement": [
@@ -6174,14 +6692,48 @@ frontend:
               ],
             ],
           },
+          {
+            "Fn::Join": [
+              "",
+              [
+                "arn:",
+                {
+                  "Ref": "AWS::Partition",
+                },
+                ":iam::aws:policy/service-role/AWSLambdaVPCAccessExecutionRole",
+              ],
+            ],
+          },
         ],
       },
       "Type": "AWS::IAM::Role",
     },
     "ExecuteRecommendationServiceRoleDefaultPolicy3123CFC9": {
+      "DependsOn": [
+        "CostGuardianVpcPrivateSubnet1DefaultRouteF69618E7",
+        "CostGuardianVpcPrivateSubnet1RouteTableAssociation93CAD386",
+        "CostGuardianVpcPrivateSubnet2DefaultRoute2AE993EA",
+        "CostGuardianVpcPrivateSubnet2RouteTableAssociation5D775D04",
+      ],
       "Properties": {
         "PolicyDocument": {
           "Statement": [
+            {
+              "Action": [
+                "kms:Decrypt",
+                "kms:DescribeKey",
+                "kms:Encrypt",
+                "kms:ReEncrypt*",
+                "kms:GenerateDataKey*",
+              ],
+              "Effect": "Allow",
+              "Resource": {
+                "Fn::GetAtt": [
+                  "DynamoKmsKeyD42E803B",
+                  "Arn",
+                ],
+              },
+            },
             {
               "Action": [
                 "dynamodb:BatchGetItem",
@@ -6240,6 +6792,10 @@ frontend:
     },
     "HealthEventHandler419E37F7": {
       "DependsOn": [
+        "CostGuardianVpcPrivateSubnet1DefaultRouteF69618E7",
+        "CostGuardianVpcPrivateSubnet1RouteTableAssociation93CAD386",
+        "CostGuardianVpcPrivateSubnet2DefaultRoute2AE993EA",
+        "CostGuardianVpcPrivateSubnet2RouteTableAssociation5D775D04",
         "HealthEventHandlerServiceRoleDefaultPolicy9FC42B89",
         "HealthEventHandlerServiceRole360AB706",
       ],
@@ -6248,11 +6804,10 @@ frontend:
           "S3Bucket": {
             "Fn::Sub": "cdk-hnb659fds-assets-\${AWS::AccountId}-\${AWS::Region}",
           },
-          "S3Key": "ef3e82062b47ff911a5b8dc3e991f9976a46f76a4975fbc00d9909e6b436290b.zip",
+          "S3Key": "824a0f45aea4c612d4cc99cc891140f4c7dd1568dfc937e242554bfd26192498.zip",
         },
         "Environment": {
           "Variables": {
-            "AWS_NODEJS_CONNECTION_REUSE_ENABLED": "1",
             "DYNAMODB_TABLE": {
               "Ref": "CostGuardianTable970FEF22",
             },
@@ -6261,7 +6816,14 @@ frontend:
             },
           },
         },
-        "Handler": "index.handler",
+        "FunctionName": "HealthEventHandler",
+        "Handler": "correlate-health.handler",
+        "LoggingConfig": {
+          "LogGroup": {
+            "Ref": "HealthEventHandlerLogGroupE4D9F2FF",
+          },
+        },
+        "ReservedConcurrentExecutions": 20,
         "Role": {
           "Fn::GetAtt": [
             "HealthEventHandlerServiceRole360AB706",
@@ -6269,10 +6831,48 @@ frontend:
           ],
         },
         "Runtime": "nodejs18.x",
+        "VpcConfig": {
+          "SecurityGroupIds": [
+            {
+              "Fn::GetAtt": [
+                "LambdaSecurityGroup0BD9FC99",
+                "GroupId",
+              ],
+            },
+          ],
+          "SubnetIds": [
+            {
+              "Ref": "CostGuardianVpcPrivateSubnet1Subnet97B65F1D",
+            },
+            {
+              "Ref": "CostGuardianVpcPrivateSubnet2SubnetB71E218F",
+            },
+          ],
+        },
       },
       "Type": "AWS::Lambda::Function",
     },
+    "HealthEventHandlerLogGroupE4D9F2FF": {
+      "DeletionPolicy": "Delete",
+      "Properties": {
+        "KmsKeyId": {
+          "Fn::GetAtt": [
+            "LogGroupKmsKey694BE21C",
+            "Arn",
+          ],
+        },
+        "RetentionInDays": 30,
+      },
+      "Type": "AWS::Logs::LogGroup",
+      "UpdateReplacePolicy": "Delete",
+    },
     "HealthEventHandlerServiceRole360AB706": {
+      "DependsOn": [
+        "CostGuardianVpcPrivateSubnet1DefaultRouteF69618E7",
+        "CostGuardianVpcPrivateSubnet1RouteTableAssociation93CAD386",
+        "CostGuardianVpcPrivateSubnet2DefaultRoute2AE993EA",
+        "CostGuardianVpcPrivateSubnet2RouteTableAssociation5D775D04",
+      ],
       "Properties": {
         "AssumeRolePolicyDocument": {
           "Statement": [
@@ -6299,14 +6899,48 @@ frontend:
               ],
             ],
           },
+          {
+            "Fn::Join": [
+              "",
+              [
+                "arn:",
+                {
+                  "Ref": "AWS::Partition",
+                },
+                ":iam::aws:policy/service-role/AWSLambdaVPCAccessExecutionRole",
+              ],
+            ],
+          },
         ],
       },
       "Type": "AWS::IAM::Role",
     },
     "HealthEventHandlerServiceRoleDefaultPolicy9FC42B89": {
+      "DependsOn": [
+        "CostGuardianVpcPrivateSubnet1DefaultRouteF69618E7",
+        "CostGuardianVpcPrivateSubnet1RouteTableAssociation93CAD386",
+        "CostGuardianVpcPrivateSubnet2DefaultRoute2AE993EA",
+        "CostGuardianVpcPrivateSubnet2RouteTableAssociation5D775D04",
+      ],
       "Properties": {
         "PolicyDocument": {
           "Statement": [
+            {
+              "Action": [
+                "kms:Decrypt",
+                "kms:DescribeKey",
+                "kms:Encrypt",
+                "kms:ReEncrypt*",
+                "kms:GenerateDataKey*",
+              ],
+              "Effect": "Allow",
+              "Resource": {
+                "Fn::GetAtt": [
+                  "DynamoKmsKeyD42E803B",
+                  "Arn",
+                ],
+              },
+            },
             {
               "Action": [
                 "dynamodb:BatchGetItem",
@@ -6447,8 +7081,64 @@ frontend:
       },
       "Type": "AWS::Lambda::Permission",
     },
+    "LambdaSecurityGroup0BD9FC99": {
+      "Properties": {
+        "GroupDescription": "Allow outbound traffic for Lambdas",
+        "SecurityGroupEgress": [
+          {
+            "CidrIp": "0.0.0.0/0",
+            "Description": "Allow all outbound traffic by default",
+            "IpProtocol": "-1",
+          },
+        ],
+        "VpcId": {
+          "Ref": "CostGuardianVpcB2B7D188",
+        },
+      },
+      "Type": "AWS::EC2::SecurityGroup",
+    },
+    "LogGroupKmsKey694BE21C": {
+      "DeletionPolicy": "Delete",
+      "Properties": {
+        "EnableKeyRotation": true,
+        "KeyPolicy": {
+          "Statement": [
+            {
+              "Action": "kms:*",
+              "Effect": "Allow",
+              "Principal": {
+                "AWS": {
+                  "Fn::Join": [
+                    "",
+                    [
+                      "arn:",
+                      {
+                        "Ref": "AWS::Partition",
+                      },
+                      ":iam::",
+                      {
+                        "Ref": "AWS::AccountId",
+                      },
+                      ":root",
+                    ],
+                  ],
+                },
+              },
+              "Resource": "*",
+            },
+          ],
+          "Version": "2012-10-17",
+        },
+      },
+      "Type": "AWS::KMS::Key",
+      "UpdateReplacePolicy": "Delete",
+    },
     "MarketplaceMetering92C6E105": {
       "DependsOn": [
+        "CostGuardianVpcPrivateSubnet1DefaultRouteF69618E7",
+        "CostGuardianVpcPrivateSubnet1RouteTableAssociation93CAD386",
+        "CostGuardianVpcPrivateSubnet2DefaultRoute2AE993EA",
+        "CostGuardianVpcPrivateSubnet2RouteTableAssociation5D775D04",
         "MarketplaceMeteringServiceRoleDefaultPolicyD9FC6E35",
         "MarketplaceMeteringServiceRoleA701C5CE",
       ],
@@ -6457,18 +7147,23 @@ frontend:
           "S3Bucket": {
             "Fn::Sub": "cdk-hnb659fds-assets-\${AWS::AccountId}-\${AWS::Region}",
           },
-          "S3Key": "02058e8a38123c15bfed92c89ae1b1049ca7c98379d3fb01e7c4f6adde01b537.zip",
+          "S3Key": "824a0f45aea4c612d4cc99cc891140f4c7dd1568dfc937e242554bfd26192498.zip",
         },
         "Environment": {
           "Variables": {
-            "AWS_NODEJS_CONNECTION_REUSE_ENABLED": "1",
             "DYNAMODB_TABLE": {
               "Ref": "CostGuardianTable970FEF22",
             },
             "PRODUCT_CODE": "your-product-code",
           },
         },
-        "Handler": "index.handler",
+        "Handler": "marketplace-metering.handler",
+        "LoggingConfig": {
+          "LogGroup": {
+            "Ref": "MarketplaceMeteringLogGroup438D13E5",
+          },
+        },
+        "ReservedConcurrentExecutions": 2,
         "Role": {
           "Fn::GetAtt": [
             "MarketplaceMeteringServiceRoleA701C5CE",
@@ -6476,10 +7171,48 @@ frontend:
           ],
         },
         "Runtime": "nodejs18.x",
+        "VpcConfig": {
+          "SecurityGroupIds": [
+            {
+              "Fn::GetAtt": [
+                "LambdaSecurityGroup0BD9FC99",
+                "GroupId",
+              ],
+            },
+          ],
+          "SubnetIds": [
+            {
+              "Ref": "CostGuardianVpcPrivateSubnet1Subnet97B65F1D",
+            },
+            {
+              "Ref": "CostGuardianVpcPrivateSubnet2SubnetB71E218F",
+            },
+          ],
+        },
       },
       "Type": "AWS::Lambda::Function",
     },
+    "MarketplaceMeteringLogGroup438D13E5": {
+      "DeletionPolicy": "Delete",
+      "Properties": {
+        "KmsKeyId": {
+          "Fn::GetAtt": [
+            "LogGroupKmsKey694BE21C",
+            "Arn",
+          ],
+        },
+        "RetentionInDays": 30,
+      },
+      "Type": "AWS::Logs::LogGroup",
+      "UpdateReplacePolicy": "Delete",
+    },
     "MarketplaceMeteringServiceRoleA701C5CE": {
+      "DependsOn": [
+        "CostGuardianVpcPrivateSubnet1DefaultRouteF69618E7",
+        "CostGuardianVpcPrivateSubnet1RouteTableAssociation93CAD386",
+        "CostGuardianVpcPrivateSubnet2DefaultRoute2AE993EA",
+        "CostGuardianVpcPrivateSubnet2RouteTableAssociation5D775D04",
+      ],
       "Properties": {
         "AssumeRolePolicyDocument": {
           "Statement": [
@@ -6506,14 +7239,48 @@ frontend:
               ],
             ],
           },
+          {
+            "Fn::Join": [
+              "",
+              [
+                "arn:",
+                {
+                  "Ref": "AWS::Partition",
+                },
+                ":iam::aws:policy/service-role/AWSLambdaVPCAccessExecutionRole",
+              ],
+            ],
+          },
         ],
       },
       "Type": "AWS::IAM::Role",
     },
     "MarketplaceMeteringServiceRoleDefaultPolicyD9FC6E35": {
+      "DependsOn": [
+        "CostGuardianVpcPrivateSubnet1DefaultRouteF69618E7",
+        "CostGuardianVpcPrivateSubnet1RouteTableAssociation93CAD386",
+        "CostGuardianVpcPrivateSubnet2DefaultRoute2AE993EA",
+        "CostGuardianVpcPrivateSubnet2RouteTableAssociation5D775D04",
+      ],
       "Properties": {
         "PolicyDocument": {
           "Statement": [
+            {
+              "Action": [
+                "kms:Decrypt",
+                "kms:DescribeKey",
+                "kms:Encrypt",
+                "kms:ReEncrypt*",
+                "kms:GenerateDataKey*",
+              ],
+              "Effect": "Allow",
+              "Resource": {
+                "Fn::GetAtt": [
+                  "DynamoKmsKeyD42E803B",
+                  "Arn",
+                ],
+              },
+            },
             {
               "Action": [
                 "dynamodb:BatchGetItem",
@@ -6567,6 +7334,10 @@ frontend:
     },
     "RecommendRdsIdle878468E8": {
       "DependsOn": [
+        "CostGuardianVpcPrivateSubnet1DefaultRouteF69618E7",
+        "CostGuardianVpcPrivateSubnet1RouteTableAssociation93CAD386",
+        "CostGuardianVpcPrivateSubnet2DefaultRoute2AE993EA",
+        "CostGuardianVpcPrivateSubnet2RouteTableAssociation5D775D04",
         "RecommendRdsRoleDefaultPolicy3C979140",
         "RecommendRdsRole185A1A88",
       ],
@@ -6575,17 +7346,22 @@ frontend:
           "S3Bucket": {
             "Fn::Sub": "cdk-hnb659fds-assets-\${AWS::AccountId}-\${AWS::Region}",
           },
-          "S3Key": "eb8b9d416285d8c2994a0ac3ce82508f401e2b49155323765fd8b8a20e6c8e1c.zip",
+          "S3Key": "824a0f45aea4c612d4cc99cc891140f4c7dd1568dfc937e242554bfd26192498.zip",
         },
         "Environment": {
           "Variables": {
-            "AWS_NODEJS_CONNECTION_REUSE_ENABLED": "1",
             "DYNAMODB_TABLE": {
               "Ref": "CostGuardianTable970FEF22",
             },
           },
         },
-        "Handler": "index.handler",
+        "Handler": "recommend-rds-idle.handler",
+        "LoggingConfig": {
+          "LogGroup": {
+            "Ref": "RecommendRdsIdleLogGroup5AB11231",
+          },
+        },
+        "ReservedConcurrentExecutions": 10,
         "Role": {
           "Fn::GetAtt": [
             "RecommendRdsRole185A1A88",
@@ -6594,8 +7370,40 @@ frontend:
         },
         "Runtime": "nodejs18.x",
         "Timeout": 300,
+        "VpcConfig": {
+          "SecurityGroupIds": [
+            {
+              "Fn::GetAtt": [
+                "LambdaSecurityGroup0BD9FC99",
+                "GroupId",
+              ],
+            },
+          ],
+          "SubnetIds": [
+            {
+              "Ref": "CostGuardianVpcPrivateSubnet1Subnet97B65F1D",
+            },
+            {
+              "Ref": "CostGuardianVpcPrivateSubnet2SubnetB71E218F",
+            },
+          ],
+        },
       },
       "Type": "AWS::Lambda::Function",
+    },
+    "RecommendRdsIdleLogGroup5AB11231": {
+      "DeletionPolicy": "Delete",
+      "Properties": {
+        "KmsKeyId": {
+          "Fn::GetAtt": [
+            "LogGroupKmsKey694BE21C",
+            "Arn",
+          ],
+        },
+        "RetentionInDays": 30,
+      },
+      "Type": "AWS::Logs::LogGroup",
+      "UpdateReplacePolicy": "Delete",
     },
     "RecommendRdsRole185A1A88": {
       "Properties": {
@@ -6690,6 +7498,22 @@ frontend:
           "Statement": [
             {
               "Action": [
+                "kms:Decrypt",
+                "kms:DescribeKey",
+                "kms:Encrypt",
+                "kms:ReEncrypt*",
+                "kms:GenerateDataKey*",
+              ],
+              "Effect": "Allow",
+              "Resource": {
+                "Fn::GetAtt": [
+                  "DynamoKmsKeyD42E803B",
+                  "Arn",
+                ],
+              },
+            },
+            {
+              "Action": [
                 "dynamodb:BatchGetItem",
                 "dynamodb:GetRecords",
                 "dynamodb:GetShardIterator",
@@ -6740,8 +7564,47 @@ frontend:
       "Type": "AWS::IAM::Policy",
     },
     "ReportsBucket4E7C5994": {
-      "DeletionPolicy": "Delete",
+      "DeletionPolicy": "Retain",
       "Properties": {
+        "BucketEncryption": {
+          "ServerSideEncryptionConfiguration": [
+            {
+              "KMSMasterKeyID": {
+                "Fn::GetAtt": [
+                  "S3Key58EFA89C",
+                  "Arn",
+                ],
+              },
+              "ServerSideEncryptionByDefault": {
+                "SSEAlgorithm": "AES256",
+              },
+            },
+          ],
+        },
+        "LifecycleConfiguration": {
+          "Rules": [
+            {
+              "ExpirationInDays": 365,
+              "Id": "DefaultLifecycle",
+              "NoncurrentVersionExpiration": {
+                "NoncurrentDays": 90,
+              },
+              "NoncurrentVersionTransitions": [
+                {
+                  "StorageClass": "GLACIER",
+                  "TransitionInDays": 30,
+                },
+              ],
+              "Status": "Enabled",
+              "Transitions": [
+                {
+                  "StorageClass": "STANDARD_IA",
+                  "TransitionInDays": 90,
+                },
+              ],
+            },
+          ],
+        },
         "PublicAccessBlockConfiguration": {
           "BlockPublicAcls": true,
           "BlockPublicPolicy": true,
@@ -6750,84 +7613,71 @@ frontend:
         },
         "Tags": [
           {
-            "Key": "aws-cdk:auto-delete-objects",
-            "Value": "true",
+            "Key": "Environment",
+            "Value": "Test",
+          },
+          {
+            "Key": "Project",
+            "Value": "CostGuardian",
           },
         ],
+        "VersioningConfiguration": {
+          "Status": "Enabled",
+        },
       },
       "Type": "AWS::S3::Bucket",
-      "UpdateReplacePolicy": "Delete",
+      "UpdateReplacePolicy": "Retain",
     },
-    "ReportsBucketAutoDeleteObjectsCustomResource98FB8A10": {
+    "S3Key58EFA89C": {
       "DeletionPolicy": "Delete",
-      "DependsOn": [
-        "ReportsBucketPolicy11C4A507",
-      ],
       "Properties": {
-        "BucketName": {
-          "Ref": "ReportsBucket4E7C5994",
-        },
-        "ServiceToken": {
-          "Fn::GetAtt": [
-            "CustomS3AutoDeleteObjectsCustomResourceProviderHandler9D90184F",
-            "Arn",
-          ],
-        },
-      },
-      "Type": "Custom::S3AutoDeleteObjects",
-      "UpdateReplacePolicy": "Delete",
-    },
-    "ReportsBucketPolicy11C4A507": {
-      "Properties": {
-        "Bucket": {
-          "Ref": "ReportsBucket4E7C5994",
-        },
-        "PolicyDocument": {
+        "Description": "KMS key for S3 bucket encryption",
+        "EnableKeyRotation": true,
+        "KeyPolicy": {
           "Statement": [
             {
-              "Action": [
-                "s3:PutBucketPolicy",
-                "s3:GetBucket*",
-                "s3:List*",
-                "s3:DeleteObject*",
-              ],
+              "Action": "kms:*",
               "Effect": "Allow",
               "Principal": {
                 "AWS": {
-                  "Fn::GetAtt": [
-                    "CustomS3AutoDeleteObjectsCustomResourceProviderRole3B1BD092",
-                    "Arn",
-                  ],
-                },
-              },
-              "Resource": [
-                {
-                  "Fn::GetAtt": [
-                    "ReportsBucket4E7C5994",
-                    "Arn",
-                  ],
-                },
-                {
                   "Fn::Join": [
                     "",
                     [
+                      "arn:",
                       {
-                        "Fn::GetAtt": [
-                          "ReportsBucket4E7C5994",
-                          "Arn",
-                        ],
+                        "Ref": "AWS::Partition",
                       },
-                      "/*",
+                      ":iam::",
+                      {
+                        "Ref": "AWS::AccountId",
+                      },
+                      ":root",
                     ],
                   ],
                 },
+              },
+              "Resource": "*",
+            },
+            {
+              "Action": [
+                "kms:Encrypt",
+                "kms:Decrypt",
+                "kms:ReEncrypt*",
+                "kms:GenerateDataKey*",
+                "kms:DescribeKey",
               ],
+              "Effect": "Allow",
+              "Principal": {
+                "Service": "s3.amazonaws.com",
+              },
+              "Resource": "*",
             },
           ],
           "Version": "2012-10-17",
         },
       },
-      "Type": "AWS::S3::BucketPolicy",
+      "Type": "AWS::KMS::Key",
+      "UpdateReplacePolicy": "Delete",
     },
     "SLAWorkflow733FFDD9": {
       "DeletionPolicy": "Delete",
@@ -6840,7 +7690,7 @@ frontend:
           "Fn::Join": [
             "",
             [
-              "{"StartAt":"CalculateImpact","States":{"CalculateImpact":{"Next":"CheckSLA","Retry":[{"ErrorEquals":["Lambda.ClientExecutionTimeoutException","Lambda.ServiceException","Lambda.AWSLambdaException","Lambda.SdkClientException"],"IntervalSeconds":2,"MaxAttempts":6,"BackoffRate":2}],"Type":"Task","OutputPath":"$.Payload","Resource":"arn:",
+              "{"StartAt":"CalculateImpact","States":{"CalculateImpact":{"Next":"CheckSLA","Retry":[{"ErrorEquals":["Lambda.ClientExecutionTimeoutException","Lambda.ServiceException","Lambda.AWSLambdaException","Lambda.SdkClientException"],"IntervalSeconds":2,"MaxAttempts":6,"BackoffRate":2},{"ErrorEquals":["States.TaskFailed","States.Timeout"],"IntervalSeconds":2,"MaxAttempts":3,"BackoffRate":2}],"Catch":[{"ErrorEquals":["States.ALL"],"ResultPath":"$.error","Next":"SlaWorkflowFailed"}],"Type":"Task","OutputPath":"$.Payload","Resource":"arn:",
               {
                 "Ref": "AWS::Partition",
               },
@@ -6851,7 +7701,7 @@ frontend:
                   "Arn",
                 ],
               },
-              "","Payload.$":"$"}},"CheckSLA":{"Next":"GenerateReport","Retry":[{"ErrorEquals":["Lambda.ClientExecutionTimeoutException","Lambda.ServiceException","Lambda.AWSLambdaException","Lambda.SdkClientException"],"IntervalSeconds":2,"MaxAttempts":6,"BackoffRate":2}],"Type":"Task","OutputPath":"$.Payload","Resource":"arn:",
+              "","Payload.$":"$"}},"CheckSLA":{"Next":"GenerateReport","Retry":[{"ErrorEquals":["Lambda.ClientExecutionTimeoutException","Lambda.ServiceException","Lambda.AWSLambdaException","Lambda.SdkClientException"],"IntervalSeconds":2,"MaxAttempts":6,"BackoffRate":2},{"ErrorEquals":["States.TaskFailed"],"IntervalSeconds":2,"MaxAttempts":3,"BackoffRate":2}],"Catch":[{"ErrorEquals":["States.ALL"],"ResultPath":"$.error","Next":"SlaWorkflowFailed"}],"Type":"Task","OutputPath":"$.Payload","Resource":"arn:",
               {
                 "Ref": "AWS::Partition",
               },
@@ -6862,7 +7712,7 @@ frontend:
                   "Arn",
                 ],
               },
-              "","Payload.$":"$"}},"GenerateReport":{"Next":"IsClaimGenerated?","Retry":[{"ErrorEquals":["Lambda.ClientExecutionTimeoutException","Lambda.ServiceException","Lambda.AWSLambdaException","Lambda.SdkClientException"],"IntervalSeconds":2,"MaxAttempts":6,"BackoffRate":2}],"Type":"Task","OutputPath":"$.Payload","Resource":"arn:",
+              "","Payload.$":"$"}},"GenerateReport":{"Next":"IsClaimGenerated?","Retry":[{"ErrorEquals":["Lambda.ClientExecutionTimeoutException","Lambda.ServiceException","Lambda.AWSLambdaException","Lambda.SdkClientException"],"IntervalSeconds":2,"MaxAttempts":6,"BackoffRate":2},{"ErrorEquals":["States.TaskFailed"],"IntervalSeconds":2,"MaxAttempts":3,"BackoffRate":2}],"Catch":[{"ErrorEquals":["States.ALL"],"ResultPath":"$.error","Next":"SlaWorkflowFailed"}],"Type":"Task","OutputPath":"$.Payload","Resource":"arn:",
               {
                 "Ref": "AWS::Partition",
               },
@@ -6873,7 +7723,7 @@ frontend:
                   "Arn",
                 ],
               },
-              "","Payload.$":"$"}},"IsClaimGenerated?":{"Type":"Choice","Choices":[{"Variable":"$.status","StringEquals":"generated","Next":"SubmitTicket"}],"Default":"NoClaimGenerated"},"NoClaimGenerated":{"Type":"Succeed"},"SubmitTicket":{"End":true,"Retry":[{"ErrorEquals":["Lambda.ClientExecutionTimeoutException","Lambda.ServiceException","Lambda.AWSLambdaException","Lambda.SdkClientException"],"IntervalSeconds":2,"MaxAttempts":6,"BackoffRate":2}],"Type":"Task","OutputPath":"$.Payload","Resource":"arn:",
+              "","Payload.$":"$"}},"IsClaimGenerated?":{"Type":"Choice","Choices":[{"Variable":"$.claimGenerated","BooleanEquals":true,"Next":"SubmitTicket"}],"Default":"NoClaimGenerated"},"NoClaimGenerated":{"Type":"Succeed"},"SubmitTicket":{"End":true,"Retry":[{"ErrorEquals":["Lambda.ClientExecutionTimeoutException","Lambda.ServiceException","Lambda.AWSLambdaException","Lambda.SdkClientException"],"IntervalSeconds":2,"MaxAttempts":6,"BackoffRate":2},{"ErrorEquals":["States.TaskFailed"],"IntervalSeconds":2,"MaxAttempts":3,"BackoffRate":2}],"Catch":[{"ErrorEquals":["States.ALL"],"ResultPath":"$.error","Next":"SlaWorkflowFailed"}],"Type":"Task","OutputPath":"$.Payload","Resource":"arn:",
               {
                 "Ref": "AWS::Partition",
               },
@@ -6884,15 +7734,35 @@ frontend:
                   "Arn",
                 ],
               },
-              "","Payload.$":"$"}}}}",
+              "","Payload.$":"$"}},"SlaWorkflowFailed":{"Type":"Fail","Error":"SlaWorkflowError","Cause":"SLA workflow execution failed"}}}",
             ],
           ],
+        },
+        "LoggingConfiguration": {
+          "Destinations": [
+            {
+              "CloudWatchLogsLogGroup": {
+                "LogGroupArn": {
+                  "Fn::GetAtt": [
+                    "SfnLogGroup4E29B71B",
+                    "Arn",
+                  ],
+                },
+              },
+            },
+          ],
+          "Level": "ALL",
         },
         "RoleArn": {
           "Fn::GetAtt": [
             "SLAWorkflowRole524ABF89",
             "Arn",
           ],
+        },
+        "StateMachineName": "SLAWorkflow",
+        "StateMachineType": "STANDARD",
+        "TracingConfiguration": {
+          "Enabled": true,
         },
       },
       "Type": "AWS::StepFunctions::StateMachine",
@@ -6906,15 +7776,7 @@ frontend:
               "Action": "sts:AssumeRole",
               "Effect": "Allow",
               "Principal": {
-                "Service": {
-                  "Fn::FindInMap": [
-                    "ServiceprincipalMap",
-                    {
-                      "Ref": "AWS::Region",
-                    },
-                    "states",
-                  ],
-                },
+                "Service": "states.amazonaws.com",
               },
             },
           ],
@@ -7031,6 +7893,30 @@ frontend:
                 },
               ],
             },
+            {
+              "Action": [
+                "logs:CreateLogDelivery",
+                "logs:GetLogDelivery",
+                "logs:UpdateLogDelivery",
+                "logs:DeleteLogDelivery",
+                "logs:ListLogDeliveries",
+                "logs:PutResourcePolicy",
+                "logs:DescribeResourcePolicies",
+                "logs:DescribeLogGroups",
+              ],
+              "Effect": "Allow",
+              "Resource": "*",
+            },
+            {
+              "Action": [
+                "xray:PutTraceSegments",
+                "xray:PutTelemetryRecords",
+                "xray:GetSamplingRules",
+                "xray:GetSamplingTargets",
+              ],
+              "Effect": "Allow",
+              "Resource": "*",
+            },
           ],
           "Version": "2012-10-17",
         },
@@ -7042,6 +7928,20 @@ frontend:
         ],
       },
       "Type": "AWS::IAM::Policy",
+    },
+    "SfnLogGroup4E29B71B": {
+      "DeletionPolicy": "Delete",
+      "Properties": {
+        "KmsKeyId": {
+          "Fn::GetAtt": [
+            "LogGroupKmsKey694BE21C",
+            "Arn",
+          ],
+        },
+        "RetentionInDays": 731,
+      },
+      "Type": "AWS::Logs::LogGroup",
+      "UpdateReplacePolicy": "Delete",
     },
     "SlaCalcRole17A883B1": {
       "Properties": {
@@ -7083,7 +7983,7 @@ frontend:
               ],
               "Version": "2012-10-17",
             },
-            "PolicyName": "AssumeCustomerRolePolicy",
+            "PolicyName": "AssumeAndSupportPolicy",
           },
         ],
       },
@@ -7093,6 +7993,22 @@ frontend:
       "Properties": {
         "PolicyDocument": {
           "Statement": [
+            {
+              "Action": [
+                "kms:Decrypt",
+                "kms:DescribeKey",
+                "kms:Encrypt",
+                "kms:ReEncrypt*",
+                "kms:GenerateDataKey*",
+              ],
+              "Effect": "Allow",
+              "Resource": {
+                "Fn::GetAtt": [
+                  "DynamoKmsKeyD42E803B",
+                  "Arn",
+                ],
+              },
+            },
             {
               "Action": [
                 "dynamodb:BatchGetItem",
@@ -7146,6 +8062,10 @@ frontend:
     },
     "SlaCalculateImpactC2938DC8": {
       "DependsOn": [
+        "CostGuardianVpcPrivateSubnet1DefaultRouteF69618E7",
+        "CostGuardianVpcPrivateSubnet1RouteTableAssociation93CAD386",
+        "CostGuardianVpcPrivateSubnet2DefaultRoute2AE993EA",
+        "CostGuardianVpcPrivateSubnet2RouteTableAssociation5D775D04",
         "SlaCalcRoleDefaultPolicy3A025536",
         "SlaCalcRole17A883B1",
       ],
@@ -7154,17 +8074,23 @@ frontend:
           "S3Bucket": {
             "Fn::Sub": "cdk-hnb659fds-assets-\${AWS::AccountId}-\${AWS::Region}",
           },
-          "S3Key": "09f99ad6a8b96c1eb5c32b2b56a40dacad87d3d56185f858d5789b70a8cbb5dc.zip",
+          "S3Key": "824a0f45aea4c612d4cc99cc891140f4c7dd1568dfc937e242554bfd26192498.zip",
         },
         "Environment": {
           "Variables": {
-            "AWS_NODEJS_CONNECTION_REUSE_ENABLED": "1",
             "DYNAMODB_TABLE": {
               "Ref": "CostGuardianTable970FEF22",
             },
           },
         },
-        "Handler": "index.calculateImpact",
+        "FunctionName": "SlaCalculateImpact",
+        "Handler": "sla-workflow.calculateImpact",
+        "LoggingConfig": {
+          "LogGroup": {
+            "Ref": "SlaCalculateImpactLogGroupED6BE0D7",
+          },
+        },
+        "ReservedConcurrentExecutions": 10,
         "Role": {
           "Fn::GetAtt": [
             "SlaCalcRole17A883B1",
@@ -7172,11 +8098,47 @@ frontend:
           ],
         },
         "Runtime": "nodejs18.x",
+        "VpcConfig": {
+          "SecurityGroupIds": [
+            {
+              "Fn::GetAtt": [
+                "LambdaSecurityGroup0BD9FC99",
+                "GroupId",
+              ],
+            },
+          ],
+          "SubnetIds": [
+            {
+              "Ref": "CostGuardianVpcPrivateSubnet1Subnet97B65F1D",
+            },
+            {
+              "Ref": "CostGuardianVpcPrivateSubnet2SubnetB71E218F",
+            },
+          ],
+        },
       },
       "Type": "AWS::Lambda::Function",
     },
+    "SlaCalculateImpactLogGroupED6BE0D7": {
+      "DeletionPolicy": "Delete",
+      "Properties": {
+        "KmsKeyId": {
+          "Fn::GetAtt": [
+            "LogGroupKmsKey694BE21C",
+            "Arn",
+          ],
+        },
+        "RetentionInDays": 30,
+      },
+      "Type": "AWS::Logs::LogGroup",
+      "UpdateReplacePolicy": "Delete",
+    },
     "SlaCheck0D07D369": {
       "DependsOn": [
+        "CostGuardianVpcPrivateSubnet1DefaultRouteF69618E7",
+        "CostGuardianVpcPrivateSubnet1RouteTableAssociation93CAD386",
+        "CostGuardianVpcPrivateSubnet2DefaultRoute2AE993EA",
+        "CostGuardianVpcPrivateSubnet2RouteTableAssociation5D775D04",
         "SlaCheckServiceRole14562FCF",
       ],
       "Properties": {
@@ -7184,17 +8146,23 @@ frontend:
           "S3Bucket": {
             "Fn::Sub": "cdk-hnb659fds-assets-\${AWS::AccountId}-\${AWS::Region}",
           },
-          "S3Key": "09f99ad6a8b96c1eb5c32b2b56a40dacad87d3d56185f858d5789b70a8cbb5dc.zip",
+          "S3Key": "824a0f45aea4c612d4cc99cc891140f4c7dd1568dfc937e242554bfd26192498.zip",
         },
         "Environment": {
           "Variables": {
-            "AWS_NODEJS_CONNECTION_REUSE_ENABLED": "1",
             "DYNAMODB_TABLE": {
               "Ref": "CostGuardianTable970FEF22",
             },
           },
         },
-        "Handler": "index.checkSLA",
+        "FunctionName": "SlaCheck",
+        "Handler": "sla-workflow.checkSLA",
+        "LoggingConfig": {
+          "LogGroup": {
+            "Ref": "SlaCheckLogGroup2B41907F",
+          },
+        },
+        "ReservedConcurrentExecutions": 10,
         "Role": {
           "Fn::GetAtt": [
             "SlaCheckServiceRole14562FCF",
@@ -7202,10 +8170,48 @@ frontend:
           ],
         },
         "Runtime": "nodejs18.x",
+        "VpcConfig": {
+          "SecurityGroupIds": [
+            {
+              "Fn::GetAtt": [
+                "LambdaSecurityGroup0BD9FC99",
+                "GroupId",
+              ],
+            },
+          ],
+          "SubnetIds": [
+            {
+              "Ref": "CostGuardianVpcPrivateSubnet1Subnet97B65F1D",
+            },
+            {
+              "Ref": "CostGuardianVpcPrivateSubnet2SubnetB71E218F",
+            },
+          ],
+        },
       },
       "Type": "AWS::Lambda::Function",
     },
+    "SlaCheckLogGroup2B41907F": {
+      "DeletionPolicy": "Delete",
+      "Properties": {
+        "KmsKeyId": {
+          "Fn::GetAtt": [
+            "LogGroupKmsKey694BE21C",
+            "Arn",
+          ],
+        },
+        "RetentionInDays": 30,
+      },
+      "Type": "AWS::Logs::LogGroup",
+      "UpdateReplacePolicy": "Delete",
+    },
     "SlaCheckServiceRole14562FCF": {
+      "DependsOn": [
+        "CostGuardianVpcPrivateSubnet1DefaultRouteF69618E7",
+        "CostGuardianVpcPrivateSubnet1RouteTableAssociation93CAD386",
+        "CostGuardianVpcPrivateSubnet2DefaultRoute2AE993EA",
+        "CostGuardianVpcPrivateSubnet2RouteTableAssociation5D775D04",
+      ],
       "Properties": {
         "AssumeRolePolicyDocument": {
           "Statement": [
@@ -7232,12 +8238,28 @@ frontend:
               ],
             ],
           },
+          {
+            "Fn::Join": [
+              "",
+              [
+                "arn:",
+                {
+                  "Ref": "AWS::Partition",
+                },
+                ":iam::aws:policy/service-role/AWSLambdaVPCAccessExecutionRole",
+              ],
+            ],
+          },
         ],
       },
       "Type": "AWS::IAM::Role",
     },
     "SlaGenerateReport41ABA1B6": {
       "DependsOn": [
+        "CostGuardianVpcPrivateSubnet1DefaultRouteF69618E7",
+        "CostGuardianVpcPrivateSubnet1RouteTableAssociation93CAD386",
+        "CostGuardianVpcPrivateSubnet2DefaultRoute2AE993EA",
+        "CostGuardianVpcPrivateSubnet2RouteTableAssociation5D775D04",
         "SlaGenerateReportServiceRoleDefaultPolicy6350B957",
         "SlaGenerateReportServiceRole0E4981AB",
       ],
@@ -7246,11 +8268,10 @@ frontend:
           "S3Bucket": {
             "Fn::Sub": "cdk-hnb659fds-assets-\${AWS::AccountId}-\${AWS::Region}",
           },
-          "S3Key": "09f99ad6a8b96c1eb5c32b2b56a40dacad87d3d56185f858d5789b70a8cbb5dc.zip",
+          "S3Key": "824a0f45aea4c612d4cc99cc891140f4c7dd1568dfc937e242554bfd26192498.zip",
         },
         "Environment": {
           "Variables": {
-            "AWS_NODEJS_CONNECTION_REUSE_ENABLED": "1",
             "DYNAMODB_TABLE": {
               "Ref": "CostGuardianTable970FEF22",
             },
@@ -7262,7 +8283,14 @@ frontend:
             },
           },
         },
-        "Handler": "index.generateReport",
+        "FunctionName": "SlaGenerateReport",
+        "Handler": "sla-workflow.generateReport",
+        "LoggingConfig": {
+          "LogGroup": {
+            "Ref": "SlaGenerateReportLogGroupD81E3C16",
+          },
+        },
+        "ReservedConcurrentExecutions": 10,
         "Role": {
           "Fn::GetAtt": [
             "SlaGenerateReportServiceRole0E4981AB",
@@ -7270,10 +8298,48 @@ frontend:
           ],
         },
         "Runtime": "nodejs18.x",
+        "VpcConfig": {
+          "SecurityGroupIds": [
+            {
+              "Fn::GetAtt": [
+                "LambdaSecurityGroup0BD9FC99",
+                "GroupId",
+              ],
+            },
+          ],
+          "SubnetIds": [
+            {
+              "Ref": "CostGuardianVpcPrivateSubnet1Subnet97B65F1D",
+            },
+            {
+              "Ref": "CostGuardianVpcPrivateSubnet2SubnetB71E218F",
+            },
+          ],
+        },
       },
       "Type": "AWS::Lambda::Function",
     },
+    "SlaGenerateReportLogGroupD81E3C16": {
+      "DeletionPolicy": "Delete",
+      "Properties": {
+        "KmsKeyId": {
+          "Fn::GetAtt": [
+            "LogGroupKmsKey694BE21C",
+            "Arn",
+          ],
+        },
+        "RetentionInDays": 30,
+      },
+      "Type": "AWS::Logs::LogGroup",
+      "UpdateReplacePolicy": "Delete",
+    },
     "SlaGenerateReportServiceRole0E4981AB": {
+      "DependsOn": [
+        "CostGuardianVpcPrivateSubnet1DefaultRouteF69618E7",
+        "CostGuardianVpcPrivateSubnet1RouteTableAssociation93CAD386",
+        "CostGuardianVpcPrivateSubnet2DefaultRoute2AE993EA",
+        "CostGuardianVpcPrivateSubnet2RouteTableAssociation5D775D04",
+      ],
       "Properties": {
         "AssumeRolePolicyDocument": {
           "Statement": [
@@ -7300,14 +8366,48 @@ frontend:
               ],
             ],
           },
+          {
+            "Fn::Join": [
+              "",
+              [
+                "arn:",
+                {
+                  "Ref": "AWS::Partition",
+                },
+                ":iam::aws:policy/service-role/AWSLambdaVPCAccessExecutionRole",
+              ],
+            ],
+          },
         ],
       },
       "Type": "AWS::IAM::Role",
     },
     "SlaGenerateReportServiceRoleDefaultPolicy6350B957": {
+      "DependsOn": [
+        "CostGuardianVpcPrivateSubnet1DefaultRouteF69618E7",
+        "CostGuardianVpcPrivateSubnet1RouteTableAssociation93CAD386",
+        "CostGuardianVpcPrivateSubnet2DefaultRoute2AE993EA",
+        "CostGuardianVpcPrivateSubnet2RouteTableAssociation5D775D04",
+      ],
       "Properties": {
         "PolicyDocument": {
           "Statement": [
+            {
+              "Action": [
+                "kms:Decrypt",
+                "kms:DescribeKey",
+                "kms:Encrypt",
+                "kms:ReEncrypt*",
+                "kms:GenerateDataKey*",
+              ],
+              "Effect": "Allow",
+              "Resource": {
+                "Fn::GetAtt": [
+                  "DynamoKmsKeyD42E803B",
+                  "Arn",
+                ],
+              },
+            },
             {
               "Action": [
                 "dynamodb:BatchGetItem",
@@ -7392,6 +8492,21 @@ frontend:
                 ],
               },
             },
+            {
+              "Action": [
+                "kms:Encrypt",
+                "kms:ReEncrypt*",
+                "kms:GenerateDataKey*",
+                "kms:Decrypt",
+              ],
+              "Effect": "Allow",
+              "Resource": {
+                "Fn::GetAtt": [
+                  "S3Key58EFA89C",
+                  "Arn",
+                ],
+              },
+            },
           ],
           "Version": "2012-10-17",
         },
@@ -7444,7 +8559,7 @@ frontend:
               ],
               "Version": "2012-10-17",
             },
-            "PolicyName": "AssumeCustomerRolePolicy",
+            "PolicyName": "AssumeAndSupportPolicy",
           },
         ],
       },
@@ -7454,6 +8569,22 @@ frontend:
       "Properties": {
         "PolicyDocument": {
           "Statement": [
+            {
+              "Action": [
+                "kms:Decrypt",
+                "kms:DescribeKey",
+                "kms:Encrypt",
+                "kms:ReEncrypt*",
+                "kms:GenerateDataKey*",
+              ],
+              "Effect": "Allow",
+              "Resource": {
+                "Fn::GetAtt": [
+                  "DynamoKmsKeyD42E803B",
+                  "Arn",
+                ],
+              },
+            },
             {
               "Action": [
                 "dynamodb:BatchGetItem",
@@ -7507,6 +8638,10 @@ frontend:
     },
     "SlaSubmitTicketEB4E0769": {
       "DependsOn": [
+        "CostGuardianVpcPrivateSubnet1DefaultRouteF69618E7",
+        "CostGuardianVpcPrivateSubnet1RouteTableAssociation93CAD386",
+        "CostGuardianVpcPrivateSubnet2DefaultRoute2AE993EA",
+        "CostGuardianVpcPrivateSubnet2RouteTableAssociation5D775D04",
         "SlaSubmitRoleDefaultPolicyA0FD4538",
         "SlaSubmitRole89597960",
       ],
@@ -7515,17 +8650,23 @@ frontend:
           "S3Bucket": {
             "Fn::Sub": "cdk-hnb659fds-assets-\${AWS::AccountId}-\${AWS::Region}",
           },
-          "S3Key": "09f99ad6a8b96c1eb5c32b2b56a40dacad87d3d56185f858d5789b70a8cbb5dc.zip",
+          "S3Key": "824a0f45aea4c612d4cc99cc891140f4c7dd1568dfc937e242554bfd26192498.zip",
         },
         "Environment": {
           "Variables": {
-            "AWS_NODEJS_CONNECTION_REUSE_ENABLED": "1",
             "DYNAMODB_TABLE": {
               "Ref": "CostGuardianTable970FEF22",
             },
           },
         },
-        "Handler": "index.submitSupportTicket",
+        "FunctionName": "SlaSubmitTicket",
+        "Handler": "sla-workflow.submitSupportTicket",
+        "LoggingConfig": {
+          "LogGroup": {
+            "Ref": "SlaSubmitTicketLogGroup11CC8728",
+          },
+        },
+        "ReservedConcurrentExecutions": 10,
         "Role": {
           "Fn::GetAtt": [
             "SlaSubmitRole89597960",
@@ -7533,37 +8674,47 @@ frontend:
           ],
         },
         "Runtime": "nodejs18.x",
+        "VpcConfig": {
+          "SecurityGroupIds": [
+            {
+              "Fn::GetAtt": [
+                "LambdaSecurityGroup0BD9FC99",
+                "GroupId",
+              ],
+            },
+          ],
+          "SubnetIds": [
+            {
+              "Ref": "CostGuardianVpcPrivateSubnet1Subnet97B65F1D",
+            },
+            {
+              "Ref": "CostGuardianVpcPrivateSubnet2SubnetB71E218F",
+            },
+          ],
+        },
       },
       "Type": "AWS::Lambda::Function",
     },
-    "SslCertificateB048BE20": {
+    "SlaSubmitTicketLogGroup11CC8728": {
+      "DeletionPolicy": "Delete",
       "Properties": {
-        "DomainName": "test.example.com",
-        "DomainValidationOptions": [
-          {
-            "DomainName": "test.example.com",
-            "HostedZoneId": "Z123456789",
-          },
-          {
-            "DomainName": "www.test.example.com",
-            "HostedZoneId": "Z123456789",
-          },
-        ],
-        "SubjectAlternativeNames": [
-          "www.test.example.com",
-        ],
-        "Tags": [
-          {
-            "Key": "Name",
-            "Value": "MyTestStack/SslCertificate",
-          },
-        ],
-        "ValidationMethod": "DNS",
+        "KmsKeyId": {
+          "Fn::GetAtt": [
+            "LogGroupKmsKey694BE21C",
+            "Arn",
+          ],
+        },
+        "RetentionInDays": 30,
       },
-      "Type": "AWS::CertificateManager::Certificate",
+      "Type": "AWS::Logs::LogGroup",
+      "UpdateReplacePolicy": "Delete",
     },
     "StopIdleInstancesF236D216": {
       "DependsOn": [
+        "CostGuardianVpcPrivateSubnet1DefaultRouteF69618E7",
+        "CostGuardianVpcPrivateSubnet1RouteTableAssociation93CAD386",
+        "CostGuardianVpcPrivateSubnet2DefaultRoute2AE993EA",
+        "CostGuardianVpcPrivateSubnet2RouteTableAssociation5D775D04",
         "StopIdleRoleDefaultPolicyC8A04B04",
         "StopIdleRole742E5D8A",
       ],
@@ -7572,17 +8723,22 @@ frontend:
           "S3Bucket": {
             "Fn::Sub": "cdk-hnb659fds-assets-\${AWS::AccountId}-\${AWS::Region}",
           },
-          "S3Key": "fc74ab8669bf1cfe0aa39f64684622129273f93f24d1f71624c5c470ee007930.zip",
+          "S3Key": "824a0f45aea4c612d4cc99cc891140f4c7dd1568dfc937e242554bfd26192498.zip",
         },
         "Environment": {
           "Variables": {
-            "AWS_NODEJS_CONNECTION_REUSE_ENABLED": "1",
             "DYNAMODB_TABLE": {
               "Ref": "CostGuardianTable970FEF22",
             },
           },
         },
-        "Handler": "index.handler",
+        "Handler": "execute-recommendation.handler",
+        "LoggingConfig": {
+          "LogGroup": {
+            "Ref": "StopIdleInstancesLogGroup39D87FCF",
+          },
+        },
+        "ReservedConcurrentExecutions": 10,
         "Role": {
           "Fn::GetAtt": [
             "StopIdleRole742E5D8A",
@@ -7591,8 +8747,40 @@ frontend:
         },
         "Runtime": "nodejs18.x",
         "Timeout": 300,
+        "VpcConfig": {
+          "SecurityGroupIds": [
+            {
+              "Fn::GetAtt": [
+                "LambdaSecurityGroup0BD9FC99",
+                "GroupId",
+              ],
+            },
+          ],
+          "SubnetIds": [
+            {
+              "Ref": "CostGuardianVpcPrivateSubnet1Subnet97B65F1D",
+            },
+            {
+              "Ref": "CostGuardianVpcPrivateSubnet2SubnetB71E218F",
+            },
+          ],
+        },
       },
       "Type": "AWS::Lambda::Function",
+    },
+    "StopIdleInstancesLogGroup39D87FCF": {
+      "DeletionPolicy": "Delete",
+      "Properties": {
+        "KmsKeyId": {
+          "Fn::GetAtt": [
+            "LogGroupKmsKey694BE21C",
+            "Arn",
+          ],
+        },
+        "RetentionInDays": 30,
+      },
+      "Type": "AWS::Logs::LogGroup",
+      "UpdateReplacePolicy": "Delete",
     },
     "StopIdleRole742E5D8A": {
       "Properties": {
@@ -7677,6 +8865,22 @@ frontend:
           "Statement": [
             {
               "Action": [
+                "kms:Decrypt",
+                "kms:DescribeKey",
+                "kms:Encrypt",
+                "kms:ReEncrypt*",
+                "kms:GenerateDataKey*",
+              ],
+              "Effect": "Allow",
+              "Resource": {
+                "Fn::GetAtt": [
+                  "DynamoKmsKeyD42E803B",
+                  "Arn",
+                ],
+              },
+            },
+            {
+              "Action": [
                 "dynamodb:BatchGetItem",
                 "dynamodb:GetRecords",
                 "dynamodb:GetShardIterator",
@@ -7733,8 +8937,194 @@ frontend:
           "GenerateStringKey": "key",
           "SecretStringTemplate": "{"key":""}",
         },
+        "KmsKeyId": {
+          "Fn::GetAtt": [
+            "StripeSecretKmsKey05039D59",
+            "Arn",
+          ],
+        },
       },
       "Type": "AWS::SecretsManager::Secret",
+      "UpdateReplacePolicy": "Delete",
+    },
+    "StripeSecretKmsKey05039D59": {
+      "DeletionPolicy": "Delete",
+      "Properties": {
+        "EnableKeyRotation": true,
+        "KeyPolicy": {
+          "Statement": [
+            {
+              "Action": "kms:*",
+              "Effect": "Allow",
+              "Principal": {
+                "AWS": {
+                  "Fn::Join": [
+                    "",
+                    [
+                      "arn:",
+                      {
+                        "Ref": "AWS::Partition",
+                      },
+                      ":iam::",
+                      {
+                        "Ref": "AWS::AccountId",
+                      },
+                      ":root",
+                    ],
+                  ],
+                },
+              },
+              "Resource": "*",
+            },
+            {
+              "Action": [
+                "kms:Decrypt",
+                "kms:Encrypt",
+                "kms:ReEncrypt*",
+                "kms:GenerateDataKey*",
+              ],
+              "Condition": {
+                "StringEquals": {
+                  "kms:ViaService": {
+                    "Fn::Join": [
+                      "",
+                      [
+                        "secretsmanager.",
+                        {
+                          "Ref": "AWS::Region",
+                        },
+                        ".amazonaws.com",
+                      ],
+                    ],
+                  },
+                },
+              },
+              "Effect": "Allow",
+              "Principal": {
+                "AWS": {
+                  "Fn::Join": [
+                    "",
+                    [
+                      "arn:",
+                      {
+                        "Ref": "AWS::Partition",
+                      },
+                      ":iam::",
+                      {
+                        "Ref": "AWS::AccountId",
+                      },
+                      ":root",
+                    ],
+                  ],
+                },
+              },
+              "Resource": "*",
+            },
+            {
+              "Action": [
+                "kms:CreateGrant",
+                "kms:DescribeKey",
+              ],
+              "Condition": {
+                "StringEquals": {
+                  "kms:ViaService": {
+                    "Fn::Join": [
+                      "",
+                      [
+                        "secretsmanager.",
+                        {
+                          "Ref": "AWS::Region",
+                        },
+                        ".amazonaws.com",
+                      ],
+                    ],
+                  },
+                },
+              },
+              "Effect": "Allow",
+              "Principal": {
+                "AWS": {
+                  "Fn::Join": [
+                    "",
+                    [
+                      "arn:",
+                      {
+                        "Ref": "AWS::Partition",
+                      },
+                      ":iam::",
+                      {
+                        "Ref": "AWS::AccountId",
+                      },
+                      ":root",
+                    ],
+                  ],
+                },
+              },
+              "Resource": "*",
+            },
+            {
+              "Action": "kms:Decrypt",
+              "Condition": {
+                "StringEquals": {
+                  "kms:ViaService": {
+                    "Fn::Join": [
+                      "",
+                      [
+                        "secretsmanager.",
+                        {
+                          "Ref": "AWS::Region",
+                        },
+                        ".amazonaws.com",
+                      ],
+                    ],
+                  },
+                },
+              },
+              "Effect": "Allow",
+              "Principal": {
+                "AWS": {
+                  "Fn::GetAtt": [
+                    "ApiHandlerServiceRole592E70E9",
+                    "Arn",
+                  ],
+                },
+              },
+              "Resource": "*",
+            },
+            {
+              "Action": "kms:Decrypt",
+              "Condition": {
+                "StringEquals": {
+                  "kms:ViaService": {
+                    "Fn::Join": [
+                      "",
+                      [
+                        "secretsmanager.",
+                        {
+                          "Ref": "AWS::Region",
+                        },
+                        ".amazonaws.com",
+                      ],
+                    ],
+                  },
+                },
+              },
+              "Effect": "Allow",
+              "Principal": {
+                "AWS": {
+                  "Fn::GetAtt": [
+                    "SlaGenerateReportServiceRole0E4981AB",
+                    "Arn",
+                  ],
+                },
+              },
+              "Resource": "*",
+            },
+          ],
+          "Version": "2012-10-17",
+        },
+      },
+      "Type": "AWS::KMS::Key",
       "UpdateReplacePolicy": "Delete",
     },
     "StripeWebhookSecretFCDDBC6A": {
@@ -7745,8 +9135,194 @@ frontend:
           "GenerateStringKey": "webhook",
           "SecretStringTemplate": "{"webhook":""}",
         },
+        "KmsKeyId": {
+          "Fn::GetAtt": [
+            "StripeWebhookSecretKmsKey53B2EE88",
+            "Arn",
+          ],
+        },
       },
       "Type": "AWS::SecretsManager::Secret",
+      "UpdateReplacePolicy": "Delete",
+    },
+    "StripeWebhookSecretKmsKey53B2EE88": {
+      "DeletionPolicy": "Delete",
+      "Properties": {
+        "EnableKeyRotation": true,
+        "KeyPolicy": {
+          "Statement": [
+            {
+              "Action": "kms:*",
+              "Effect": "Allow",
+              "Principal": {
+                "AWS": {
+                  "Fn::Join": [
+                    "",
+                    [
+                      "arn:",
+                      {
+                        "Ref": "AWS::Partition",
+                      },
+                      ":iam::",
+                      {
+                        "Ref": "AWS::AccountId",
+                      },
+                      ":root",
+                    ],
+                  ],
+                },
+              },
+              "Resource": "*",
+            },
+            {
+              "Action": [
+                "kms:Decrypt",
+                "kms:Encrypt",
+                "kms:ReEncrypt*",
+                "kms:GenerateDataKey*",
+              ],
+              "Condition": {
+                "StringEquals": {
+                  "kms:ViaService": {
+                    "Fn::Join": [
+                      "",
+                      [
+                        "secretsmanager.",
+                        {
+                          "Ref": "AWS::Region",
+                        },
+                        ".amazonaws.com",
+                      ],
+                    ],
+                  },
+                },
+              },
+              "Effect": "Allow",
+              "Principal": {
+                "AWS": {
+                  "Fn::Join": [
+                    "",
+                    [
+                      "arn:",
+                      {
+                        "Ref": "AWS::Partition",
+                      },
+                      ":iam::",
+                      {
+                        "Ref": "AWS::AccountId",
+                      },
+                      ":root",
+                    ],
+                  ],
+                },
+              },
+              "Resource": "*",
+            },
+            {
+              "Action": [
+                "kms:CreateGrant",
+                "kms:DescribeKey",
+              ],
+              "Condition": {
+                "StringEquals": {
+                  "kms:ViaService": {
+                    "Fn::Join": [
+                      "",
+                      [
+                        "secretsmanager.",
+                        {
+                          "Ref": "AWS::Region",
+                        },
+                        ".amazonaws.com",
+                      ],
+                    ],
+                  },
+                },
+              },
+              "Effect": "Allow",
+              "Principal": {
+                "AWS": {
+                  "Fn::Join": [
+                    "",
+                    [
+                      "arn:",
+                      {
+                        "Ref": "AWS::Partition",
+                      },
+                      ":iam::",
+                      {
+                        "Ref": "AWS::AccountId",
+                      },
+                      ":root",
+                    ],
+                  ],
+                },
+              },
+              "Resource": "*",
+            },
+            {
+              "Action": "kms:Decrypt",
+              "Condition": {
+                "StringEquals": {
+                  "kms:ViaService": {
+                    "Fn::Join": [
+                      "",
+                      [
+                        "secretsmanager.",
+                        {
+                          "Ref": "AWS::Region",
+                        },
+                        ".amazonaws.com",
+                      ],
+                    ],
+                  },
+                },
+              },
+              "Effect": "Allow",
+              "Principal": {
+                "AWS": {
+                  "Fn::GetAtt": [
+                    "ApiHandlerServiceRole592E70E9",
+                    "Arn",
+                  ],
+                },
+              },
+              "Resource": "*",
+            },
+            {
+              "Action": "kms:Decrypt",
+              "Condition": {
+                "StringEquals": {
+                  "kms:ViaService": {
+                    "Fn::Join": [
+                      "",
+                      [
+                        "secretsmanager.",
+                        {
+                          "Ref": "AWS::Region",
+                        },
+                        ".amazonaws.com",
+                      ],
+                    ],
+                  },
+                },
+              },
+              "Effect": "Allow",
+              "Principal": {
+                "AWS": {
+                  "Fn::GetAtt": [
+                    "SlaGenerateReportServiceRole0E4981AB",
+                    "Arn",
+                  ],
+                },
+              },
+              "Resource": "*",
+            },
+          ],
+          "Version": "2012-10-17",
+        },
+      },
+      "Type": "AWS::KMS::Key",
       "UpdateReplacePolicy": "Delete",
     },
     "WeeklyAutomationRule5514088E": {

@@ -1,0 +1,1698 @@
+
+> aws-cost-guardian-infra@0.1.0 test
+> jest -f
+
+  console.log
+    [CostGuardianStack] Asset paths:
+
+      at new CostGuardianStack (lib/cost-guardian-stack.ts:68:13)
+
+  console.log
+      backendPath: g:\aws-cost-guardian\backend - exists: true
+
+      at new CostGuardianStack (lib/cost-guardian-stack.ts:69:13)
+
+  console.log
+      backendFunctionsPath: g:\aws-cost-guardian\backend\functions - exists: true
+
+      at new CostGuardianStack (lib/cost-guardian-stack.ts:70:13)
+
+  console.log
+      docsPath: g:\aws-cost-guardian\docs - exists: false
+
+      at new CostGuardianStack (lib/cost-guardian-stack.ts:71:13)
+
+  console.warn
+    [WARNING] aws-cdk-lib.aws_events.CfnEventBusPolicyProps#action is deprecated.
+      this property has been deprecated
+      This API will be removed in the next major release.
+
+    [0m [90m 632 |[39m     [90m// Isso mantém a capacidade cross-account (conta variável) mas evita[39m
+     [90m 633 |[39m     [90m// que contas arbitrárias enviem eventos ao barramento.[39m
+    [31m[1m>[22m[39m[90m 634 |[39m     [36mnew[39m events[33m.[39m[33mCfnEventBusPolicy[39m([36mthis[39m[33m,[39m [32m'EventBusPolicy'[39m[33m,[39m {
+     [90m     |[39m     [31m[1m^[22m[39m
+     [90m 635 |[39m       eventBusName[33m:[39m eventBus[33m.[39meventBusName[33m,[39m
+     [90m 636 |[39m       statementId[33m:[39m [32m'AllowClientHealthEvents'[39m[33m,[39m
+     [90m 637 |[39m       action[33m:[39m [32m'events:PutEvents'[39m[33m,[39m[0m
+
+      at print (../node_modules/aws-cdk-lib/.warnings.jsii.js:9:146)
+      at Object.aws_cdk_lib_aws_events_CfnEventBusPolicyProps (../node_modules/aws-cdk-lib/.warnings.jsii.js:5:324230)
+      at new CfnEventBusPolicy (../node_modules/aws-cdk-lib/aws-events/lib/events.generated.js:1:72756)
+      at new CostGuardianStack (lib/cost-guardian-stack.ts:634:5)
+      at Object.<anonymous> (__tests__/cost-guardian-stack.comprehensive.test.ts:83:15)
+
+  console.warn
+    [WARNING] aws-cdk-lib.aws_events.CfnEventBusPolicyProps#condition is deprecated.
+      this property has been deprecated
+      This API will be removed in the next major release.
+
+    [0m [90m 632 |[39m     [90m// Isso mantém a capacidade cross-account (conta variável) mas evita[39m
+     [90m 633 |[39m     [90m// que contas arbitrárias enviem eventos ao barramento.[39m
+    [31m[1m>[22m[39m[90m 634 |[39m     [36mnew[39m events[33m.[39m[33mCfnEventBusPolicy[39m([36mthis[39m[33m,[39m [32m'EventBusPolicy'[39m[33m,[39m {
+     [90m     |[39m     [31m[1m^[22m[39m
+     [90m 635 |[39m       eventBusName[33m:[39m eventBus[33m.[39meventBusName[33m,[39m
+     [90m 636 |[39m       statementId[33m:[39m [32m'AllowClientHealthEvents'[39m[33m,[39m
+     [90m 637 |[39m       action[33m:[39m [32m'events:PutEvents'[39m[33m,[39m[0m
+
+      at print (../node_modules/aws-cdk-lib/.warnings.jsii.js:9:146)
+      at Object.aws_cdk_lib_aws_events_CfnEventBusPolicyProps (../node_modules/aws-cdk-lib/.warnings.jsii.js:5:324345)
+      at new CfnEventBusPolicy (../node_modules/aws-cdk-lib/aws-events/lib/events.generated.js:1:72756)
+      at new CostGuardianStack (lib/cost-guardian-stack.ts:634:5)
+      at Object.<anonymous> (__tests__/cost-guardian-stack.comprehensive.test.ts:83:15)
+
+  console.warn
+    [WARNING] aws-cdk-lib.aws_events.CfnEventBusPolicyProps#principal is deprecated.
+      this property has been deprecated
+      This API will be removed in the next major release.
+
+    [0m [90m 632 |[39m     [90m// Isso mantém a capacidade cross-account (conta variável) mas evita[39m
+     [90m 633 |[39m     [90m// que contas arbitrárias enviem eventos ao barramento.[39m
+    [31m[1m>[22m[39m[90m 634 |[39m     [36mnew[39m events[33m.[39m[33mCfnEventBusPolicy[39m([36mthis[39m[33m,[39m [32m'EventBusPolicy'[39m[33m,[39m {
+     [90m     |[39m     [31m[1m^[22m[39m
+     [90m 635 |[39m       eventBusName[33m:[39m eventBus[33m.[39meventBusName[33m,[39m
+     [90m 636 |[39m       statementId[33m:[39m [32m'AllowClientHealthEvents'[39m[33m,[39m
+     [90m 637 |[39m       action[33m:[39m [32m'events:PutEvents'[39m[33m,[39m[0m
+
+      at print (../node_modules/aws-cdk-lib/.warnings.jsii.js:9:146)
+      at Object.aws_cdk_lib_aws_events_CfnEventBusPolicyProps (../node_modules/aws-cdk-lib/.warnings.jsii.js:5:324517)
+      at new CfnEventBusPolicy (../node_modules/aws-cdk-lib/aws-events/lib/events.generated.js:1:72756)
+      at new CostGuardianStack (lib/cost-guardian-stack.ts:634:5)
+      at Object.<anonymous> (__tests__/cost-guardian-stack.comprehensive.test.ts:83:15)
+
+  console.log
+    [CostGuardianStack] Asset paths:
+
+      at new CostGuardianStack (lib/cost-guardian-stack.ts:68:13)
+
+  console.log
+      backendPath: g:\aws-cost-guardian\backend - exists: true
+
+      at new CostGuardianStack (lib/cost-guardian-stack.ts:69:13)
+
+  console.log
+      backendFunctionsPath: g:\aws-cost-guardian\backend\functions - exists: true
+
+      at new CostGuardianStack (lib/cost-guardian-stack.ts:70:13)
+
+  console.log
+      docsPath: g:\aws-cost-guardian\docs - exists: false
+
+      at new CostGuardianStack (lib/cost-guardian-stack.ts:71:13)
+
+  console.warn
+    [WARNING] aws-cdk-lib.aws_events.CfnEventBusPolicyProps#action is deprecated.
+      this property has been deprecated
+      This API will be removed in the next major release.
+
+    [0m [90m 632 |[39m     [90m// Isso mantém a capacidade cross-account (conta variável) mas evita[39m
+     [90m 633 |[39m     [90m// que contas arbitrárias enviem eventos ao barramento.[39m
+    [31m[1m>[22m[39m[90m 634 |[39m     [36mnew[39m events[33m.[39m[33mCfnEventBusPolicy[39m([36mthis[39m[33m,[39m [32m'EventBusPolicy'[39m[33m,[39m {
+     [90m     |[39m     [31m[1m^[22m[39m
+     [90m 635 |[39m       eventBusName[33m:[39m eventBus[33m.[39meventBusName[33m,[39m
+     [90m 636 |[39m       statementId[33m:[39m [32m'AllowClientHealthEvents'[39m[33m,[39m
+     [90m 637 |[39m       action[33m:[39m [32m'events:PutEvents'[39m[33m,[39m[0m
+
+      at print (../node_modules/aws-cdk-lib/.warnings.jsii.js:9:146)
+      at Object.aws_cdk_lib_aws_events_CfnEventBusPolicyProps (../node_modules/aws-cdk-lib/.warnings.jsii.js:5:324230)
+      at new CfnEventBusPolicy (../node_modules/aws-cdk-lib/aws-events/lib/events.generated.js:1:72756)
+      at new CostGuardianStack (lib/cost-guardian-stack.ts:634:5)
+      at Object.<anonymous> (__tests__/cost-guardian-stack.comprehensive.test.ts:83:15)
+
+  console.warn
+    [WARNING] aws-cdk-lib.aws_events.CfnEventBusPolicyProps#condition is deprecated.
+      this property has been deprecated
+      This API will be removed in the next major release.
+
+    [0m [90m 632 |[39m     [90m// Isso mantém a capacidade cross-account (conta variável) mas evita[39m
+     [90m 633 |[39m     [90m// que contas arbitrárias enviem eventos ao barramento.[39m
+    [31m[1m>[22m[39m[90m 634 |[39m     [36mnew[39m events[33m.[39m[33mCfnEventBusPolicy[39m([36mthis[39m[33m,[39m [32m'EventBusPolicy'[39m[33m,[39m {
+     [90m     |[39m     [31m[1m^[22m[39m
+     [90m 635 |[39m       eventBusName[33m:[39m eventBus[33m.[39meventBusName[33m,[39m
+     [90m 636 |[39m       statementId[33m:[39m [32m'AllowClientHealthEvents'[39m[33m,[39m
+     [90m 637 |[39m       action[33m:[39m [32m'events:PutEvents'[39m[33m,[39m[0m
+
+      at print (../node_modules/aws-cdk-lib/.warnings.jsii.js:9:146)
+      at Object.aws_cdk_lib_aws_events_CfnEventBusPolicyProps (../node_modules/aws-cdk-lib/.warnings.jsii.js:5:324345)
+      at new CfnEventBusPolicy (../node_modules/aws-cdk-lib/aws-events/lib/events.generated.js:1:72756)
+      at new CostGuardianStack (lib/cost-guardian-stack.ts:634:5)
+      at Object.<anonymous> (__tests__/cost-guardian-stack.comprehensive.test.ts:83:15)
+
+  console.warn
+    [WARNING] aws-cdk-lib.aws_events.CfnEventBusPolicyProps#principal is deprecated.
+      this property has been deprecated
+      This API will be removed in the next major release.
+
+    [0m [90m 632 |[39m     [90m// Isso mantém a capacidade cross-account (conta variável) mas evita[39m
+     [90m 633 |[39m     [90m// que contas arbitrárias enviem eventos ao barramento.[39m
+    [31m[1m>[22m[39m[90m 634 |[39m     [36mnew[39m events[33m.[39m[33mCfnEventBusPolicy[39m([36mthis[39m[33m,[39m [32m'EventBusPolicy'[39m[33m,[39m {
+     [90m     |[39m     [31m[1m^[22m[39m
+     [90m 635 |[39m       eventBusName[33m:[39m eventBus[33m.[39meventBusName[33m,[39m
+     [90m 636 |[39m       statementId[33m:[39m [32m'AllowClientHealthEvents'[39m[33m,[39m
+     [90m 637 |[39m       action[33m:[39m [32m'events:PutEvents'[39m[33m,[39m[0m
+
+      at print (../node_modules/aws-cdk-lib/.warnings.jsii.js:9:146)
+      at Object.aws_cdk_lib_aws_events_CfnEventBusPolicyProps (../node_modules/aws-cdk-lib/.warnings.jsii.js:5:324517)
+      at new CfnEventBusPolicy (../node_modules/aws-cdk-lib/aws-events/lib/events.generated.js:1:72756)
+      at new CostGuardianStack (lib/cost-guardian-stack.ts:634:5)
+      at Object.<anonymous> (__tests__/cost-guardian-stack.comprehensive.test.ts:83:15)
+
+  console.log
+    [CostGuardianStack] Asset paths:
+
+      at new CostGuardianStack (lib/cost-guardian-stack.ts:68:13)
+
+  console.log
+      backendPath: g:\aws-cost-guardian\backend - exists: true
+
+      at new CostGuardianStack (lib/cost-guardian-stack.ts:69:13)
+
+  console.log
+      backendFunctionsPath: g:\aws-cost-guardian\backend\functions - exists: true
+
+      at new CostGuardianStack (lib/cost-guardian-stack.ts:70:13)
+
+  console.log
+      docsPath: g:\aws-cost-guardian\docs - exists: false
+
+      at new CostGuardianStack (lib/cost-guardian-stack.ts:71:13)
+
+  console.warn
+    [WARNING] aws-cdk-lib.aws_events.CfnEventBusPolicyProps#action is deprecated.
+      this property has been deprecated
+      This API will be removed in the next major release.
+
+    [0m [90m 632 |[39m     [90m// Isso mantém a capacidade cross-account (conta variável) mas evita[39m
+     [90m 633 |[39m     [90m// que contas arbitrárias enviem eventos ao barramento.[39m
+    [31m[1m>[22m[39m[90m 634 |[39m     [36mnew[39m events[33m.[39m[33mCfnEventBusPolicy[39m([36mthis[39m[33m,[39m [32m'EventBusPolicy'[39m[33m,[39m {
+     [90m     |[39m     [31m[1m^[22m[39m
+     [90m 635 |[39m       eventBusName[33m:[39m eventBus[33m.[39meventBusName[33m,[39m
+     [90m 636 |[39m       statementId[33m:[39m [32m'AllowClientHealthEvents'[39m[33m,[39m
+     [90m 637 |[39m       action[33m:[39m [32m'events:PutEvents'[39m[33m,[39m[0m
+
+      at print (../node_modules/aws-cdk-lib/.warnings.jsii.js:9:146)
+      at Object.aws_cdk_lib_aws_events_CfnEventBusPolicyProps (../node_modules/aws-cdk-lib/.warnings.jsii.js:5:324230)
+      at new CfnEventBusPolicy (../node_modules/aws-cdk-lib/aws-events/lib/events.generated.js:1:72756)
+      at new CostGuardianStack (lib/cost-guardian-stack.ts:634:5)
+      at Object.<anonymous> (__tests__/cost-guardian-stack.comprehensive.test.ts:83:15)
+
+  console.warn
+    [WARNING] aws-cdk-lib.aws_events.CfnEventBusPolicyProps#condition is deprecated.
+      this property has been deprecated
+      This API will be removed in the next major release.
+
+    [0m [90m 632 |[39m     [90m// Isso mantém a capacidade cross-account (conta variável) mas evita[39m
+     [90m 633 |[39m     [90m// que contas arbitrárias enviem eventos ao barramento.[39m
+    [31m[1m>[22m[39m[90m 634 |[39m     [36mnew[39m events[33m.[39m[33mCfnEventBusPolicy[39m([36mthis[39m[33m,[39m [32m'EventBusPolicy'[39m[33m,[39m {
+     [90m     |[39m     [31m[1m^[22m[39m
+     [90m 635 |[39m       eventBusName[33m:[39m eventBus[33m.[39meventBusName[33m,[39m
+     [90m 636 |[39m       statementId[33m:[39m [32m'AllowClientHealthEvents'[39m[33m,[39m
+     [90m 637 |[39m       action[33m:[39m [32m'events:PutEvents'[39m[33m,[39m[0m
+
+      at print (../node_modules/aws-cdk-lib/.warnings.jsii.js:9:146)
+      at Object.aws_cdk_lib_aws_events_CfnEventBusPolicyProps (../node_modules/aws-cdk-lib/.warnings.jsii.js:5:324345)
+      at new CfnEventBusPolicy (../node_modules/aws-cdk-lib/aws-events/lib/events.generated.js:1:72756)
+      at new CostGuardianStack (lib/cost-guardian-stack.ts:634:5)
+      at Object.<anonymous> (__tests__/cost-guardian-stack.comprehensive.test.ts:83:15)
+
+  console.warn
+    [WARNING] aws-cdk-lib.aws_events.CfnEventBusPolicyProps#principal is deprecated.
+      this property has been deprecated
+      This API will be removed in the next major release.
+
+    [0m [90m 632 |[39m     [90m// Isso mantém a capacidade cross-account (conta variável) mas evita[39m
+     [90m 633 |[39m     [90m// que contas arbitrárias enviem eventos ao barramento.[39m
+    [31m[1m>[22m[39m[90m 634 |[39m     [36mnew[39m events[33m.[39m[33mCfnEventBusPolicy[39m([36mthis[39m[33m,[39m [32m'EventBusPolicy'[39m[33m,[39m {
+     [90m     |[39m     [31m[1m^[22m[39m
+     [90m 635 |[39m       eventBusName[33m:[39m eventBus[33m.[39meventBusName[33m,[39m
+     [90m 636 |[39m       statementId[33m:[39m [32m'AllowClientHealthEvents'[39m[33m,[39m
+     [90m 637 |[39m       action[33m:[39m [32m'events:PutEvents'[39m[33m,[39m[0m
+
+      at print (../node_modules/aws-cdk-lib/.warnings.jsii.js:9:146)
+      at Object.aws_cdk_lib_aws_events_CfnEventBusPolicyProps (../node_modules/aws-cdk-lib/.warnings.jsii.js:5:324517)
+      at new CfnEventBusPolicy (../node_modules/aws-cdk-lib/aws-events/lib/events.generated.js:1:72756)
+      at new CostGuardianStack (lib/cost-guardian-stack.ts:634:5)
+      at Object.<anonymous> (__tests__/cost-guardian-stack.comprehensive.test.ts:83:15)
+
+  console.log
+    [CostGuardianStack] Asset paths:
+
+      at new CostGuardianStack (lib/cost-guardian-stack.ts:68:13)
+
+  console.log
+      backendPath: g:\aws-cost-guardian\backend - exists: true
+
+      at new CostGuardianStack (lib/cost-guardian-stack.ts:69:13)
+
+  console.log
+      backendFunctionsPath: g:\aws-cost-guardian\backend\functions - exists: true
+
+      at new CostGuardianStack (lib/cost-guardian-stack.ts:70:13)
+
+  console.log
+      docsPath: g:\aws-cost-guardian\docs - exists: false
+
+      at new CostGuardianStack (lib/cost-guardian-stack.ts:71:13)
+
+  console.warn
+    [WARNING] aws-cdk-lib.aws_events.CfnEventBusPolicyProps#action is deprecated.
+      this property has been deprecated
+      This API will be removed in the next major release.
+
+    [0m [90m 632 |[39m     [90m// Isso mantém a capacidade cross-account (conta variável) mas evita[39m
+     [90m 633 |[39m     [90m// que contas arbitrárias enviem eventos ao barramento.[39m
+    [31m[1m>[22m[39m[90m 634 |[39m     [36mnew[39m events[33m.[39m[33mCfnEventBusPolicy[39m([36mthis[39m[33m,[39m [32m'EventBusPolicy'[39m[33m,[39m {
+     [90m     |[39m     [31m[1m^[22m[39m
+     [90m 635 |[39m       eventBusName[33m:[39m eventBus[33m.[39meventBusName[33m,[39m
+     [90m 636 |[39m       statementId[33m:[39m [32m'AllowClientHealthEvents'[39m[33m,[39m
+     [90m 637 |[39m       action[33m:[39m [32m'events:PutEvents'[39m[33m,[39m[0m
+
+      at print (../node_modules/aws-cdk-lib/.warnings.jsii.js:9:146)
+      at Object.aws_cdk_lib_aws_events_CfnEventBusPolicyProps (../node_modules/aws-cdk-lib/.warnings.jsii.js:5:324230)
+      at new CfnEventBusPolicy (../node_modules/aws-cdk-lib/aws-events/lib/events.generated.js:1:72756)
+      at new CostGuardianStack (lib/cost-guardian-stack.ts:634:5)
+      at Object.<anonymous> (__tests__/cost-guardian-stack.comprehensive.test.ts:83:15)
+
+  console.warn
+    [WARNING] aws-cdk-lib.aws_events.CfnEventBusPolicyProps#condition is deprecated.
+      this property has been deprecated
+      This API will be removed in the next major release.
+
+    [0m [90m 632 |[39m     [90m// Isso mantém a capacidade cross-account (conta variável) mas evita[39m
+     [90m 633 |[39m     [90m// que contas arbitrárias enviem eventos ao barramento.[39m
+    [31m[1m>[22m[39m[90m 634 |[39m     [36mnew[39m events[33m.[39m[33mCfnEventBusPolicy[39m([36mthis[39m[33m,[39m [32m'EventBusPolicy'[39m[33m,[39m {
+     [90m     |[39m     [31m[1m^[22m[39m
+     [90m 635 |[39m       eventBusName[33m:[39m eventBus[33m.[39meventBusName[33m,[39m
+     [90m 636 |[39m       statementId[33m:[39m [32m'AllowClientHealthEvents'[39m[33m,[39m
+     [90m 637 |[39m       action[33m:[39m [32m'events:PutEvents'[39m[33m,[39m[0m
+
+      at print (../node_modules/aws-cdk-lib/.warnings.jsii.js:9:146)
+      at Object.aws_cdk_lib_aws_events_CfnEventBusPolicyProps (../node_modules/aws-cdk-lib/.warnings.jsii.js:5:324345)
+      at new CfnEventBusPolicy (../node_modules/aws-cdk-lib/aws-events/lib/events.generated.js:1:72756)
+      at new CostGuardianStack (lib/cost-guardian-stack.ts:634:5)
+      at Object.<anonymous> (__tests__/cost-guardian-stack.comprehensive.test.ts:83:15)
+
+  console.warn
+    [WARNING] aws-cdk-lib.aws_events.CfnEventBusPolicyProps#principal is deprecated.
+      this property has been deprecated
+      This API will be removed in the next major release.
+
+    [0m [90m 632 |[39m     [90m// Isso mantém a capacidade cross-account (conta variável) mas evita[39m
+     [90m 633 |[39m     [90m// que contas arbitrárias enviem eventos ao barramento.[39m
+    [31m[1m>[22m[39m[90m 634 |[39m     [36mnew[39m events[33m.[39m[33mCfnEventBusPolicy[39m([36mthis[39m[33m,[39m [32m'EventBusPolicy'[39m[33m,[39m {
+     [90m     |[39m     [31m[1m^[22m[39m
+     [90m 635 |[39m       eventBusName[33m:[39m eventBus[33m.[39meventBusName[33m,[39m
+     [90m 636 |[39m       statementId[33m:[39m [32m'AllowClientHealthEvents'[39m[33m,[39m
+     [90m 637 |[39m       action[33m:[39m [32m'events:PutEvents'[39m[33m,[39m[0m
+
+      at print (../node_modules/aws-cdk-lib/.warnings.jsii.js:9:146)
+      at Object.aws_cdk_lib_aws_events_CfnEventBusPolicyProps (../node_modules/aws-cdk-lib/.warnings.jsii.js:5:324517)
+      at new CfnEventBusPolicy (../node_modules/aws-cdk-lib/aws-events/lib/events.generated.js:1:72756)
+      at new CostGuardianStack (lib/cost-guardian-stack.ts:634:5)
+      at Object.<anonymous> (__tests__/cost-guardian-stack.comprehensive.test.ts:83:15)
+
+  console.log
+    [CostGuardianStack] Asset paths:
+
+      at new CostGuardianStack (lib/cost-guardian-stack.ts:68:13)
+
+  console.log
+      backendPath: g:\aws-cost-guardian\backend - exists: true
+
+      at new CostGuardianStack (lib/cost-guardian-stack.ts:69:13)
+
+  console.log
+      backendFunctionsPath: g:\aws-cost-guardian\backend\functions - exists: true
+
+      at new CostGuardianStack (lib/cost-guardian-stack.ts:70:13)
+
+  console.log
+      docsPath: g:\aws-cost-guardian\docs - exists: false
+
+      at new CostGuardianStack (lib/cost-guardian-stack.ts:71:13)
+
+  console.warn
+    [WARNING] aws-cdk-lib.aws_events.CfnEventBusPolicyProps#action is deprecated.
+      this property has been deprecated
+      This API will be removed in the next major release.
+
+    [0m [90m 632 |[39m     [90m// Isso mantém a capacidade cross-account (conta variável) mas evita[39m
+     [90m 633 |[39m     [90m// que contas arbitrárias enviem eventos ao barramento.[39m
+    [31m[1m>[22m[39m[90m 634 |[39m     [36mnew[39m events[33m.[39m[33mCfnEventBusPolicy[39m([36mthis[39m[33m,[39m [32m'EventBusPolicy'[39m[33m,[39m {
+     [90m     |[39m     [31m[1m^[22m[39m
+     [90m 635 |[39m       eventBusName[33m:[39m eventBus[33m.[39meventBusName[33m,[39m
+     [90m 636 |[39m       statementId[33m:[39m [32m'AllowClientHealthEvents'[39m[33m,[39m
+     [90m 637 |[39m       action[33m:[39m [32m'events:PutEvents'[39m[33m,[39m[0m
+
+      at print (../node_modules/aws-cdk-lib/.warnings.jsii.js:9:146)
+      at Object.aws_cdk_lib_aws_events_CfnEventBusPolicyProps (../node_modules/aws-cdk-lib/.warnings.jsii.js:5:324230)
+      at new CfnEventBusPolicy (../node_modules/aws-cdk-lib/aws-events/lib/events.generated.js:1:72756)
+      at new CostGuardianStack (lib/cost-guardian-stack.ts:634:5)
+      at Object.<anonymous> (__tests__/cost-guardian-stack.comprehensive.test.ts:83:15)
+
+  console.warn
+    [WARNING] aws-cdk-lib.aws_events.CfnEventBusPolicyProps#condition is deprecated.
+      this property has been deprecated
+      This API will be removed in the next major release.
+
+    [0m [90m 632 |[39m     [90m// Isso mantém a capacidade cross-account (conta variável) mas evita[39m
+     [90m 633 |[39m     [90m// que contas arbitrárias enviem eventos ao barramento.[39m
+    [31m[1m>[22m[39m[90m 634 |[39m     [36mnew[39m events[33m.[39m[33mCfnEventBusPolicy[39m([36mthis[39m[33m,[39m [32m'EventBusPolicy'[39m[33m,[39m {
+     [90m     |[39m     [31m[1m^[22m[39m
+     [90m 635 |[39m       eventBusName[33m:[39m eventBus[33m.[39meventBusName[33m,[39m
+     [90m 636 |[39m       statementId[33m:[39m [32m'AllowClientHealthEvents'[39m[33m,[39m
+     [90m 637 |[39m       action[33m:[39m [32m'events:PutEvents'[39m[33m,[39m[0m
+
+      at print (../node_modules/aws-cdk-lib/.warnings.jsii.js:9:146)
+      at Object.aws_cdk_lib_aws_events_CfnEventBusPolicyProps (../node_modules/aws-cdk-lib/.warnings.jsii.js:5:324345)
+      at new CfnEventBusPolicy (../node_modules/aws-cdk-lib/aws-events/lib/events.generated.js:1:72756)
+      at new CostGuardianStack (lib/cost-guardian-stack.ts:634:5)
+      at Object.<anonymous> (__tests__/cost-guardian-stack.comprehensive.test.ts:83:15)
+
+  console.warn
+    [WARNING] aws-cdk-lib.aws_events.CfnEventBusPolicyProps#principal is deprecated.
+      this property has been deprecated
+      This API will be removed in the next major release.
+
+    [0m [90m 632 |[39m     [90m// Isso mantém a capacidade cross-account (conta variável) mas evita[39m
+     [90m 633 |[39m     [90m// que contas arbitrárias enviem eventos ao barramento.[39m
+    [31m[1m>[22m[39m[90m 634 |[39m     [36mnew[39m events[33m.[39m[33mCfnEventBusPolicy[39m([36mthis[39m[33m,[39m [32m'EventBusPolicy'[39m[33m,[39m {
+     [90m     |[39m     [31m[1m^[22m[39m
+     [90m 635 |[39m       eventBusName[33m:[39m eventBus[33m.[39meventBusName[33m,[39m
+     [90m 636 |[39m       statementId[33m:[39m [32m'AllowClientHealthEvents'[39m[33m,[39m
+     [90m 637 |[39m       action[33m:[39m [32m'events:PutEvents'[39m[33m,[39m[0m
+
+      at print (../node_modules/aws-cdk-lib/.warnings.jsii.js:9:146)
+      at Object.aws_cdk_lib_aws_events_CfnEventBusPolicyProps (../node_modules/aws-cdk-lib/.warnings.jsii.js:5:324517)
+      at new CfnEventBusPolicy (../node_modules/aws-cdk-lib/aws-events/lib/events.generated.js:1:72756)
+      at new CostGuardianStack (lib/cost-guardian-stack.ts:634:5)
+      at Object.<anonymous> (__tests__/cost-guardian-stack.comprehensive.test.ts:83:15)
+
+  console.log
+    [CostGuardianStack] Asset paths:
+
+      at new CostGuardianStack (lib/cost-guardian-stack.ts:68:13)
+
+  console.log
+      backendPath: g:\aws-cost-guardian\backend - exists: true
+
+      at new CostGuardianStack (lib/cost-guardian-stack.ts:69:13)
+
+  console.log
+      backendFunctionsPath: g:\aws-cost-guardian\backend\functions - exists: true
+
+      at new CostGuardianStack (lib/cost-guardian-stack.ts:70:13)
+
+  console.log
+      docsPath: g:\aws-cost-guardian\docs - exists: false
+
+      at new CostGuardianStack (lib/cost-guardian-stack.ts:71:13)
+
+  console.warn
+    [WARNING] aws-cdk-lib.aws_events.CfnEventBusPolicyProps#action is deprecated.
+      this property has been deprecated
+      This API will be removed in the next major release.
+
+    [0m [90m 632 |[39m     [90m// Isso mantém a capacidade cross-account (conta variável) mas evita[39m
+     [90m 633 |[39m     [90m// que contas arbitrárias enviem eventos ao barramento.[39m
+    [31m[1m>[22m[39m[90m 634 |[39m     [36mnew[39m events[33m.[39m[33mCfnEventBusPolicy[39m([36mthis[39m[33m,[39m [32m'EventBusPolicy'[39m[33m,[39m {
+     [90m     |[39m     [31m[1m^[22m[39m
+     [90m 635 |[39m       eventBusName[33m:[39m eventBus[33m.[39meventBusName[33m,[39m
+     [90m 636 |[39m       statementId[33m:[39m [32m'AllowClientHealthEvents'[39m[33m,[39m
+     [90m 637 |[39m       action[33m:[39m [32m'events:PutEvents'[39m[33m,[39m[0m
+
+      at print (../node_modules/aws-cdk-lib/.warnings.jsii.js:9:146)
+      at Object.aws_cdk_lib_aws_events_CfnEventBusPolicyProps (../node_modules/aws-cdk-lib/.warnings.jsii.js:5:324230)
+      at new CfnEventBusPolicy (../node_modules/aws-cdk-lib/aws-events/lib/events.generated.js:1:72756)
+      at new CostGuardianStack (lib/cost-guardian-stack.ts:634:5)
+      at Object.<anonymous> (__tests__/cost-guardian-stack.comprehensive.test.ts:158:15)
+
+  console.warn
+    [WARNING] aws-cdk-lib.aws_events.CfnEventBusPolicyProps#condition is deprecated.
+      this property has been deprecated
+      This API will be removed in the next major release.
+
+    [0m [90m 632 |[39m     [90m// Isso mantém a capacidade cross-account (conta variável) mas evita[39m
+     [90m 633 |[39m     [90m// que contas arbitrárias enviem eventos ao barramento.[39m
+    [31m[1m>[22m[39m[90m 634 |[39m     [36mnew[39m events[33m.[39m[33mCfnEventBusPolicy[39m([36mthis[39m[33m,[39m [32m'EventBusPolicy'[39m[33m,[39m {
+     [90m     |[39m     [31m[1m^[22m[39m
+     [90m 635 |[39m       eventBusName[33m:[39m eventBus[33m.[39meventBusName[33m,[39m
+     [90m 636 |[39m       statementId[33m:[39m [32m'AllowClientHealthEvents'[39m[33m,[39m
+     [90m 637 |[39m       action[33m:[39m [32m'events:PutEvents'[39m[33m,[39m[0m
+
+      at print (../node_modules/aws-cdk-lib/.warnings.jsii.js:9:146)
+      at Object.aws_cdk_lib_aws_events_CfnEventBusPolicyProps (../node_modules/aws-cdk-lib/.warnings.jsii.js:5:324345)
+      at new CfnEventBusPolicy (../node_modules/aws-cdk-lib/aws-events/lib/events.generated.js:1:72756)
+      at new CostGuardianStack (lib/cost-guardian-stack.ts:634:5)
+      at Object.<anonymous> (__tests__/cost-guardian-stack.comprehensive.test.ts:158:15)
+
+  console.warn
+    [WARNING] aws-cdk-lib.aws_events.CfnEventBusPolicyProps#principal is deprecated.
+      this property has been deprecated
+      This API will be removed in the next major release.
+
+    [0m [90m 632 |[39m     [90m// Isso mantém a capacidade cross-account (conta variável) mas evita[39m
+     [90m 633 |[39m     [90m// que contas arbitrárias enviem eventos ao barramento.[39m
+    [31m[1m>[22m[39m[90m 634 |[39m     [36mnew[39m events[33m.[39m[33mCfnEventBusPolicy[39m([36mthis[39m[33m,[39m [32m'EventBusPolicy'[39m[33m,[39m {
+     [90m     |[39m     [31m[1m^[22m[39m
+     [90m 635 |[39m       eventBusName[33m:[39m eventBus[33m.[39meventBusName[33m,[39m
+     [90m 636 |[39m       statementId[33m:[39m [32m'AllowClientHealthEvents'[39m[33m,[39m
+     [90m 637 |[39m       action[33m:[39m [32m'events:PutEvents'[39m[33m,[39m[0m
+
+      at print (../node_modules/aws-cdk-lib/.warnings.jsii.js:9:146)
+      at Object.aws_cdk_lib_aws_events_CfnEventBusPolicyProps (../node_modules/aws-cdk-lib/.warnings.jsii.js:5:324517)
+      at new CfnEventBusPolicy (../node_modules/aws-cdk-lib/aws-events/lib/events.generated.js:1:72756)
+      at new CostGuardianStack (lib/cost-guardian-stack.ts:634:5)
+      at Object.<anonymous> (__tests__/cost-guardian-stack.comprehensive.test.ts:158:15)
+
+  console.log
+    [CostGuardianStack] Asset paths:
+
+      at new CostGuardianStack (lib/cost-guardian-stack.ts:68:13)
+
+  console.log
+      backendPath: g:\aws-cost-guardian\backend - exists: true
+
+      at new CostGuardianStack (lib/cost-guardian-stack.ts:69:13)
+
+  console.log
+      backendFunctionsPath: g:\aws-cost-guardian\backend\functions - exists: true
+
+      at new CostGuardianStack (lib/cost-guardian-stack.ts:70:13)
+
+  console.log
+      docsPath: g:\aws-cost-guardian\docs - exists: false
+
+      at new CostGuardianStack (lib/cost-guardian-stack.ts:71:13)
+
+  console.warn
+    [WARNING] aws-cdk-lib.aws_events.CfnEventBusPolicyProps#action is deprecated.
+      this property has been deprecated
+      This API will be removed in the next major release.
+
+    [0m [90m 632 |[39m     [90m// Isso mantém a capacidade cross-account (conta variável) mas evita[39m
+     [90m 633 |[39m     [90m// que contas arbitrárias enviem eventos ao barramento.[39m
+    [31m[1m>[22m[39m[90m 634 |[39m     [36mnew[39m events[33m.[39m[33mCfnEventBusPolicy[39m([36mthis[39m[33m,[39m [32m'EventBusPolicy'[39m[33m,[39m {
+     [90m     |[39m     [31m[1m^[22m[39m
+     [90m 635 |[39m       eventBusName[33m:[39m eventBus[33m.[39meventBusName[33m,[39m
+     [90m 636 |[39m       statementId[33m:[39m [32m'AllowClientHealthEvents'[39m[33m,[39m
+     [90m 637 |[39m       action[33m:[39m [32m'events:PutEvents'[39m[33m,[39m[0m
+
+      at print (../node_modules/aws-cdk-lib/.warnings.jsii.js:9:146)
+      at Object.aws_cdk_lib_aws_events_CfnEventBusPolicyProps (../node_modules/aws-cdk-lib/.warnings.jsii.js:5:324230)
+      at new CfnEventBusPolicy (../node_modules/aws-cdk-lib/aws-events/lib/events.generated.js:1:72756)
+      at new CostGuardianStack (lib/cost-guardian-stack.ts:634:5)
+      at Object.<anonymous> (__tests__/cost-guardian-stack.comprehensive.test.ts:158:15)
+
+  console.warn
+    [WARNING] aws-cdk-lib.aws_events.CfnEventBusPolicyProps#condition is deprecated.
+      this property has been deprecated
+      This API will be removed in the next major release.
+
+    [0m [90m 632 |[39m     [90m// Isso mantém a capacidade cross-account (conta variável) mas evita[39m
+     [90m 633 |[39m     [90m// que contas arbitrárias enviem eventos ao barramento.[39m
+    [31m[1m>[22m[39m[90m 634 |[39m     [36mnew[39m events[33m.[39m[33mCfnEventBusPolicy[39m([36mthis[39m[33m,[39m [32m'EventBusPolicy'[39m[33m,[39m {
+     [90m     |[39m     [31m[1m^[22m[39m
+     [90m 635 |[39m       eventBusName[33m:[39m eventBus[33m.[39meventBusName[33m,[39m
+     [90m 636 |[39m       statementId[33m:[39m [32m'AllowClientHealthEvents'[39m[33m,[39m
+     [90m 637 |[39m       action[33m:[39m [32m'events:PutEvents'[39m[33m,[39m[0m
+
+      at print (../node_modules/aws-cdk-lib/.warnings.jsii.js:9:146)
+      at Object.aws_cdk_lib_aws_events_CfnEventBusPolicyProps (../node_modules/aws-cdk-lib/.warnings.jsii.js:5:324345)
+      at new CfnEventBusPolicy (../node_modules/aws-cdk-lib/aws-events/lib/events.generated.js:1:72756)
+      at new CostGuardianStack (lib/cost-guardian-stack.ts:634:5)
+      at Object.<anonymous> (__tests__/cost-guardian-stack.comprehensive.test.ts:158:15)
+
+  console.warn
+    [WARNING] aws-cdk-lib.aws_events.CfnEventBusPolicyProps#principal is deprecated.
+      this property has been deprecated
+      This API will be removed in the next major release.
+
+    [0m [90m 632 |[39m     [90m// Isso mantém a capacidade cross-account (conta variável) mas evita[39m
+     [90m 633 |[39m     [90m// que contas arbitrárias enviem eventos ao barramento.[39m
+    [31m[1m>[22m[39m[90m 634 |[39m     [36mnew[39m events[33m.[39m[33mCfnEventBusPolicy[39m([36mthis[39m[33m,[39m [32m'EventBusPolicy'[39m[33m,[39m {
+     [90m     |[39m     [31m[1m^[22m[39m
+     [90m 635 |[39m       eventBusName[33m:[39m eventBus[33m.[39meventBusName[33m,[39m
+     [90m 636 |[39m       statementId[33m:[39m [32m'AllowClientHealthEvents'[39m[33m,[39m
+     [90m 637 |[39m       action[33m:[39m [32m'events:PutEvents'[39m[33m,[39m[0m
+
+      at print (../node_modules/aws-cdk-lib/.warnings.jsii.js:9:146)
+      at Object.aws_cdk_lib_aws_events_CfnEventBusPolicyProps (../node_modules/aws-cdk-lib/.warnings.jsii.js:5:324517)
+      at new CfnEventBusPolicy (../node_modules/aws-cdk-lib/aws-events/lib/events.generated.js:1:72756)
+      at new CostGuardianStack (lib/cost-guardian-stack.ts:634:5)
+      at Object.<anonymous> (__tests__/cost-guardian-stack.comprehensive.test.ts:158:15)
+
+  console.log
+    [CostGuardianStack] Asset paths:
+
+      at new CostGuardianStack (lib/cost-guardian-stack.ts:68:13)
+
+  console.log
+      backendPath: g:\aws-cost-guardian\backend - exists: true
+
+      at new CostGuardianStack (lib/cost-guardian-stack.ts:69:13)
+
+  console.log
+      backendFunctionsPath: g:\aws-cost-guardian\backend\functions - exists: true
+
+      at new CostGuardianStack (lib/cost-guardian-stack.ts:70:13)
+
+  console.log
+      docsPath: g:\aws-cost-guardian\docs - exists: false
+
+      at new CostGuardianStack (lib/cost-guardian-stack.ts:71:13)
+
+  console.warn
+    [WARNING] aws-cdk-lib.aws_events.CfnEventBusPolicyProps#action is deprecated.
+      this property has been deprecated
+      This API will be removed in the next major release.
+
+    [0m [90m 632 |[39m     [90m// Isso mantém a capacidade cross-account (conta variável) mas evita[39m
+     [90m 633 |[39m     [90m// que contas arbitrárias enviem eventos ao barramento.[39m
+    [31m[1m>[22m[39m[90m 634 |[39m     [36mnew[39m events[33m.[39m[33mCfnEventBusPolicy[39m([36mthis[39m[33m,[39m [32m'EventBusPolicy'[39m[33m,[39m {
+     [90m     |[39m     [31m[1m^[22m[39m
+     [90m 635 |[39m       eventBusName[33m:[39m eventBus[33m.[39meventBusName[33m,[39m
+     [90m 636 |[39m       statementId[33m:[39m [32m'AllowClientHealthEvents'[39m[33m,[39m
+     [90m 637 |[39m       action[33m:[39m [32m'events:PutEvents'[39m[33m,[39m[0m
+
+      at print (../node_modules/aws-cdk-lib/.warnings.jsii.js:9:146)
+      at Object.aws_cdk_lib_aws_events_CfnEventBusPolicyProps (../node_modules/aws-cdk-lib/.warnings.jsii.js:5:324230)
+      at new CfnEventBusPolicy (../node_modules/aws-cdk-lib/aws-events/lib/events.generated.js:1:72756)
+      at new CostGuardianStack (lib/cost-guardian-stack.ts:634:5)
+      at Object.<anonymous> (__tests__/cost-guardian-stack.comprehensive.test.ts:158:15)
+
+  console.warn
+    [WARNING] aws-cdk-lib.aws_events.CfnEventBusPolicyProps#condition is deprecated.
+      this property has been deprecated
+      This API will be removed in the next major release.
+
+    [0m [90m 632 |[39m     [90m// Isso mantém a capacidade cross-account (conta variável) mas evita[39m
+     [90m 633 |[39m     [90m// que contas arbitrárias enviem eventos ao barramento.[39m
+    [31m[1m>[22m[39m[90m 634 |[39m     [36mnew[39m events[33m.[39m[33mCfnEventBusPolicy[39m([36mthis[39m[33m,[39m [32m'EventBusPolicy'[39m[33m,[39m {
+     [90m     |[39m     [31m[1m^[22m[39m
+     [90m 635 |[39m       eventBusName[33m:[39m eventBus[33m.[39meventBusName[33m,[39m
+     [90m 636 |[39m       statementId[33m:[39m [32m'AllowClientHealthEvents'[39m[33m,[39m
+     [90m 637 |[39m       action[33m:[39m [32m'events:PutEvents'[39m[33m,[39m[0m
+
+      at print (../node_modules/aws-cdk-lib/.warnings.jsii.js:9:146)
+      at Object.aws_cdk_lib_aws_events_CfnEventBusPolicyProps (../node_modules/aws-cdk-lib/.warnings.jsii.js:5:324345)
+      at new CfnEventBusPolicy (../node_modules/aws-cdk-lib/aws-events/lib/events.generated.js:1:72756)
+      at new CostGuardianStack (lib/cost-guardian-stack.ts:634:5)
+      at Object.<anonymous> (__tests__/cost-guardian-stack.comprehensive.test.ts:158:15)
+
+  console.warn
+    [WARNING] aws-cdk-lib.aws_events.CfnEventBusPolicyProps#principal is deprecated.
+      this property has been deprecated
+      This API will be removed in the next major release.
+
+    [0m [90m 632 |[39m     [90m// Isso mantém a capacidade cross-account (conta variável) mas evita[39m
+     [90m 633 |[39m     [90m// que contas arbitrárias enviem eventos ao barramento.[39m
+    [31m[1m>[22m[39m[90m 634 |[39m     [36mnew[39m events[33m.[39m[33mCfnEventBusPolicy[39m([36mthis[39m[33m,[39m [32m'EventBusPolicy'[39m[33m,[39m {
+     [90m     |[39m     [31m[1m^[22m[39m
+     [90m 635 |[39m       eventBusName[33m:[39m eventBus[33m.[39meventBusName[33m,[39m
+     [90m 636 |[39m       statementId[33m:[39m [32m'AllowClientHealthEvents'[39m[33m,[39m
+     [90m 637 |[39m       action[33m:[39m [32m'events:PutEvents'[39m[33m,[39m[0m
+
+      at print (../node_modules/aws-cdk-lib/.warnings.jsii.js:9:146)
+      at Object.aws_cdk_lib_aws_events_CfnEventBusPolicyProps (../node_modules/aws-cdk-lib/.warnings.jsii.js:5:324517)
+      at new CfnEventBusPolicy (../node_modules/aws-cdk-lib/aws-events/lib/events.generated.js:1:72756)
+      at new CostGuardianStack (lib/cost-guardian-stack.ts:634:5)
+      at Object.<anonymous> (__tests__/cost-guardian-stack.comprehensive.test.ts:158:15)
+
+  console.log
+    [CostGuardianStack] Asset paths:
+
+      at new CostGuardianStack (lib/cost-guardian-stack.ts:68:13)
+
+  console.log
+      backendPath: g:\aws-cost-guardian\backend - exists: true
+
+      at new CostGuardianStack (lib/cost-guardian-stack.ts:69:13)
+
+  console.log
+      backendFunctionsPath: g:\aws-cost-guardian\backend\functions - exists: true
+
+      at new CostGuardianStack (lib/cost-guardian-stack.ts:70:13)
+
+  console.log
+      docsPath: g:\aws-cost-guardian\docs - exists: false
+
+      at new CostGuardianStack (lib/cost-guardian-stack.ts:71:13)
+
+  console.warn
+    [WARNING] aws-cdk-lib.aws_events.CfnEventBusPolicyProps#action is deprecated.
+      this property has been deprecated
+      This API will be removed in the next major release.
+
+    [0m [90m 632 |[39m     [90m// Isso mantém a capacidade cross-account (conta variável) mas evita[39m
+     [90m 633 |[39m     [90m// que contas arbitrárias enviem eventos ao barramento.[39m
+    [31m[1m>[22m[39m[90m 634 |[39m     [36mnew[39m events[33m.[39m[33mCfnEventBusPolicy[39m([36mthis[39m[33m,[39m [32m'EventBusPolicy'[39m[33m,[39m {
+     [90m     |[39m     [31m[1m^[22m[39m
+     [90m 635 |[39m       eventBusName[33m:[39m eventBus[33m.[39meventBusName[33m,[39m
+     [90m 636 |[39m       statementId[33m:[39m [32m'AllowClientHealthEvents'[39m[33m,[39m
+     [90m 637 |[39m       action[33m:[39m [32m'events:PutEvents'[39m[33m,[39m[0m
+
+      at print (../node_modules/aws-cdk-lib/.warnings.jsii.js:9:146)
+      at Object.aws_cdk_lib_aws_events_CfnEventBusPolicyProps (../node_modules/aws-cdk-lib/.warnings.jsii.js:5:324230)
+      at new CfnEventBusPolicy (../node_modules/aws-cdk-lib/aws-events/lib/events.generated.js:1:72756)
+      at new CostGuardianStack (lib/cost-guardian-stack.ts:634:5)
+      at Object.<anonymous> (__tests__/cost-guardian-stack.comprehensive.test.ts:158:15)
+
+  console.warn
+    [WARNING] aws-cdk-lib.aws_events.CfnEventBusPolicyProps#condition is deprecated.
+      this property has been deprecated
+      This API will be removed in the next major release.
+
+    [0m [90m 632 |[39m     [90m// Isso mantém a capacidade cross-account (conta variável) mas evita[39m
+     [90m 633 |[39m     [90m// que contas arbitrárias enviem eventos ao barramento.[39m
+    [31m[1m>[22m[39m[90m 634 |[39m     [36mnew[39m events[33m.[39m[33mCfnEventBusPolicy[39m([36mthis[39m[33m,[39m [32m'EventBusPolicy'[39m[33m,[39m {
+     [90m     |[39m     [31m[1m^[22m[39m
+     [90m 635 |[39m       eventBusName[33m:[39m eventBus[33m.[39meventBusName[33m,[39m
+     [90m 636 |[39m       statementId[33m:[39m [32m'AllowClientHealthEvents'[39m[33m,[39m
+     [90m 637 |[39m       action[33m:[39m [32m'events:PutEvents'[39m[33m,[39m[0m
+
+      at print (../node_modules/aws-cdk-lib/.warnings.jsii.js:9:146)
+      at Object.aws_cdk_lib_aws_events_CfnEventBusPolicyProps (../node_modules/aws-cdk-lib/.warnings.jsii.js:5:324345)
+      at new CfnEventBusPolicy (../node_modules/aws-cdk-lib/aws-events/lib/events.generated.js:1:72756)
+      at new CostGuardianStack (lib/cost-guardian-stack.ts:634:5)
+      at Object.<anonymous> (__tests__/cost-guardian-stack.comprehensive.test.ts:158:15)
+
+  console.warn
+    [WARNING] aws-cdk-lib.aws_events.CfnEventBusPolicyProps#principal is deprecated.
+      this property has been deprecated
+      This API will be removed in the next major release.
+
+    [0m [90m 632 |[39m     [90m// Isso mantém a capacidade cross-account (conta variável) mas evita[39m
+     [90m 633 |[39m     [90m// que contas arbitrárias enviem eventos ao barramento.[39m
+    [31m[1m>[22m[39m[90m 634 |[39m     [36mnew[39m events[33m.[39m[33mCfnEventBusPolicy[39m([36mthis[39m[33m,[39m [32m'EventBusPolicy'[39m[33m,[39m {
+     [90m     |[39m     [31m[1m^[22m[39m
+     [90m 635 |[39m       eventBusName[33m:[39m eventBus[33m.[39meventBusName[33m,[39m
+     [90m 636 |[39m       statementId[33m:[39m [32m'AllowClientHealthEvents'[39m[33m,[39m
+     [90m 637 |[39m       action[33m:[39m [32m'events:PutEvents'[39m[33m,[39m[0m
+
+      at print (../node_modules/aws-cdk-lib/.warnings.jsii.js:9:146)
+      at Object.aws_cdk_lib_aws_events_CfnEventBusPolicyProps (../node_modules/aws-cdk-lib/.warnings.jsii.js:5:324517)
+      at new CfnEventBusPolicy (../node_modules/aws-cdk-lib/aws-events/lib/events.generated.js:1:72756)
+      at new CostGuardianStack (lib/cost-guardian-stack.ts:634:5)
+      at Object.<anonymous> (__tests__/cost-guardian-stack.comprehensive.test.ts:158:15)
+
+  console.log
+    [CostGuardianStack] Asset paths:
+
+      at new CostGuardianStack (lib/cost-guardian-stack.ts:68:13)
+
+  console.log
+      backendPath: g:\aws-cost-guardian\backend - exists: true
+
+      at new CostGuardianStack (lib/cost-guardian-stack.ts:69:13)
+
+  console.log
+      backendFunctionsPath: g:\aws-cost-guardian\backend\functions - exists: true
+
+      at new CostGuardianStack (lib/cost-guardian-stack.ts:70:13)
+
+  console.log
+      docsPath: g:\aws-cost-guardian\docs - exists: false
+
+      at new CostGuardianStack (lib/cost-guardian-stack.ts:71:13)
+
+  console.warn
+    [WARNING] aws-cdk-lib.aws_events.CfnEventBusPolicyProps#action is deprecated.
+      this property has been deprecated
+      This API will be removed in the next major release.
+
+    [0m [90m 632 |[39m     [90m// Isso mantém a capacidade cross-account (conta variável) mas evita[39m
+     [90m 633 |[39m     [90m// que contas arbitrárias enviem eventos ao barramento.[39m
+    [31m[1m>[22m[39m[90m 634 |[39m     [36mnew[39m events[33m.[39m[33mCfnEventBusPolicy[39m([36mthis[39m[33m,[39m [32m'EventBusPolicy'[39m[33m,[39m {
+     [90m     |[39m     [31m[1m^[22m[39m
+     [90m 635 |[39m       eventBusName[33m:[39m eventBus[33m.[39meventBusName[33m,[39m
+     [90m 636 |[39m       statementId[33m:[39m [32m'AllowClientHealthEvents'[39m[33m,[39m
+     [90m 637 |[39m       action[33m:[39m [32m'events:PutEvents'[39m[33m,[39m[0m
+
+      at print (../node_modules/aws-cdk-lib/.warnings.jsii.js:9:146)
+      at Object.aws_cdk_lib_aws_events_CfnEventBusPolicyProps (../node_modules/aws-cdk-lib/.warnings.jsii.js:5:324230)
+      at new CfnEventBusPolicy (../node_modules/aws-cdk-lib/aws-events/lib/events.generated.js:1:72756)
+      at new CostGuardianStack (lib/cost-guardian-stack.ts:634:5)
+      at Object.<anonymous> (__tests__/cost-guardian-stack.comprehensive.test.ts:224:15)
+
+  console.warn
+    [WARNING] aws-cdk-lib.aws_events.CfnEventBusPolicyProps#condition is deprecated.
+      this property has been deprecated
+      This API will be removed in the next major release.
+
+    [0m [90m 632 |[39m     [90m// Isso mantém a capacidade cross-account (conta variável) mas evita[39m
+     [90m 633 |[39m     [90m// que contas arbitrárias enviem eventos ao barramento.[39m
+    [31m[1m>[22m[39m[90m 634 |[39m     [36mnew[39m events[33m.[39m[33mCfnEventBusPolicy[39m([36mthis[39m[33m,[39m [32m'EventBusPolicy'[39m[33m,[39m {
+     [90m     |[39m     [31m[1m^[22m[39m
+     [90m 635 |[39m       eventBusName[33m:[39m eventBus[33m.[39meventBusName[33m,[39m
+     [90m 636 |[39m       statementId[33m:[39m [32m'AllowClientHealthEvents'[39m[33m,[39m
+     [90m 637 |[39m       action[33m:[39m [32m'events:PutEvents'[39m[33m,[39m[0m
+
+      at print (../node_modules/aws-cdk-lib/.warnings.jsii.js:9:146)
+      at Object.aws_cdk_lib_aws_events_CfnEventBusPolicyProps (../node_modules/aws-cdk-lib/.warnings.jsii.js:5:324345)
+      at new CfnEventBusPolicy (../node_modules/aws-cdk-lib/aws-events/lib/events.generated.js:1:72756)
+      at new CostGuardianStack (lib/cost-guardian-stack.ts:634:5)
+      at Object.<anonymous> (__tests__/cost-guardian-stack.comprehensive.test.ts:224:15)
+
+  console.warn
+    [WARNING] aws-cdk-lib.aws_events.CfnEventBusPolicyProps#principal is deprecated.
+      this property has been deprecated
+      This API will be removed in the next major release.
+
+    [0m [90m 632 |[39m     [90m// Isso mantém a capacidade cross-account (conta variável) mas evita[39m
+     [90m 633 |[39m     [90m// que contas arbitrárias enviem eventos ao barramento.[39m
+    [31m[1m>[22m[39m[90m 634 |[39m     [36mnew[39m events[33m.[39m[33mCfnEventBusPolicy[39m([36mthis[39m[33m,[39m [32m'EventBusPolicy'[39m[33m,[39m {
+     [90m     |[39m     [31m[1m^[22m[39m
+     [90m 635 |[39m       eventBusName[33m:[39m eventBus[33m.[39meventBusName[33m,[39m
+     [90m 636 |[39m       statementId[33m:[39m [32m'AllowClientHealthEvents'[39m[33m,[39m
+     [90m 637 |[39m       action[33m:[39m [32m'events:PutEvents'[39m[33m,[39m[0m
+
+      at print (../node_modules/aws-cdk-lib/.warnings.jsii.js:9:146)
+      at Object.aws_cdk_lib_aws_events_CfnEventBusPolicyProps (../node_modules/aws-cdk-lib/.warnings.jsii.js:5:324517)
+      at new CfnEventBusPolicy (../node_modules/aws-cdk-lib/aws-events/lib/events.generated.js:1:72756)
+      at new CostGuardianStack (lib/cost-guardian-stack.ts:634:5)
+      at Object.<anonymous> (__tests__/cost-guardian-stack.comprehensive.test.ts:224:15)
+
+  console.log
+    [CostGuardianStack] Asset paths:
+
+      at new CostGuardianStack (lib/cost-guardian-stack.ts:68:13)
+
+  console.log
+      backendPath: g:\aws-cost-guardian\backend - exists: true
+
+      at new CostGuardianStack (lib/cost-guardian-stack.ts:69:13)
+
+  console.log
+      backendFunctionsPath: g:\aws-cost-guardian\backend\functions - exists: true
+
+      at new CostGuardianStack (lib/cost-guardian-stack.ts:70:13)
+
+  console.log
+      docsPath: g:\aws-cost-guardian\docs - exists: false
+
+      at new CostGuardianStack (lib/cost-guardian-stack.ts:71:13)
+
+  console.warn
+    [WARNING] aws-cdk-lib.aws_events.CfnEventBusPolicyProps#action is deprecated.
+      this property has been deprecated
+      This API will be removed in the next major release.
+
+    [0m [90m 632 |[39m     [90m// Isso mantém a capacidade cross-account (conta variável) mas evita[39m
+     [90m 633 |[39m     [90m// que contas arbitrárias enviem eventos ao barramento.[39m
+    [31m[1m>[22m[39m[90m 634 |[39m     [36mnew[39m events[33m.[39m[33mCfnEventBusPolicy[39m([36mthis[39m[33m,[39m [32m'EventBusPolicy'[39m[33m,[39m {
+     [90m     |[39m     [31m[1m^[22m[39m
+     [90m 635 |[39m       eventBusName[33m:[39m eventBus[33m.[39meventBusName[33m,[39m
+     [90m 636 |[39m       statementId[33m:[39m [32m'AllowClientHealthEvents'[39m[33m,[39m
+     [90m 637 |[39m       action[33m:[39m [32m'events:PutEvents'[39m[33m,[39m[0m
+
+      at print (../node_modules/aws-cdk-lib/.warnings.jsii.js:9:146)
+      at Object.aws_cdk_lib_aws_events_CfnEventBusPolicyProps (../node_modules/aws-cdk-lib/.warnings.jsii.js:5:324230)
+      at new CfnEventBusPolicy (../node_modules/aws-cdk-lib/aws-events/lib/events.generated.js:1:72756)
+      at new CostGuardianStack (lib/cost-guardian-stack.ts:634:5)
+      at Object.<anonymous> (__tests__/cost-guardian-stack.comprehensive.test.ts:224:15)
+
+  console.warn
+    [WARNING] aws-cdk-lib.aws_events.CfnEventBusPolicyProps#condition is deprecated.
+      this property has been deprecated
+      This API will be removed in the next major release.
+
+    [0m [90m 632 |[39m     [90m// Isso mantém a capacidade cross-account (conta variável) mas evita[39m
+     [90m 633 |[39m     [90m// que contas arbitrárias enviem eventos ao barramento.[39m
+    [31m[1m>[22m[39m[90m 634 |[39m     [36mnew[39m events[33m.[39m[33mCfnEventBusPolicy[39m([36mthis[39m[33m,[39m [32m'EventBusPolicy'[39m[33m,[39m {
+     [90m     |[39m     [31m[1m^[22m[39m
+     [90m 635 |[39m       eventBusName[33m:[39m eventBus[33m.[39meventBusName[33m,[39m
+     [90m 636 |[39m       statementId[33m:[39m [32m'AllowClientHealthEvents'[39m[33m,[39m
+     [90m 637 |[39m       action[33m:[39m [32m'events:PutEvents'[39m[33m,[39m[0m
+
+      at print (../node_modules/aws-cdk-lib/.warnings.jsii.js:9:146)
+      at Object.aws_cdk_lib_aws_events_CfnEventBusPolicyProps (../node_modules/aws-cdk-lib/.warnings.jsii.js:5:324345)
+      at new CfnEventBusPolicy (../node_modules/aws-cdk-lib/aws-events/lib/events.generated.js:1:72756)
+      at new CostGuardianStack (lib/cost-guardian-stack.ts:634:5)
+      at Object.<anonymous> (__tests__/cost-guardian-stack.comprehensive.test.ts:224:15)
+
+  console.warn
+    [WARNING] aws-cdk-lib.aws_events.CfnEventBusPolicyProps#principal is deprecated.
+      this property has been deprecated
+      This API will be removed in the next major release.
+
+    [0m [90m 632 |[39m     [90m// Isso mantém a capacidade cross-account (conta variável) mas evita[39m
+     [90m 633 |[39m     [90m// que contas arbitrárias enviem eventos ao barramento.[39m
+    [31m[1m>[22m[39m[90m 634 |[39m     [36mnew[39m events[33m.[39m[33mCfnEventBusPolicy[39m([36mthis[39m[33m,[39m [32m'EventBusPolicy'[39m[33m,[39m {
+     [90m     |[39m     [31m[1m^[22m[39m
+     [90m 635 |[39m       eventBusName[33m:[39m eventBus[33m.[39meventBusName[33m,[39m
+     [90m 636 |[39m       statementId[33m:[39m [32m'AllowClientHealthEvents'[39m[33m,[39m
+     [90m 637 |[39m       action[33m:[39m [32m'events:PutEvents'[39m[33m,[39m[0m
+
+      at print (../node_modules/aws-cdk-lib/.warnings.jsii.js:9:146)
+      at Object.aws_cdk_lib_aws_events_CfnEventBusPolicyProps (../node_modules/aws-cdk-lib/.warnings.jsii.js:5:324517)
+      at new CfnEventBusPolicy (../node_modules/aws-cdk-lib/aws-events/lib/events.generated.js:1:72756)
+      at new CostGuardianStack (lib/cost-guardian-stack.ts:634:5)
+      at Object.<anonymous> (__tests__/cost-guardian-stack.comprehensive.test.ts:224:15)
+
+  console.log
+    [CostGuardianStack] Asset paths:
+
+      at new CostGuardianStack (lib/cost-guardian-stack.ts:68:13)
+
+  console.log
+      backendPath: g:\aws-cost-guardian\backend - exists: true
+
+      at new CostGuardianStack (lib/cost-guardian-stack.ts:69:13)
+
+  console.log
+      backendFunctionsPath: g:\aws-cost-guardian\backend\functions - exists: true
+
+      at new CostGuardianStack (lib/cost-guardian-stack.ts:70:13)
+
+  console.log
+      docsPath: g:\aws-cost-guardian\docs - exists: false
+
+      at new CostGuardianStack (lib/cost-guardian-stack.ts:71:13)
+
+  console.warn
+    [WARNING] aws-cdk-lib.aws_events.CfnEventBusPolicyProps#action is deprecated.
+      this property has been deprecated
+      This API will be removed in the next major release.
+
+    [0m [90m 632 |[39m     [90m// Isso mantém a capacidade cross-account (conta variável) mas evita[39m
+     [90m 633 |[39m     [90m// que contas arbitrárias enviem eventos ao barramento.[39m
+    [31m[1m>[22m[39m[90m 634 |[39m     [36mnew[39m events[33m.[39m[33mCfnEventBusPolicy[39m([36mthis[39m[33m,[39m [32m'EventBusPolicy'[39m[33m,[39m {
+     [90m     |[39m     [31m[1m^[22m[39m
+     [90m 635 |[39m       eventBusName[33m:[39m eventBus[33m.[39meventBusName[33m,[39m
+     [90m 636 |[39m       statementId[33m:[39m [32m'AllowClientHealthEvents'[39m[33m,[39m
+     [90m 637 |[39m       action[33m:[39m [32m'events:PutEvents'[39m[33m,[39m[0m
+
+      at print (../node_modules/aws-cdk-lib/.warnings.jsii.js:9:146)
+      at Object.aws_cdk_lib_aws_events_CfnEventBusPolicyProps (../node_modules/aws-cdk-lib/.warnings.jsii.js:5:324230)
+      at new CfnEventBusPolicy (../node_modules/aws-cdk-lib/aws-events/lib/events.generated.js:1:72756)
+      at new CostGuardianStack (lib/cost-guardian-stack.ts:634:5)
+      at Object.<anonymous> (__tests__/cost-guardian-stack.comprehensive.test.ts:224:15)
+
+  console.warn
+    [WARNING] aws-cdk-lib.aws_events.CfnEventBusPolicyProps#condition is deprecated.
+      this property has been deprecated
+      This API will be removed in the next major release.
+
+    [0m [90m 632 |[39m     [90m// Isso mantém a capacidade cross-account (conta variável) mas evita[39m
+     [90m 633 |[39m     [90m// que contas arbitrárias enviem eventos ao barramento.[39m
+    [31m[1m>[22m[39m[90m 634 |[39m     [36mnew[39m events[33m.[39m[33mCfnEventBusPolicy[39m([36mthis[39m[33m,[39m [32m'EventBusPolicy'[39m[33m,[39m {
+     [90m     |[39m     [31m[1m^[22m[39m
+     [90m 635 |[39m       eventBusName[33m:[39m eventBus[33m.[39meventBusName[33m,[39m
+     [90m 636 |[39m       statementId[33m:[39m [32m'AllowClientHealthEvents'[39m[33m,[39m
+     [90m 637 |[39m       action[33m:[39m [32m'events:PutEvents'[39m[33m,[39m[0m
+
+      at print (../node_modules/aws-cdk-lib/.warnings.jsii.js:9:146)
+      at Object.aws_cdk_lib_aws_events_CfnEventBusPolicyProps (../node_modules/aws-cdk-lib/.warnings.jsii.js:5:324345)
+      at new CfnEventBusPolicy (../node_modules/aws-cdk-lib/aws-events/lib/events.generated.js:1:72756)
+      at new CostGuardianStack (lib/cost-guardian-stack.ts:634:5)
+      at Object.<anonymous> (__tests__/cost-guardian-stack.comprehensive.test.ts:224:15)
+
+  console.warn
+    [WARNING] aws-cdk-lib.aws_events.CfnEventBusPolicyProps#principal is deprecated.
+      this property has been deprecated
+      This API will be removed in the next major release.
+
+    [0m [90m 632 |[39m     [90m// Isso mantém a capacidade cross-account (conta variável) mas evita[39m
+     [90m 633 |[39m     [90m// que contas arbitrárias enviem eventos ao barramento.[39m
+    [31m[1m>[22m[39m[90m 634 |[39m     [36mnew[39m events[33m.[39m[33mCfnEventBusPolicy[39m([36mthis[39m[33m,[39m [32m'EventBusPolicy'[39m[33m,[39m {
+     [90m     |[39m     [31m[1m^[22m[39m
+     [90m 635 |[39m       eventBusName[33m:[39m eventBus[33m.[39meventBusName[33m,[39m
+     [90m 636 |[39m       statementId[33m:[39m [32m'AllowClientHealthEvents'[39m[33m,[39m
+     [90m 637 |[39m       action[33m:[39m [32m'events:PutEvents'[39m[33m,[39m[0m
+
+      at print (../node_modules/aws-cdk-lib/.warnings.jsii.js:9:146)
+      at Object.aws_cdk_lib_aws_events_CfnEventBusPolicyProps (../node_modules/aws-cdk-lib/.warnings.jsii.js:5:324517)
+      at new CfnEventBusPolicy (../node_modules/aws-cdk-lib/aws-events/lib/events.generated.js:1:72756)
+      at new CostGuardianStack (lib/cost-guardian-stack.ts:634:5)
+      at Object.<anonymous> (__tests__/cost-guardian-stack.comprehensive.test.ts:224:15)
+
+  console.log
+    [CostGuardianStack] Asset paths:
+
+      at new CostGuardianStack (lib/cost-guardian-stack.ts:68:13)
+
+  console.log
+      backendPath: g:\aws-cost-guardian\backend - exists: true
+
+      at new CostGuardianStack (lib/cost-guardian-stack.ts:69:13)
+
+  console.log
+      backendFunctionsPath: g:\aws-cost-guardian\backend\functions - exists: true
+
+      at new CostGuardianStack (lib/cost-guardian-stack.ts:70:13)
+
+  console.log
+      docsPath: g:\aws-cost-guardian\docs - exists: false
+
+      at new CostGuardianStack (lib/cost-guardian-stack.ts:71:13)
+
+  console.warn
+    [WARNING] aws-cdk-lib.aws_events.CfnEventBusPolicyProps#action is deprecated.
+      this property has been deprecated
+      This API will be removed in the next major release.
+
+    [0m [90m 632 |[39m     [90m// Isso mantém a capacidade cross-account (conta variável) mas evita[39m
+     [90m 633 |[39m     [90m// que contas arbitrárias enviem eventos ao barramento.[39m
+    [31m[1m>[22m[39m[90m 634 |[39m     [36mnew[39m events[33m.[39m[33mCfnEventBusPolicy[39m([36mthis[39m[33m,[39m [32m'EventBusPolicy'[39m[33m,[39m {
+     [90m     |[39m     [31m[1m^[22m[39m
+     [90m 635 |[39m       eventBusName[33m:[39m eventBus[33m.[39meventBusName[33m,[39m
+     [90m 636 |[39m       statementId[33m:[39m [32m'AllowClientHealthEvents'[39m[33m,[39m
+     [90m 637 |[39m       action[33m:[39m [32m'events:PutEvents'[39m[33m,[39m[0m
+
+      at print (../node_modules/aws-cdk-lib/.warnings.jsii.js:9:146)
+      at Object.aws_cdk_lib_aws_events_CfnEventBusPolicyProps (../node_modules/aws-cdk-lib/.warnings.jsii.js:5:324230)
+      at new CfnEventBusPolicy (../node_modules/aws-cdk-lib/aws-events/lib/events.generated.js:1:72756)
+      at new CostGuardianStack (lib/cost-guardian-stack.ts:634:5)
+      at Object.<anonymous> (__tests__/cost-guardian-stack.comprehensive.test.ts:277:15)
+
+  console.warn
+    [WARNING] aws-cdk-lib.aws_events.CfnEventBusPolicyProps#condition is deprecated.
+      this property has been deprecated
+      This API will be removed in the next major release.
+
+    [0m [90m 632 |[39m     [90m// Isso mantém a capacidade cross-account (conta variável) mas evita[39m
+     [90m 633 |[39m     [90m// que contas arbitrárias enviem eventos ao barramento.[39m
+    [31m[1m>[22m[39m[90m 634 |[39m     [36mnew[39m events[33m.[39m[33mCfnEventBusPolicy[39m([36mthis[39m[33m,[39m [32m'EventBusPolicy'[39m[33m,[39m {
+     [90m     |[39m     [31m[1m^[22m[39m
+     [90m 635 |[39m       eventBusName[33m:[39m eventBus[33m.[39meventBusName[33m,[39m
+     [90m 636 |[39m       statementId[33m:[39m [32m'AllowClientHealthEvents'[39m[33m,[39m
+     [90m 637 |[39m       action[33m:[39m [32m'events:PutEvents'[39m[33m,[39m[0m
+
+      at print (../node_modules/aws-cdk-lib/.warnings.jsii.js:9:146)
+      at Object.aws_cdk_lib_aws_events_CfnEventBusPolicyProps (../node_modules/aws-cdk-lib/.warnings.jsii.js:5:324345)
+      at new CfnEventBusPolicy (../node_modules/aws-cdk-lib/aws-events/lib/events.generated.js:1:72756)
+      at new CostGuardianStack (lib/cost-guardian-stack.ts:634:5)
+      at Object.<anonymous> (__tests__/cost-guardian-stack.comprehensive.test.ts:277:15)
+
+  console.warn
+    [WARNING] aws-cdk-lib.aws_events.CfnEventBusPolicyProps#principal is deprecated.
+      this property has been deprecated
+      This API will be removed in the next major release.
+
+    [0m [90m 632 |[39m     [90m// Isso mantém a capacidade cross-account (conta variável) mas evita[39m
+     [90m 633 |[39m     [90m// que contas arbitrárias enviem eventos ao barramento.[39m
+    [31m[1m>[22m[39m[90m 634 |[39m     [36mnew[39m events[33m.[39m[33mCfnEventBusPolicy[39m([36mthis[39m[33m,[39m [32m'EventBusPolicy'[39m[33m,[39m {
+     [90m     |[39m     [31m[1m^[22m[39m
+     [90m 635 |[39m       eventBusName[33m:[39m eventBus[33m.[39meventBusName[33m,[39m
+     [90m 636 |[39m       statementId[33m:[39m [32m'AllowClientHealthEvents'[39m[33m,[39m
+     [90m 637 |[39m       action[33m:[39m [32m'events:PutEvents'[39m[33m,[39m[0m
+
+      at print (../node_modules/aws-cdk-lib/.warnings.jsii.js:9:146)
+      at Object.aws_cdk_lib_aws_events_CfnEventBusPolicyProps (../node_modules/aws-cdk-lib/.warnings.jsii.js:5:324517)
+      at new CfnEventBusPolicy (../node_modules/aws-cdk-lib/aws-events/lib/events.generated.js:1:72756)
+      at new CostGuardianStack (lib/cost-guardian-stack.ts:634:5)
+      at Object.<anonymous> (__tests__/cost-guardian-stack.comprehensive.test.ts:277:15)
+
+  console.log
+    [CostGuardianStack] Asset paths:
+
+      at new CostGuardianStack (lib/cost-guardian-stack.ts:68:13)
+
+  console.log
+      backendPath: g:\aws-cost-guardian\backend - exists: true
+
+      at new CostGuardianStack (lib/cost-guardian-stack.ts:69:13)
+
+  console.log
+      backendFunctionsPath: g:\aws-cost-guardian\backend\functions - exists: true
+
+      at new CostGuardianStack (lib/cost-guardian-stack.ts:70:13)
+
+  console.log
+      docsPath: g:\aws-cost-guardian\docs - exists: false
+
+      at new CostGuardianStack (lib/cost-guardian-stack.ts:71:13)
+
+  console.warn
+    [WARNING] aws-cdk-lib.aws_events.CfnEventBusPolicyProps#action is deprecated.
+      this property has been deprecated
+      This API will be removed in the next major release.
+
+    [0m [90m 632 |[39m     [90m// Isso mantém a capacidade cross-account (conta variável) mas evita[39m
+     [90m 633 |[39m     [90m// que contas arbitrárias enviem eventos ao barramento.[39m
+    [31m[1m>[22m[39m[90m 634 |[39m     [36mnew[39m events[33m.[39m[33mCfnEventBusPolicy[39m([36mthis[39m[33m,[39m [32m'EventBusPolicy'[39m[33m,[39m {
+     [90m     |[39m     [31m[1m^[22m[39m
+     [90m 635 |[39m       eventBusName[33m:[39m eventBus[33m.[39meventBusName[33m,[39m
+     [90m 636 |[39m       statementId[33m:[39m [32m'AllowClientHealthEvents'[39m[33m,[39m
+     [90m 637 |[39m       action[33m:[39m [32m'events:PutEvents'[39m[33m,[39m[0m
+
+      at print (../node_modules/aws-cdk-lib/.warnings.jsii.js:9:146)
+      at Object.aws_cdk_lib_aws_events_CfnEventBusPolicyProps (../node_modules/aws-cdk-lib/.warnings.jsii.js:5:324230)
+      at new CfnEventBusPolicy (../node_modules/aws-cdk-lib/aws-events/lib/events.generated.js:1:72756)
+      at new CostGuardianStack (lib/cost-guardian-stack.ts:634:5)
+      at Object.<anonymous> (__tests__/cost-guardian-stack.comprehensive.test.ts:277:15)
+
+  console.warn
+    [WARNING] aws-cdk-lib.aws_events.CfnEventBusPolicyProps#condition is deprecated.
+      this property has been deprecated
+      This API will be removed in the next major release.
+
+    [0m [90m 632 |[39m     [90m// Isso mantém a capacidade cross-account (conta variável) mas evita[39m
+     [90m 633 |[39m     [90m// que contas arbitrárias enviem eventos ao barramento.[39m
+    [31m[1m>[22m[39m[90m 634 |[39m     [36mnew[39m events[33m.[39m[33mCfnEventBusPolicy[39m([36mthis[39m[33m,[39m [32m'EventBusPolicy'[39m[33m,[39m {
+     [90m     |[39m     [31m[1m^[22m[39m
+     [90m 635 |[39m       eventBusName[33m:[39m eventBus[33m.[39meventBusName[33m,[39m
+     [90m 636 |[39m       statementId[33m:[39m [32m'AllowClientHealthEvents'[39m[33m,[39m
+     [90m 637 |[39m       action[33m:[39m [32m'events:PutEvents'[39m[33m,[39m[0m
+
+      at print (../node_modules/aws-cdk-lib/.warnings.jsii.js:9:146)
+      at Object.aws_cdk_lib_aws_events_CfnEventBusPolicyProps (../node_modules/aws-cdk-lib/.warnings.jsii.js:5:324345)
+      at new CfnEventBusPolicy (../node_modules/aws-cdk-lib/aws-events/lib/events.generated.js:1:72756)
+      at new CostGuardianStack (lib/cost-guardian-stack.ts:634:5)
+      at Object.<anonymous> (__tests__/cost-guardian-stack.comprehensive.test.ts:277:15)
+
+  console.warn
+    [WARNING] aws-cdk-lib.aws_events.CfnEventBusPolicyProps#principal is deprecated.
+      this property has been deprecated
+      This API will be removed in the next major release.
+
+    [0m [90m 632 |[39m     [90m// Isso mantém a capacidade cross-account (conta variável) mas evita[39m
+     [90m 633 |[39m     [90m// que contas arbitrárias enviem eventos ao barramento.[39m
+    [31m[1m>[22m[39m[90m 634 |[39m     [36mnew[39m events[33m.[39m[33mCfnEventBusPolicy[39m([36mthis[39m[33m,[39m [32m'EventBusPolicy'[39m[33m,[39m {
+     [90m     |[39m     [31m[1m^[22m[39m
+     [90m 635 |[39m       eventBusName[33m:[39m eventBus[33m.[39meventBusName[33m,[39m
+     [90m 636 |[39m       statementId[33m:[39m [32m'AllowClientHealthEvents'[39m[33m,[39m
+     [90m 637 |[39m       action[33m:[39m [32m'events:PutEvents'[39m[33m,[39m[0m
+
+      at print (../node_modules/aws-cdk-lib/.warnings.jsii.js:9:146)
+      at Object.aws_cdk_lib_aws_events_CfnEventBusPolicyProps (../node_modules/aws-cdk-lib/.warnings.jsii.js:5:324517)
+      at new CfnEventBusPolicy (../node_modules/aws-cdk-lib/aws-events/lib/events.generated.js:1:72756)
+      at new CostGuardianStack (lib/cost-guardian-stack.ts:634:5)
+      at Object.<anonymous> (__tests__/cost-guardian-stack.comprehensive.test.ts:277:15)
+
+  console.log
+    [CostGuardianStack] Asset paths:
+
+      at new CostGuardianStack (lib/cost-guardian-stack.ts:68:13)
+
+  console.log
+      backendPath: g:\aws-cost-guardian\backend - exists: true
+
+      at new CostGuardianStack (lib/cost-guardian-stack.ts:69:13)
+
+  console.log
+      backendFunctionsPath: g:\aws-cost-guardian\backend\functions - exists: true
+
+      at new CostGuardianStack (lib/cost-guardian-stack.ts:70:13)
+
+  console.log
+      docsPath: g:\aws-cost-guardian\docs - exists: false
+
+      at new CostGuardianStack (lib/cost-guardian-stack.ts:71:13)
+
+  console.warn
+    [WARNING] aws-cdk-lib.aws_events.CfnEventBusPolicyProps#action is deprecated.
+      this property has been deprecated
+      This API will be removed in the next major release.
+
+    [0m [90m 632 |[39m     [90m// Isso mantém a capacidade cross-account (conta variável) mas evita[39m
+     [90m 633 |[39m     [90m// que contas arbitrárias enviem eventos ao barramento.[39m
+    [31m[1m>[22m[39m[90m 634 |[39m     [36mnew[39m events[33m.[39m[33mCfnEventBusPolicy[39m([36mthis[39m[33m,[39m [32m'EventBusPolicy'[39m[33m,[39m {
+     [90m     |[39m     [31m[1m^[22m[39m
+     [90m 635 |[39m       eventBusName[33m:[39m eventBus[33m.[39meventBusName[33m,[39m
+     [90m 636 |[39m       statementId[33m:[39m [32m'AllowClientHealthEvents'[39m[33m,[39m
+     [90m 637 |[39m       action[33m:[39m [32m'events:PutEvents'[39m[33m,[39m[0m
+
+      at print (../node_modules/aws-cdk-lib/.warnings.jsii.js:9:146)
+      at Object.aws_cdk_lib_aws_events_CfnEventBusPolicyProps (../node_modules/aws-cdk-lib/.warnings.jsii.js:5:324230)
+      at new CfnEventBusPolicy (../node_modules/aws-cdk-lib/aws-events/lib/events.generated.js:1:72756)
+      at new CostGuardianStack (lib/cost-guardian-stack.ts:634:5)
+      at Object.<anonymous> (__tests__/cost-guardian-stack.comprehensive.test.ts:277:15)
+
+  console.warn
+    [WARNING] aws-cdk-lib.aws_events.CfnEventBusPolicyProps#condition is deprecated.
+      this property has been deprecated
+      This API will be removed in the next major release.
+
+    [0m [90m 632 |[39m     [90m// Isso mantém a capacidade cross-account (conta variável) mas evita[39m
+     [90m 633 |[39m     [90m// que contas arbitrárias enviem eventos ao barramento.[39m
+    [31m[1m>[22m[39m[90m 634 |[39m     [36mnew[39m events[33m.[39m[33mCfnEventBusPolicy[39m([36mthis[39m[33m,[39m [32m'EventBusPolicy'[39m[33m,[39m {
+     [90m     |[39m     [31m[1m^[22m[39m
+     [90m 635 |[39m       eventBusName[33m:[39m eventBus[33m.[39meventBusName[33m,[39m
+     [90m 636 |[39m       statementId[33m:[39m [32m'AllowClientHealthEvents'[39m[33m,[39m
+     [90m 637 |[39m       action[33m:[39m [32m'events:PutEvents'[39m[33m,[39m[0m
+
+      at print (../node_modules/aws-cdk-lib/.warnings.jsii.js:9:146)
+      at Object.aws_cdk_lib_aws_events_CfnEventBusPolicyProps (../node_modules/aws-cdk-lib/.warnings.jsii.js:5:324345)
+      at new CfnEventBusPolicy (../node_modules/aws-cdk-lib/aws-events/lib/events.generated.js:1:72756)
+      at new CostGuardianStack (lib/cost-guardian-stack.ts:634:5)
+      at Object.<anonymous> (__tests__/cost-guardian-stack.comprehensive.test.ts:277:15)
+
+  console.warn
+    [WARNING] aws-cdk-lib.aws_events.CfnEventBusPolicyProps#principal is deprecated.
+      this property has been deprecated
+      This API will be removed in the next major release.
+
+    [0m [90m 632 |[39m     [90m// Isso mantém a capacidade cross-account (conta variável) mas evita[39m
+     [90m 633 |[39m     [90m// que contas arbitrárias enviem eventos ao barramento.[39m
+    [31m[1m>[22m[39m[90m 634 |[39m     [36mnew[39m events[33m.[39m[33mCfnEventBusPolicy[39m([36mthis[39m[33m,[39m [32m'EventBusPolicy'[39m[33m,[39m {
+     [90m     |[39m     [31m[1m^[22m[39m
+     [90m 635 |[39m       eventBusName[33m:[39m eventBus[33m.[39meventBusName[33m,[39m
+     [90m 636 |[39m       statementId[33m:[39m [32m'AllowClientHealthEvents'[39m[33m,[39m
+     [90m 637 |[39m       action[33m:[39m [32m'events:PutEvents'[39m[33m,[39m[0m
+
+      at print (../node_modules/aws-cdk-lib/.warnings.jsii.js:9:146)
+      at Object.aws_cdk_lib_aws_events_CfnEventBusPolicyProps (../node_modules/aws-cdk-lib/.warnings.jsii.js:5:324517)
+      at new CfnEventBusPolicy (../node_modules/aws-cdk-lib/aws-events/lib/events.generated.js:1:72756)
+      at new CostGuardianStack (lib/cost-guardian-stack.ts:634:5)
+      at Object.<anonymous> (__tests__/cost-guardian-stack.comprehensive.test.ts:277:15)
+
+  console.log
+    [CostGuardianStack] Asset paths:
+
+      at new CostGuardianStack (lib/cost-guardian-stack.ts:68:13)
+
+  console.log
+      backendPath: g:\aws-cost-guardian\backend - exists: true
+
+      at new CostGuardianStack (lib/cost-guardian-stack.ts:69:13)
+
+  console.log
+      backendFunctionsPath: g:\aws-cost-guardian\backend\functions - exists: true
+
+      at new CostGuardianStack (lib/cost-guardian-stack.ts:70:13)
+
+  console.log
+      docsPath: g:\aws-cost-guardian\docs - exists: true
+
+      at new CostGuardianStack (lib/cost-guardian-stack.ts:71:13)
+
+  console.warn
+    [WARNING] aws-cdk-lib.aws_events.CfnEventBusPolicyProps#action is deprecated.
+      this property has been deprecated
+      This API will be removed in the next major release.
+
+    [0m [90m 632 |[39m     [90m// Isso mantém a capacidade cross-account (conta variável) mas evita[39m
+     [90m 633 |[39m     [90m// que contas arbitrárias enviem eventos ao barramento.[39m
+    [31m[1m>[22m[39m[90m 634 |[39m     [36mnew[39m events[33m.[39m[33mCfnEventBusPolicy[39m([36mthis[39m[33m,[39m [32m'EventBusPolicy'[39m[33m,[39m {
+     [90m     |[39m     [31m[1m^[22m[39m
+     [90m 635 |[39m       eventBusName[33m:[39m eventBus[33m.[39meventBusName[33m,[39m
+     [90m 636 |[39m       statementId[33m:[39m [32m'AllowClientHealthEvents'[39m[33m,[39m
+     [90m 637 |[39m       action[33m:[39m [32m'events:PutEvents'[39m[33m,[39m[0m
+
+      at print (../node_modules/aws-cdk-lib/.warnings.jsii.js:9:146)
+      at Object.aws_cdk_lib_aws_events_CfnEventBusPolicyProps (../node_modules/aws-cdk-lib/.warnings.jsii.js:5:324230)
+      at new CfnEventBusPolicy (../node_modules/aws-cdk-lib/aws-events/lib/events.generated.js:1:72756)
+      at new CostGuardianStack (lib/cost-guardian-stack.ts:634:5)
+      at Object.<anonymous> (__tests__/cost-guardian-stack.comprehensive.test.ts:310:25)
+
+  console.warn
+    [WARNING] aws-cdk-lib.aws_events.CfnEventBusPolicyProps#condition is deprecated.
+      this property has been deprecated
+      This API will be removed in the next major release.
+
+    [0m [90m 632 |[39m     [90m// Isso mantém a capacidade cross-account (conta variável) mas evita[39m
+     [90m 633 |[39m     [90m// que contas arbitrárias enviem eventos ao barramento.[39m
+    [31m[1m>[22m[39m[90m 634 |[39m     [36mnew[39m events[33m.[39m[33mCfnEventBusPolicy[39m([36mthis[39m[33m,[39m [32m'EventBusPolicy'[39m[33m,[39m {
+     [90m     |[39m     [31m[1m^[22m[39m
+     [90m 635 |[39m       eventBusName[33m:[39m eventBus[33m.[39meventBusName[33m,[39m
+     [90m 636 |[39m       statementId[33m:[39m [32m'AllowClientHealthEvents'[39m[33m,[39m
+     [90m 637 |[39m       action[33m:[39m [32m'events:PutEvents'[39m[33m,[39m[0m
+
+      at print (../node_modules/aws-cdk-lib/.warnings.jsii.js:9:146)
+      at Object.aws_cdk_lib_aws_events_CfnEventBusPolicyProps (../node_modules/aws-cdk-lib/.warnings.jsii.js:5:324345)
+      at new CfnEventBusPolicy (../node_modules/aws-cdk-lib/aws-events/lib/events.generated.js:1:72756)
+      at new CostGuardianStack (lib/cost-guardian-stack.ts:634:5)
+      at Object.<anonymous> (__tests__/cost-guardian-stack.comprehensive.test.ts:310:25)
+
+  console.warn
+    [WARNING] aws-cdk-lib.aws_events.CfnEventBusPolicyProps#principal is deprecated.
+      this property has been deprecated
+      This API will be removed in the next major release.
+
+    [0m [90m 632 |[39m     [90m// Isso mantém a capacidade cross-account (conta variável) mas evita[39m
+     [90m 633 |[39m     [90m// que contas arbitrárias enviem eventos ao barramento.[39m
+    [31m[1m>[22m[39m[90m 634 |[39m     [36mnew[39m events[33m.[39m[33mCfnEventBusPolicy[39m([36mthis[39m[33m,[39m [32m'EventBusPolicy'[39m[33m,[39m {
+     [90m     |[39m     [31m[1m^[22m[39m
+     [90m 635 |[39m       eventBusName[33m:[39m eventBus[33m.[39meventBusName[33m,[39m
+     [90m 636 |[39m       statementId[33m:[39m [32m'AllowClientHealthEvents'[39m[33m,[39m
+     [90m 637 |[39m       action[33m:[39m [32m'events:PutEvents'[39m[33m,[39m[0m
+
+      at print (../node_modules/aws-cdk-lib/.warnings.jsii.js:9:146)
+      at Object.aws_cdk_lib_aws_events_CfnEventBusPolicyProps (../node_modules/aws-cdk-lib/.warnings.jsii.js:5:324517)
+      at new CfnEventBusPolicy (../node_modules/aws-cdk-lib/aws-events/lib/events.generated.js:1:72756)
+      at new CostGuardianStack (lib/cost-guardian-stack.ts:634:5)
+      at Object.<anonymous> (__tests__/cost-guardian-stack.comprehensive.test.ts:310:25)
+
+  console.log
+    [CostGuardianStack] Asset paths:
+
+      at new CostGuardianStack (lib/cost-guardian-stack.ts:68:13)
+
+  console.log
+      backendPath: g:\aws-cost-guardian\backend - exists: true
+
+      at new CostGuardianStack (lib/cost-guardian-stack.ts:69:13)
+
+  console.log
+      backendFunctionsPath: g:\aws-cost-guardian\backend\functions - exists: true
+
+      at new CostGuardianStack (lib/cost-guardian-stack.ts:70:13)
+
+  console.log
+      docsPath: g:\aws-cost-guardian\docs - exists: true
+
+      at new CostGuardianStack (lib/cost-guardian-stack.ts:71:13)
+
+  console.warn
+    [WARNING] aws-cdk-lib.aws_events.CfnEventBusPolicyProps#action is deprecated.
+      this property has been deprecated
+      This API will be removed in the next major release.
+
+    [0m [90m 632 |[39m     [90m// Isso mantém a capacidade cross-account (conta variável) mas evita[39m
+     [90m 633 |[39m     [90m// que contas arbitrárias enviem eventos ao barramento.[39m
+    [31m[1m>[22m[39m[90m 634 |[39m     [36mnew[39m events[33m.[39m[33mCfnEventBusPolicy[39m([36mthis[39m[33m,[39m [32m'EventBusPolicy'[39m[33m,[39m {
+     [90m     |[39m     [31m[1m^[22m[39m
+     [90m 635 |[39m       eventBusName[33m:[39m eventBus[33m.[39meventBusName[33m,[39m
+     [90m 636 |[39m       statementId[33m:[39m [32m'AllowClientHealthEvents'[39m[33m,[39m
+     [90m 637 |[39m       action[33m:[39m [32m'events:PutEvents'[39m[33m,[39m[0m
+
+      at print (../node_modules/aws-cdk-lib/.warnings.jsii.js:9:146)
+      at Object.aws_cdk_lib_aws_events_CfnEventBusPolicyProps (../node_modules/aws-cdk-lib/.warnings.jsii.js:5:324230)
+      at new CfnEventBusPolicy (../node_modules/aws-cdk-lib/aws-events/lib/events.generated.js:1:72756)
+      at new CostGuardianStack (lib/cost-guardian-stack.ts:634:5)
+      at Object.<anonymous> (__tests__/cost-guardian-stack.comprehensive.test.ts:320:25)
+
+  console.warn
+    [WARNING] aws-cdk-lib.aws_events.CfnEventBusPolicyProps#condition is deprecated.
+      this property has been deprecated
+      This API will be removed in the next major release.
+
+    [0m [90m 632 |[39m     [90m// Isso mantém a capacidade cross-account (conta variável) mas evita[39m
+     [90m 633 |[39m     [90m// que contas arbitrárias enviem eventos ao barramento.[39m
+    [31m[1m>[22m[39m[90m 634 |[39m     [36mnew[39m events[33m.[39m[33mCfnEventBusPolicy[39m([36mthis[39m[33m,[39m [32m'EventBusPolicy'[39m[33m,[39m {
+     [90m     |[39m     [31m[1m^[22m[39m
+     [90m 635 |[39m       eventBusName[33m:[39m eventBus[33m.[39meventBusName[33m,[39m
+     [90m 636 |[39m       statementId[33m:[39m [32m'AllowClientHealthEvents'[39m[33m,[39m
+     [90m 637 |[39m       action[33m:[39m [32m'events:PutEvents'[39m[33m,[39m[0m
+
+      at print (../node_modules/aws-cdk-lib/.warnings.jsii.js:9:146)
+      at Object.aws_cdk_lib_aws_events_CfnEventBusPolicyProps (../node_modules/aws-cdk-lib/.warnings.jsii.js:5:324345)
+      at new CfnEventBusPolicy (../node_modules/aws-cdk-lib/aws-events/lib/events.generated.js:1:72756)
+      at new CostGuardianStack (lib/cost-guardian-stack.ts:634:5)
+      at Object.<anonymous> (__tests__/cost-guardian-stack.comprehensive.test.ts:320:25)
+
+  console.warn
+    [WARNING] aws-cdk-lib.aws_events.CfnEventBusPolicyProps#principal is deprecated.
+      this property has been deprecated
+      This API will be removed in the next major release.
+
+    [0m [90m 632 |[39m     [90m// Isso mantém a capacidade cross-account (conta variável) mas evita[39m
+     [90m 633 |[39m     [90m// que contas arbitrárias enviem eventos ao barramento.[39m
+    [31m[1m>[22m[39m[90m 634 |[39m     [36mnew[39m events[33m.[39m[33mCfnEventBusPolicy[39m([36mthis[39m[33m,[39m [32m'EventBusPolicy'[39m[33m,[39m {
+     [90m     |[39m     [31m[1m^[22m[39m
+     [90m 635 |[39m       eventBusName[33m:[39m eventBus[33m.[39meventBusName[33m,[39m
+     [90m 636 |[39m       statementId[33m:[39m [32m'AllowClientHealthEvents'[39m[33m,[39m
+     [90m 637 |[39m       action[33m:[39m [32m'events:PutEvents'[39m[33m,[39m[0m
+
+      at print (../node_modules/aws-cdk-lib/.warnings.jsii.js:9:146)
+      at Object.aws_cdk_lib_aws_events_CfnEventBusPolicyProps (../node_modules/aws-cdk-lib/.warnings.jsii.js:5:324517)
+      at new CfnEventBusPolicy (../node_modules/aws-cdk-lib/aws-events/lib/events.generated.js:1:72756)
+      at new CostGuardianStack (lib/cost-guardian-stack.ts:634:5)
+      at Object.<anonymous> (__tests__/cost-guardian-stack.comprehensive.test.ts:320:25)
+
+  console.log
+    [CostGuardianStack] Asset paths:
+
+      at new CostGuardianStack (lib/cost-guardian-stack.ts:68:13)
+
+  console.log
+      backendPath: g:\aws-cost-guardian\backend - exists: true
+
+      at new CostGuardianStack (lib/cost-guardian-stack.ts:69:13)
+
+  console.log
+      backendFunctionsPath: g:\aws-cost-guardian\backend\functions - exists: true
+
+      at new CostGuardianStack (lib/cost-guardian-stack.ts:70:13)
+
+  console.log
+      docsPath: g:\aws-cost-guardian\docs - exists: false
+
+      at new CostGuardianStack (lib/cost-guardian-stack.ts:71:13)
+
+  console.warn
+    [WARNING] aws-cdk-lib.aws_events.CfnEventBusPolicyProps#action is deprecated.
+      this property has been deprecated
+      This API will be removed in the next major release.
+
+    [0m [90m 632 |[39m     [90m// Isso mantém a capacidade cross-account (conta variável) mas evita[39m
+     [90m 633 |[39m     [90m// que contas arbitrárias enviem eventos ao barramento.[39m
+    [31m[1m>[22m[39m[90m 634 |[39m     [36mnew[39m events[33m.[39m[33mCfnEventBusPolicy[39m([36mthis[39m[33m,[39m [32m'EventBusPolicy'[39m[33m,[39m {
+     [90m     |[39m     [31m[1m^[22m[39m
+     [90m 635 |[39m       eventBusName[33m:[39m eventBus[33m.[39meventBusName[33m,[39m
+     [90m 636 |[39m       statementId[33m:[39m [32m'AllowClientHealthEvents'[39m[33m,[39m
+     [90m 637 |[39m       action[33m:[39m [32m'events:PutEvents'[39m[33m,[39m[0m
+
+      at print (../node_modules/aws-cdk-lib/.warnings.jsii.js:9:146)
+      at Object.aws_cdk_lib_aws_events_CfnEventBusPolicyProps (../node_modules/aws-cdk-lib/.warnings.jsii.js:5:324230)
+      at new CfnEventBusPolicy (../node_modules/aws-cdk-lib/aws-events/lib/events.generated.js:1:72756)
+      at new CostGuardianStack (lib/cost-guardian-stack.ts:634:5)
+      at Object.<anonymous> (__tests__/cost-guardian-stack.comprehensive.test.ts:336:25)
+
+  console.warn
+    [WARNING] aws-cdk-lib.aws_events.CfnEventBusPolicyProps#condition is deprecated.
+      this property has been deprecated
+      This API will be removed in the next major release.
+
+    [0m [90m 632 |[39m     [90m// Isso mantém a capacidade cross-account (conta variável) mas evita[39m
+     [90m 633 |[39m     [90m// que contas arbitrárias enviem eventos ao barramento.[39m
+    [31m[1m>[22m[39m[90m 634 |[39m     [36mnew[39m events[33m.[39m[33mCfnEventBusPolicy[39m([36mthis[39m[33m,[39m [32m'EventBusPolicy'[39m[33m,[39m {
+     [90m     |[39m     [31m[1m^[22m[39m
+     [90m 635 |[39m       eventBusName[33m:[39m eventBus[33m.[39meventBusName[33m,[39m
+     [90m 636 |[39m       statementId[33m:[39m [32m'AllowClientHealthEvents'[39m[33m,[39m
+     [90m 637 |[39m       action[33m:[39m [32m'events:PutEvents'[39m[33m,[39m[0m
+
+      at print (../node_modules/aws-cdk-lib/.warnings.jsii.js:9:146)
+      at Object.aws_cdk_lib_aws_events_CfnEventBusPolicyProps (../node_modules/aws-cdk-lib/.warnings.jsii.js:5:324345)
+      at new CfnEventBusPolicy (../node_modules/aws-cdk-lib/aws-events/lib/events.generated.js:1:72756)
+      at new CostGuardianStack (lib/cost-guardian-stack.ts:634:5)
+      at Object.<anonymous> (__tests__/cost-guardian-stack.comprehensive.test.ts:336:25)
+
+  console.warn
+    [WARNING] aws-cdk-lib.aws_events.CfnEventBusPolicyProps#principal is deprecated.
+      this property has been deprecated
+      This API will be removed in the next major release.
+
+    [0m [90m 632 |[39m     [90m// Isso mantém a capacidade cross-account (conta variável) mas evita[39m
+     [90m 633 |[39m     [90m// que contas arbitrárias enviem eventos ao barramento.[39m
+    [31m[1m>[22m[39m[90m 634 |[39m     [36mnew[39m events[33m.[39m[33mCfnEventBusPolicy[39m([36mthis[39m[33m,[39m [32m'EventBusPolicy'[39m[33m,[39m {
+     [90m     |[39m     [31m[1m^[22m[39m
+     [90m 635 |[39m       eventBusName[33m:[39m eventBus[33m.[39meventBusName[33m,[39m
+     [90m 636 |[39m       statementId[33m:[39m [32m'AllowClientHealthEvents'[39m[33m,[39m
+     [90m 637 |[39m       action[33m:[39m [32m'events:PutEvents'[39m[33m,[39m[0m
+
+      at print (../node_modules/aws-cdk-lib/.warnings.jsii.js:9:146)
+      at Object.aws_cdk_lib_aws_events_CfnEventBusPolicyProps (../node_modules/aws-cdk-lib/.warnings.jsii.js:5:324517)
+      at new CfnEventBusPolicy (../node_modules/aws-cdk-lib/aws-events/lib/events.generated.js:1:72756)
+      at new CostGuardianStack (lib/cost-guardian-stack.ts:634:5)
+      at Object.<anonymous> (__tests__/cost-guardian-stack.comprehensive.test.ts:336:25)
+
+  console.log
+    [CostGuardianStack] Asset paths:
+
+      at new CostGuardianStack (lib/cost-guardian-stack.ts:68:13)
+
+  console.log
+      backendPath: g:\aws-cost-guardian\backend - exists: true
+
+      at new CostGuardianStack (lib/cost-guardian-stack.ts:69:13)
+
+  console.log
+      backendFunctionsPath: g:\aws-cost-guardian\backend\functions - exists: true
+
+      at new CostGuardianStack (lib/cost-guardian-stack.ts:70:13)
+
+  console.log
+      docsPath: g:\aws-cost-guardian\docs - exists: true
+
+      at new CostGuardianStack (lib/cost-guardian-stack.ts:71:13)
+
+  console.warn
+    [WARNING] aws-cdk-lib.aws_events.CfnEventBusPolicyProps#action is deprecated.
+      this property has been deprecated
+      This API will be removed in the next major release.
+
+    [0m [90m 632 |[39m     [90m// Isso mantém a capacidade cross-account (conta variável) mas evita[39m
+     [90m 633 |[39m     [90m// que contas arbitrárias enviem eventos ao barramento.[39m
+    [31m[1m>[22m[39m[90m 634 |[39m     [36mnew[39m events[33m.[39m[33mCfnEventBusPolicy[39m([36mthis[39m[33m,[39m [32m'EventBusPolicy'[39m[33m,[39m {
+     [90m     |[39m     [31m[1m^[22m[39m
+     [90m 635 |[39m       eventBusName[33m:[39m eventBus[33m.[39meventBusName[33m,[39m
+     [90m 636 |[39m       statementId[33m:[39m [32m'AllowClientHealthEvents'[39m[33m,[39m
+     [90m 637 |[39m       action[33m:[39m [32m'events:PutEvents'[39m[33m,[39m[0m
+
+      at print (../node_modules/aws-cdk-lib/.warnings.jsii.js:9:146)
+      at Object.aws_cdk_lib_aws_events_CfnEventBusPolicyProps (../node_modules/aws-cdk-lib/.warnings.jsii.js:5:324230)
+      at new CfnEventBusPolicy (../node_modules/aws-cdk-lib/aws-events/lib/events.generated.js:1:72756)
+      at new CostGuardianStack (lib/cost-guardian-stack.ts:634:5)
+      at Object.<anonymous> (__tests__/cost-guardian-stack.comprehensive.test.ts:351:25)
+
+  console.warn
+    [WARNING] aws-cdk-lib.aws_events.CfnEventBusPolicyProps#condition is deprecated.
+      this property has been deprecated
+      This API will be removed in the next major release.
+
+    [0m [90m 632 |[39m     [90m// Isso mantém a capacidade cross-account (conta variável) mas evita[39m
+     [90m 633 |[39m     [90m// que contas arbitrárias enviem eventos ao barramento.[39m
+    [31m[1m>[22m[39m[90m 634 |[39m     [36mnew[39m events[33m.[39m[33mCfnEventBusPolicy[39m([36mthis[39m[33m,[39m [32m'EventBusPolicy'[39m[33m,[39m {
+     [90m     |[39m     [31m[1m^[22m[39m
+     [90m 635 |[39m       eventBusName[33m:[39m eventBus[33m.[39meventBusName[33m,[39m
+     [90m 636 |[39m       statementId[33m:[39m [32m'AllowClientHealthEvents'[39m[33m,[39m
+     [90m 637 |[39m       action[33m:[39m [32m'events:PutEvents'[39m[33m,[39m[0m
+
+      at print (../node_modules/aws-cdk-lib/.warnings.jsii.js:9:146)
+      at Object.aws_cdk_lib_aws_events_CfnEventBusPolicyProps (../node_modules/aws-cdk-lib/.warnings.jsii.js:5:324345)
+      at new CfnEventBusPolicy (../node_modules/aws-cdk-lib/aws-events/lib/events.generated.js:1:72756)
+      at new CostGuardianStack (lib/cost-guardian-stack.ts:634:5)
+      at Object.<anonymous> (__tests__/cost-guardian-stack.comprehensive.test.ts:351:25)
+
+  console.warn
+    [WARNING] aws-cdk-lib.aws_events.CfnEventBusPolicyProps#principal is deprecated.
+      this property has been deprecated
+      This API will be removed in the next major release.
+
+    [0m [90m 632 |[39m     [90m// Isso mantém a capacidade cross-account (conta variável) mas evita[39m
+     [90m 633 |[39m     [90m// que contas arbitrárias enviem eventos ao barramento.[39m
+    [31m[1m>[22m[39m[90m 634 |[39m     [36mnew[39m events[33m.[39m[33mCfnEventBusPolicy[39m([36mthis[39m[33m,[39m [32m'EventBusPolicy'[39m[33m,[39m {
+     [90m     |[39m     [31m[1m^[22m[39m
+     [90m 635 |[39m       eventBusName[33m:[39m eventBus[33m.[39meventBusName[33m,[39m
+     [90m 636 |[39m       statementId[33m:[39m [32m'AllowClientHealthEvents'[39m[33m,[39m
+     [90m 637 |[39m       action[33m:[39m [32m'events:PutEvents'[39m[33m,[39m[0m
+
+      at print (../node_modules/aws-cdk-lib/.warnings.jsii.js:9:146)
+      at Object.aws_cdk_lib_aws_events_CfnEventBusPolicyProps (../node_modules/aws-cdk-lib/.warnings.jsii.js:5:324517)
+      at new CfnEventBusPolicy (../node_modules/aws-cdk-lib/aws-events/lib/events.generated.js:1:72756)
+      at new CostGuardianStack (lib/cost-guardian-stack.ts:634:5)
+      at Object.<anonymous> (__tests__/cost-guardian-stack.comprehensive.test.ts:351:25)
+
+  console.log
+    [CostGuardianStack] Asset paths:
+
+      at new CostGuardianStack (lib/cost-guardian-stack.ts:68:13)
+
+  console.log
+      backendPath: g:\aws-cost-guardian\backend - exists: true
+
+      at new CostGuardianStack (lib/cost-guardian-stack.ts:69:13)
+
+  console.log
+      backendFunctionsPath: g:\aws-cost-guardian\backend\functions - exists: true
+
+      at new CostGuardianStack (lib/cost-guardian-stack.ts:70:13)
+
+  console.log
+      docsPath: g:\aws-cost-guardian\docs - exists: true
+
+      at new CostGuardianStack (lib/cost-guardian-stack.ts:71:13)
+
+  console.warn
+    [WARNING] aws-cdk-lib.aws_events.CfnEventBusPolicyProps#action is deprecated.
+      this property has been deprecated
+      This API will be removed in the next major release.
+
+    [0m [90m 632 |[39m     [90m// Isso mantém a capacidade cross-account (conta variável) mas evita[39m
+     [90m 633 |[39m     [90m// que contas arbitrárias enviem eventos ao barramento.[39m
+    [31m[1m>[22m[39m[90m 634 |[39m     [36mnew[39m events[33m.[39m[33mCfnEventBusPolicy[39m([36mthis[39m[33m,[39m [32m'EventBusPolicy'[39m[33m,[39m {
+     [90m     |[39m     [31m[1m^[22m[39m
+     [90m 635 |[39m       eventBusName[33m:[39m eventBus[33m.[39meventBusName[33m,[39m
+     [90m 636 |[39m       statementId[33m:[39m [32m'AllowClientHealthEvents'[39m[33m,[39m
+     [90m 637 |[39m       action[33m:[39m [32m'events:PutEvents'[39m[33m,[39m[0m
+
+      at print (../node_modules/aws-cdk-lib/.warnings.jsii.js:9:146)
+      at Object.aws_cdk_lib_aws_events_CfnEventBusPolicyProps (../node_modules/aws-cdk-lib/.warnings.jsii.js:5:324230)
+      at new CfnEventBusPolicy (../node_modules/aws-cdk-lib/aws-events/lib/events.generated.js:1:72756)
+      at new CostGuardianStack (lib/cost-guardian-stack.ts:634:5)
+      at Object.<anonymous> (__tests__/cost-guardian-stack.comprehensive.test.ts:365:15)
+
+  console.warn
+    [WARNING] aws-cdk-lib.aws_events.CfnEventBusPolicyProps#condition is deprecated.
+      this property has been deprecated
+      This API will be removed in the next major release.
+
+    [0m [90m 632 |[39m     [90m// Isso mantém a capacidade cross-account (conta variável) mas evita[39m
+     [90m 633 |[39m     [90m// que contas arbitrárias enviem eventos ao barramento.[39m
+    [31m[1m>[22m[39m[90m 634 |[39m     [36mnew[39m events[33m.[39m[33mCfnEventBusPolicy[39m([36mthis[39m[33m,[39m [32m'EventBusPolicy'[39m[33m,[39m {
+     [90m     |[39m     [31m[1m^[22m[39m
+     [90m 635 |[39m       eventBusName[33m:[39m eventBus[33m.[39meventBusName[33m,[39m
+     [90m 636 |[39m       statementId[33m:[39m [32m'AllowClientHealthEvents'[39m[33m,[39m
+     [90m 637 |[39m       action[33m:[39m [32m'events:PutEvents'[39m[33m,[39m[0m
+
+      at print (../node_modules/aws-cdk-lib/.warnings.jsii.js:9:146)
+      at Object.aws_cdk_lib_aws_events_CfnEventBusPolicyProps (../node_modules/aws-cdk-lib/.warnings.jsii.js:5:324345)
+      at new CfnEventBusPolicy (../node_modules/aws-cdk-lib/aws-events/lib/events.generated.js:1:72756)
+      at new CostGuardianStack (lib/cost-guardian-stack.ts:634:5)
+      at Object.<anonymous> (__tests__/cost-guardian-stack.comprehensive.test.ts:365:15)
+
+  console.warn
+    [WARNING] aws-cdk-lib.aws_events.CfnEventBusPolicyProps#principal is deprecated.
+      this property has been deprecated
+      This API will be removed in the next major release.
+
+    [0m [90m 632 |[39m     [90m// Isso mantém a capacidade cross-account (conta variável) mas evita[39m
+     [90m 633 |[39m     [90m// que contas arbitrárias enviem eventos ao barramento.[39m
+    [31m[1m>[22m[39m[90m 634 |[39m     [36mnew[39m events[33m.[39m[33mCfnEventBusPolicy[39m([36mthis[39m[33m,[39m [32m'EventBusPolicy'[39m[33m,[39m {
+     [90m     |[39m     [31m[1m^[22m[39m
+     [90m 635 |[39m       eventBusName[33m:[39m eventBus[33m.[39meventBusName[33m,[39m
+     [90m 636 |[39m       statementId[33m:[39m [32m'AllowClientHealthEvents'[39m[33m,[39m
+     [90m 637 |[39m       action[33m:[39m [32m'events:PutEvents'[39m[33m,[39m[0m
+
+      at print (../node_modules/aws-cdk-lib/.warnings.jsii.js:9:146)
+      at Object.aws_cdk_lib_aws_events_CfnEventBusPolicyProps (../node_modules/aws-cdk-lib/.warnings.jsii.js:5:324517)
+      at new CfnEventBusPolicy (../node_modules/aws-cdk-lib/aws-events/lib/events.generated.js:1:72756)
+      at new CostGuardianStack (lib/cost-guardian-stack.ts:634:5)
+      at Object.<anonymous> (__tests__/cost-guardian-stack.comprehensive.test.ts:365:15)
+
+  console.log
+    [CostGuardianStack] Asset paths:
+
+      at new CostGuardianStack (lib/cost-guardian-stack.ts:68:13)
+
+  console.log
+      backendPath: g:\aws-cost-guardian\backend - exists: true
+
+      at new CostGuardianStack (lib/cost-guardian-stack.ts:69:13)
+
+  console.log
+      backendFunctionsPath: g:\aws-cost-guardian\backend\functions - exists: true
+
+      at new CostGuardianStack (lib/cost-guardian-stack.ts:70:13)
+
+  console.log
+      docsPath: g:\aws-cost-guardian\docs - exists: true
+
+      at new CostGuardianStack (lib/cost-guardian-stack.ts:71:13)
+
+  console.warn
+    [WARNING] aws-cdk-lib.aws_events.CfnEventBusPolicyProps#action is deprecated.
+      this property has been deprecated
+      This API will be removed in the next major release.
+
+    [0m [90m 632 |[39m     [90m// Isso mantém a capacidade cross-account (conta variável) mas evita[39m
+     [90m 633 |[39m     [90m// que contas arbitrárias enviem eventos ao barramento.[39m
+    [31m[1m>[22m[39m[90m 634 |[39m     [36mnew[39m events[33m.[39m[33mCfnEventBusPolicy[39m([36mthis[39m[33m,[39m [32m'EventBusPolicy'[39m[33m,[39m {
+     [90m     |[39m     [31m[1m^[22m[39m
+     [90m 635 |[39m       eventBusName[33m:[39m eventBus[33m.[39meventBusName[33m,[39m
+     [90m 636 |[39m       statementId[33m:[39m [32m'AllowClientHealthEvents'[39m[33m,[39m
+     [90m 637 |[39m       action[33m:[39m [32m'events:PutEvents'[39m[33m,[39m[0m
+
+      at print (../node_modules/aws-cdk-lib/.warnings.jsii.js:9:146)
+      at Object.aws_cdk_lib_aws_events_CfnEventBusPolicyProps (../node_modules/aws-cdk-lib/.warnings.jsii.js:5:324230)
+      at new CfnEventBusPolicy (../node_modules/aws-cdk-lib/aws-events/lib/events.generated.js:1:72756)
+      at new CostGuardianStack (lib/cost-guardian-stack.ts:634:5)
+      at Object.<anonymous> (__tests__/cost-guardian-stack.comprehensive.test.ts:365:15)
+
+  console.warn
+    [WARNING] aws-cdk-lib.aws_events.CfnEventBusPolicyProps#condition is deprecated.
+      this property has been deprecated
+      This API will be removed in the next major release.
+
+    [0m [90m 632 |[39m     [90m// Isso mantém a capacidade cross-account (conta variável) mas evita[39m
+     [90m 633 |[39m     [90m// que contas arbitrárias enviem eventos ao barramento.[39m
+    [31m[1m>[22m[39m[90m 634 |[39m     [36mnew[39m events[33m.[39m[33mCfnEventBusPolicy[39m([36mthis[39m[33m,[39m [32m'EventBusPolicy'[39m[33m,[39m {
+     [90m     |[39m     [31m[1m^[22m[39m
+     [90m 635 |[39m       eventBusName[33m:[39m eventBus[33m.[39meventBusName[33m,[39m
+     [90m 636 |[39m       statementId[33m:[39m [32m'AllowClientHealthEvents'[39m[33m,[39m
+     [90m 637 |[39m       action[33m:[39m [32m'events:PutEvents'[39m[33m,[39m[0m
+
+      at print (../node_modules/aws-cdk-lib/.warnings.jsii.js:9:146)
+      at Object.aws_cdk_lib_aws_events_CfnEventBusPolicyProps (../node_modules/aws-cdk-lib/.warnings.jsii.js:5:324345)
+      at new CfnEventBusPolicy (../node_modules/aws-cdk-lib/aws-events/lib/events.generated.js:1:72756)
+      at new CostGuardianStack (lib/cost-guardian-stack.ts:634:5)
+      at Object.<anonymous> (__tests__/cost-guardian-stack.comprehensive.test.ts:365:15)
+
+  console.warn
+    [WARNING] aws-cdk-lib.aws_events.CfnEventBusPolicyProps#principal is deprecated.
+      this property has been deprecated
+      This API will be removed in the next major release.
+
+    [0m [90m 632 |[39m     [90m// Isso mantém a capacidade cross-account (conta variável) mas evita[39m
+     [90m 633 |[39m     [90m// que contas arbitrárias enviem eventos ao barramento.[39m
+    [31m[1m>[22m[39m[90m 634 |[39m     [36mnew[39m events[33m.[39m[33mCfnEventBusPolicy[39m([36mthis[39m[33m,[39m [32m'EventBusPolicy'[39m[33m,[39m {
+     [90m     |[39m     [31m[1m^[22m[39m
+     [90m 635 |[39m       eventBusName[33m:[39m eventBus[33m.[39meventBusName[33m,[39m
+     [90m 636 |[39m       statementId[33m:[39m [32m'AllowClientHealthEvents'[39m[33m,[39m
+     [90m 637 |[39m       action[33m:[39m [32m'events:PutEvents'[39m[33m,[39m[0m
+
+      at print (../node_modules/aws-cdk-lib/.warnings.jsii.js:9:146)
+      at Object.aws_cdk_lib_aws_events_CfnEventBusPolicyProps (../node_modules/aws-cdk-lib/.warnings.jsii.js:5:324517)
+      at new CfnEventBusPolicy (../node_modules/aws-cdk-lib/aws-events/lib/events.generated.js:1:72756)
+      at new CostGuardianStack (lib/cost-guardian-stack.ts:634:5)
+      at Object.<anonymous> (__tests__/cost-guardian-stack.comprehensive.test.ts:365:15)
+
+  console.log
+    [CostGuardianStack] Asset paths:
+
+      at new CostGuardianStack (lib/cost-guardian-stack.ts:68:13)
+
+  console.log
+      backendPath: g:\aws-cost-guardian\backend - exists: true
+
+      at new CostGuardianStack (lib/cost-guardian-stack.ts:69:13)
+
+  console.log
+      backendFunctionsPath: g:\aws-cost-guardian\backend\functions - exists: true
+
+      at new CostGuardianStack (lib/cost-guardian-stack.ts:70:13)
+
+  console.log
+      docsPath: g:\aws-cost-guardian\docs - exists: true
+
+      at new CostGuardianStack (lib/cost-guardian-stack.ts:71:13)
+
+  console.warn
+    [WARNING] aws-cdk-lib.aws_events.CfnEventBusPolicyProps#action is deprecated.
+      this property has been deprecated
+      This API will be removed in the next major release.
+
+    [0m [90m 632 |[39m     [90m// Isso mantém a capacidade cross-account (conta variável) mas evita[39m
+     [90m 633 |[39m     [90m// que contas arbitrárias enviem eventos ao barramento.[39m
+    [31m[1m>[22m[39m[90m 634 |[39m     [36mnew[39m events[33m.[39m[33mCfnEventBusPolicy[39m([36mthis[39m[33m,[39m [32m'EventBusPolicy'[39m[33m,[39m {
+     [90m     |[39m     [31m[1m^[22m[39m
+     [90m 635 |[39m       eventBusName[33m:[39m eventBus[33m.[39meventBusName[33m,[39m
+     [90m 636 |[39m       statementId[33m:[39m [32m'AllowClientHealthEvents'[39m[33m,[39m
+     [90m 637 |[39m       action[33m:[39m [32m'events:PutEvents'[39m[33m,[39m[0m
+
+      at print (../node_modules/aws-cdk-lib/.warnings.jsii.js:9:146)
+      at Object.aws_cdk_lib_aws_events_CfnEventBusPolicyProps (../node_modules/aws-cdk-lib/.warnings.jsii.js:5:324230)
+      at new CfnEventBusPolicy (../node_modules/aws-cdk-lib/aws-events/lib/events.generated.js:1:72756)
+      at new CostGuardianStack (lib/cost-guardian-stack.ts:634:5)
+      at Object.<anonymous> (__tests__/cost-guardian-stack.comprehensive.test.ts:365:15)
+
+  console.warn
+    [WARNING] aws-cdk-lib.aws_events.CfnEventBusPolicyProps#condition is deprecated.
+      this property has been deprecated
+      This API will be removed in the next major release.
+
+    [0m [90m 632 |[39m     [90m// Isso mantém a capacidade cross-account (conta variável) mas evita[39m
+     [90m 633 |[39m     [90m// que contas arbitrárias enviem eventos ao barramento.[39m
+    [31m[1m>[22m[39m[90m 634 |[39m     [36mnew[39m events[33m.[39m[33mCfnEventBusPolicy[39m([36mthis[39m[33m,[39m [32m'EventBusPolicy'[39m[33m,[39m {
+     [90m     |[39m     [31m[1m^[22m[39m
+     [90m 635 |[39m       eventBusName[33m:[39m eventBus[33m.[39meventBusName[33m,[39m
+     [90m 636 |[39m       statementId[33m:[39m [32m'AllowClientHealthEvents'[39m[33m,[39m
+     [90m 637 |[39m       action[33m:[39m [32m'events:PutEvents'[39m[33m,[39m[0m
+
+      at print (../node_modules/aws-cdk-lib/.warnings.jsii.js:9:146)
+      at Object.aws_cdk_lib_aws_events_CfnEventBusPolicyProps (../node_modules/aws-cdk-lib/.warnings.jsii.js:5:324345)
+      at new CfnEventBusPolicy (../node_modules/aws-cdk-lib/aws-events/lib/events.generated.js:1:72756)
+      at new CostGuardianStack (lib/cost-guardian-stack.ts:634:5)
+      at Object.<anonymous> (__tests__/cost-guardian-stack.comprehensive.test.ts:365:15)
+
+  console.warn
+    [WARNING] aws-cdk-lib.aws_events.CfnEventBusPolicyProps#principal is deprecated.
+      this property has been deprecated
+      This API will be removed in the next major release.
+
+    [0m [90m 632 |[39m     [90m// Isso mantém a capacidade cross-account (conta variável) mas evita[39m
+     [90m 633 |[39m     [90m// que contas arbitrárias enviem eventos ao barramento.[39m
+    [31m[1m>[22m[39m[90m 634 |[39m     [36mnew[39m events[33m.[39m[33mCfnEventBusPolicy[39m([36mthis[39m[33m,[39m [32m'EventBusPolicy'[39m[33m,[39m {
+     [90m     |[39m     [31m[1m^[22m[39m
+     [90m 635 |[39m       eventBusName[33m:[39m eventBus[33m.[39meventBusName[33m,[39m
+     [90m 636 |[39m       statementId[33m:[39m [32m'AllowClientHealthEvents'[39m[33m,[39m
+     [90m 637 |[39m       action[33m:[39m [32m'events:PutEvents'[39m[33m,[39m[0m
+
+      at print (../node_modules/aws-cdk-lib/.warnings.jsii.js:9:146)
+      at Object.aws_cdk_lib_aws_events_CfnEventBusPolicyProps (../node_modules/aws-cdk-lib/.warnings.jsii.js:5:324517)
+      at new CfnEventBusPolicy (../node_modules/aws-cdk-lib/aws-events/lib/events.generated.js:1:72756)
+      at new CostGuardianStack (lib/cost-guardian-stack.ts:634:5)
+      at Object.<anonymous> (__tests__/cost-guardian-stack.comprehensive.test.ts:365:15)
+

@@ -1,0 +1,83 @@
+
+> aws-cost-guardian-infra@0.1.0 test
+> jest -f --testNamePattern=API Gateway deve ter integrações
+
+  console.warn
+    [WARNING] aws-cdk-lib.aws_dynamodb.TableOptions#pointInTimeRecovery is deprecated.
+      use `pointInTimeRecoverySpecification` instead
+      This API will be removed in the next major release.
+
+    [0m [90m 121 |[39m       pointInTimeRecoverySpecification[33m:[39m {
+     [90m 122 |[39m         pointInTimeRecoveryEnabled[33m:[39m [36mtrue[39m
+    [31m[1m>[22m[39m[90m 123 |[39m       }[33m,[39m
+     [90m     |[39m                   [31m[1m^[22m[39m
+     [90m 124 |[39m       encryption[33m:[39m dynamodb[33m.[39m[33mTableEncryption[39m[33m.[39m[33mCUSTOMER_MANAGED[39m[33m,[39m [90m// Usar KMS para maior segurança (Task 3)[39m
+     [90m 125 |[39m       encryptionKey[33m:[39m dynamoKmsKey[33m,[39m
+     [90m 126 |[39m     })[33m;[39m[0m
+
+      at print (../node_modules/aws-cdk-lib/.warnings.jsii.js:9:146)
+      at Object.aws_cdk_lib_aws_dynamodb_TableProps (../node_modules/aws-cdk-lib/.warnings.jsii.js:1:805417)
+      at new Table2 (../node_modules/aws-cdk-lib/aws-dynamodb/lib/table.js:1:23167)
+      at new Table2 (../node_modules/aws-cdk-lib/core/lib/prop-injectable.js:1:783)
+      at new CostGuardianStack (lib/cost-guardian-stack.ts:123:19)
+      at Object.<anonymous> (__tests__/cost-guardian-stack.comprehensive.test.ts:271:15)
+
+FAIL __tests__/cost-guardian-stack.comprehensive.test.ts (22.542 s)
+  CostGuardianStack: Testes Completos
+    Segurança e Compliance
+      ○ skipped Secrets Manager deve usar KMS com rotação automática
+      ○ skipped Lambdas devem ter configuração de VPC
+      ○ skipped API Gateway deve ter WAF associado
+      Configurações de S3
+        ○ skipped Todos os buckets devem ter as configurações de segurança adequadas
+        ○ skipped Todos os buckets devem ter lifecycle rules completas
+    Configuração de Recursos
+      ○ skipped DynamoDB deve ter GSIs configurados corretamente
+      ○ skipped Lambda functions devem ter configurações de memória e timeout apropriadas
+      ○ skipped Step Functions devem ter tratamento de erro configurado
+      ○ skipped Cognito User Pool deve ter políticas de senha fortes
+    Permissões e IAM
+      ○ skipped Lambda roles devem seguir o princípio do menor privilégio
+      ○ skipped Step Functions devem ter permissões para invocar Lambdas
+      ○ skipped EventBridge deve ter permissão para acionar Step Functions
+    Integrações
+      × API Gateway deve ter integrações com Lambda configuradas (1656 ms)
+      ○ skipped EventBridge deve ter regras para eventos do Health
+      ○ skipped Step Functions devem ter integrações com serviços AWS
+    Ambientes (Test vs Prod)
+      ○ skipped Ambiente de teste não deve criar BucketDeployment
+      ○ skipped Ambiente de produção deve criar BucketDeployment
+      ○ skipped Ambiente de teste deve ter logs aprimorados
+      ○ skipped Ambiente de produção deve ter alertas configurados
+    Escalabilidade e Performance
+      ○ skipped DynamoDB deve ter auto scaling configurado
+      ○ skipped Lambda functions devem ter configurações de concorrência
+      ○ skipped API Gateway deve ter throttling configurado
+
+  ● CostGuardianStack: Testes Completos › Integrações › API Gateway deve ter integrações com Lambda configuradas
+
+    ValidationError: Cannot find entry file at G:\aws-cost-guardian\backend\handler.js
+        at path [IntegrationTestStack] in aws-cdk-lib.Stack
+
+    [0m [90m 269 |[39m         [36mreturn[39m [36mfalse[39m[33m;[39m
+     [90m 270 |[39m       })[33m;[39m
+    [31m[1m>[22m[39m[90m 271 |[39m       stack [33m=[39m [36mnew[39m [33mCostGuardian[39m[33m.[39m[33mCostGuardianStack[39m(app[33m,[39m [32m'IntegrationTestStack'[39m[33m,[39m testConfig)[33m;[39m
+     [90m     |[39m               [31m[1m^[22m[39m
+     [90m 272 |[39m       template [33m=[39m [33mTemplate[39m[33m.[39mfromStack(stack)[33m;[39m
+     [90m 273 |[39m     })[33m;[39m
+     [90m 274 |[39m[0m
+
+      at Object.<anonymous> (__tests__/cost-guardian-stack.comprehensive.test.ts:271:15)
+
+Test Suites: 1 failed, 1 total
+Tests:       1 failed, 21 skipped, 22 total
+Snapshots:   0 total
+Time:        23.408 s, estimated 34 s
+Ran all test suites with tests matching "API Gateway deve ter integrações".
+npm error Lifecycle script `test` failed with error:
+npm error code 1
+npm error path g:\aws-cost-guardian\infra
+npm error workspace aws-cost-guardian-infra@0.1.0
+npm error location g:\aws-cost-guardian\infra
+npm error command failed
+npm error command C:\Windows\system32\cmd.exe /d /s /c jest -f ^^^"--testNamePattern=API^^^ Gateway^^^ deve^^^ ter^^^ integrações^^^"

@@ -1,0 +1,4 @@
+
+> aws-cost-guardian-infra@0.1.0 test
+> jest --testPathPattern=comprehensive
+

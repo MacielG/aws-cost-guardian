@@ -1,0 +1,39 @@
+
+> aws-cost-guardian-infra@0.1.0 test
+> jest --testNamePattern=Secrets Manager
+
+FAIL __tests__/cost-guardian-stack.comprehensive.test.ts (76.172 s)
+  ● CostGuardianStack: Testes Completos › Segurança e Compliance › Secrets Manager deve usar KMS com rotação automática
+
+    ValidationError: Cannot find asset at G:\aws-cost-guardian\backend
+        at path [SecurityTestStack/ApiHandler/Code/Stage] in aws-cdk-lib.AssetStaging
+
+    [0m [90m 356 |[39m
+     [90m 357 |[39m     [90m// 1. Lambda para o API Gateway (Monolito Express)[39m
+    [31m[1m>[22m[39m[90m 358 |[39m     [36mconst[39m apiHandlerLambda [33m=[39m [36mnew[39m lambda[33m.[39m[33mFunction[39m([36mthis[39m[33m,[39m [32m'ApiHandler'[39m[33m,[39m {
+     [90m     |[39m                              [31m[1m^[22m[39m
+     [90m 359 |[39m       runtime[33m:[39m lambda[33m.[39m[33mRuntime[39m[33m.[39m[33mNODEJS_18_X[39m[33m,[39m
+     [90m 360 |[39m       code[33m:[39m lambda[33m.[39m[33mCode[39m[33m.[39mfromAsset(backendPath)[33m,[39m
+     [90m 361 |[39m       handler[33m:[39m [32m'handler.app'[39m[33m,[39m [90m// export do express + serverless é exposto como 'app' no handler.js[39m[0m
+
+      at new Asset (../node_modules/aws-cdk-lib/aws-s3-assets/lib/asset.js:1:1551)
+      at AssetCode.bind (../node_modules/aws-cdk-lib/aws-lambda/lib/code.js:5:4415)
+      at new Function2 (../node_modules/aws-cdk-lib/aws-lambda/lib/function.js:1:14880)
+      at new Function2 (../node_modules/aws-cdk-lib/core/lib/prop-injectable.js:1:783)
+      at new CostGuardianStack (lib/cost-guardian-stack.ts:358:30)
+      at Object.<anonymous> (__tests__/cost-guardian-stack.comprehensive.test.ts:83:15)
+
+A worker process has failed to exit gracefully and has been force exited. This is likely caused by tests leaking due to improper teardown. Try running with --detectOpenHandles to find leaks. Active timers can also cause this, ensure that .unref() was called on them.
+
+Test Suites: 1 failed, 1 skipped, 1 of 2 total
+Tests:       1 failed, 27 skipped, 28 total
+Snapshots:   0 total
+Time:        117.064 s
+Ran all test suites with tests matching "Secrets Manager".
+npm error Lifecycle script `test` failed with error:
+npm error code 1
+npm error path g:\aws-cost-guardian\infra
+npm error workspace aws-cost-guardian-infra@0.1.0
+npm error location g:\aws-cost-guardian\infra
+npm error command failed
+npm error command C:\Windows\system32\cmd.exe /d /s /c jest ^^^"--testNamePattern=Secrets^^^ Manager^^^"
