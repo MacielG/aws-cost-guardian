@@ -43,8 +43,19 @@ Resources:
                   - health:DescribeAffectedEntities
                   - cloudwatch:GetMetricData
                   - support:CreateCase
-                  - support:DescribeServices
-                Resource: '*'
+                  - support:DescribeSeverityLevels
+                Resource: "*" # Necessário para serviços globais como Cost Explorer e Health
+              - Effect: Allow
+                Action:
+                  - ec2:DescribeVolumes
+                  - ec2:DescribeInstances
+                  - rds:DescribeDBInstances
+                Resource: "*" # Ações de describe geralmente são seguras com '*'
+              - Effect: Allow
+                Action:
+                  - ec2:DeleteVolume
+                  - ec2:StopInstances
+                Resource: !Sub "arn:aws:ec2:${AWS::Region}:${AWS::AccountId}:*" # Restringe a ações na conta do cliente
 
   # Custom Resource para Callback (ativa onboarding)
   CallbackFunction:

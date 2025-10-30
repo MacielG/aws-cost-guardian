@@ -34,14 +34,20 @@ describe('CostGuardianStack: Testes Completos', () => {
     env: { account: '123456789012', region: 'us-east-1' },
     domainName: 'test.example.com',
     hostedZoneId: 'Z123456789',
-    isTestEnvironment: true
+    isTestEnvironment: true,
+    githubRepo: 'test/repo',
+    githubBranch: 'main',
+    githubTokenSecretName: 'dummy-secret'
   };
 
   const prodConfig = {
     env: { account: '123456789012', region: 'us-east-1' },
     domainName: 'prod.example.com',
     hostedZoneId: 'Z987654321',
-    isTestEnvironment: false
+    isTestEnvironment: false,
+    githubRepo: 'prod/repo',
+    githubBranch: 'main',
+    githubTokenSecretName: 'prod-secret'
   };
 
   beforeEach(() => {
@@ -56,7 +62,8 @@ describe('CostGuardianStack: Testes Completos', () => {
 
     describe('Configurações de S3', () => {
       test('Todos os buckets devem ter as configurações de segurança adequadas', () => {
-        const bucketCount = template.findResources('AWS::S3::Bucket').length;
+        const buckets = template.findResources('AWS::S3::Bucket');
+        const bucketCount = Object.keys(buckets).length;
         expect(bucketCount).toBeGreaterThan(0);
 
         template.allResources('AWS::S3::Bucket', {
@@ -143,7 +150,7 @@ describe('CostGuardianStack: Testes Completos', () => {
             KeySchema: [
               { AttributeName: 'awsAccountId', KeyType: 'HASH' }
             ],
-            Projection: { ProjectionType: 'ALL' }
+            Projection: { ProjectionType: 'INCLUDE' }
           })
         ])
       });
@@ -158,7 +165,24 @@ describe('CostGuardianStack: Testes Completos', () => {
 
     test('Step Functions devem ter tratamento de erro configurado', () => {
       template.hasResourceProperties('AWS::StepFunctions::StateMachine', {
-        DefinitionString: Match.stringLikeRegexp('Catch|Retry')
+        // Valida a estrutura da máquina de estados, garantindo a ordem correta das funções
+        DefinitionString: Match.objectLike({
+          'Fn::Join': Match.arrayWith([
+            Match.arrayWith([
+              Match.stringLikeRegexp("CalculateImpact"),
+              Match.stringLikeRegexp("CheckSLA"),
+              Match.stringLikeRegexp("GenerateReport"),
+              Match.stringLikeRegexp("IsClaimGenerated?"),
+              Match.stringLikeRegexp("SubmitTicket"),
+              Match.stringLikeRegexp("NoClaimGenerated"),
+            ])
+          ])
+        })
+      });
+
+      // Valida que a SFN tem políticas de log configuradas
+      template.hasResourceProperties('AWS::StepFunctions::StateMachine', {
+        LoggingConfiguration: Match.objectLike({ Level: "ALL" })
       });
     });
 

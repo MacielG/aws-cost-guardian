@@ -224,7 +224,7 @@ exports.generateReport = async (event) => {
   ExpressionAttributeNames: { '#status': 'status' },
   ExpressionAttributeValues: { ':status': 'NO_VIOLATION' }
   }).promise();
-  return { claimGenerated: false }; // <-- Retorna explicitamente
+  return { ...event, claimGenerated: false }; // <-- Retorna explicitamente
   }
 
   // 1. Gerar PDF com pdf-lib e salvar em S3
@@ -436,7 +436,7 @@ exports.generateReport = async (event) => {
       ExpressionAttributeValues: { ':status': 'CLAIM_GENERATED', ':claimId': claimId }
   }).promise();
 
-  return { ...event, reportUrl, status: 'generated', claimId: claimId };
+  return { ...event, reportUrl, claimGenerated: true, claimId: claimId };
 };
 
 /**
