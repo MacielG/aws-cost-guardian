@@ -71,17 +71,17 @@ export class CostGuardianStack extends cdk.Stack {
 
     // Secrets (Mantido)
     const stripeSecret = new secretsmanager.Secret(this, 'StripeSecret', {
-      encryptionKey: new cdk.aws_kms.Key(this, 'StripeSecretKmsKey', { enableKeyRotation: true }),
+      encryptionKey: new kms.Key(this, 'StripeSecretKmsKey', { enableKeyRotation: true, removalPolicy: cdk.RemovalPolicy.DESTROY }),
       generateSecretString: { secretStringTemplate: '{"key":""}', generateStringKey: 'key' },
       removalPolicy: cdk.RemovalPolicy.DESTROY,
     });
     // Adicionar rotação automática para o stripeSecret
     stripeSecret.addRotationSchedule('StripeSecretRotation', { automaticallyAfter: cdk.Duration.days(90) });
 
-    // Webhook secret (raw string) stored in Secrets Manager for secure delivery
+    // Webhook secret (raw string) stored in Secrets Manager for secure delivery - CORRIGIDO
     const stripeWebhookSecret = new secretsmanager.Secret(this, 'StripeWebhookSecret', {
       description: 'Stripe webhook signing secret for platform webhooks',
-      encryptionKey: new cdk.aws_kms.Key(this, 'StripeWebhookSecretKmsKey', { enableKeyRotation: true, removalPolicy: cdk.RemovalPolicy.DESTROY }),
+      encryptionKey: new kms.Key(this, 'StripeWebhookSecretKmsKey', { enableKeyRotation: true, removalPolicy: cdk.RemovalPolicy.DESTROY }),
       generateSecretString: { secretStringTemplate: '{"webhook":""}', generateStringKey: 'webhook' },
       removalPolicy: cdk.RemovalPolicy.DESTROY,
     });
@@ -89,7 +89,7 @@ export class CostGuardianStack extends cdk.Stack {
     stripeWebhookSecret.addRotationSchedule('WebhookSecretRotation', { automaticallyAfter: cdk.Duration.days(90) });
 
     // KMS Key para todos os CloudWatch Log Groups
-    const logKmsKey = new cdk.aws_kms.Key(this, 'LogGroupKmsKey', {
+    const logKmsKey = new kms.Key(this, 'LogGroupKmsKey', {
       enableKeyRotation: true,
       removalPolicy: cdk.RemovalPolicy.DESTROY,
     });
@@ -103,7 +103,7 @@ export class CostGuardianStack extends cdk.Stack {
       removalPolicy: cdk.RemovalPolicy.DESTROY,
       stream: dynamodb.StreamViewType.NEW_AND_OLD_IMAGES, // Habilitar stream
       pointInTimeRecovery: true,
-      encryption: dynamodb.TableEncryption.AWS_MANAGED,
+      encryption: dynamodb.TableEncryption.CUSTOMER_MANAGED, // Usar KMS para maior segurança
     });
 
     // Força Point-in-Time Recovery através do recurso L1
@@ -200,7 +200,7 @@ export class CostGuardianStack extends cdk.Stack {
       websiteIndexDocument: 'template.yaml',
       removalPolicy: cdk.RemovalPolicy.DESTROY,
       autoDeleteObjects: true,
-      versioned: true,
+      versioned: true, // Habilitar versionamento
       encryption: s3.BucketEncryption.S3_MANAGED,
       blockPublicAccess: new s3.BlockPublicAccess({
         blockPublicAcls: true,
@@ -208,7 +208,7 @@ export class CostGuardianStack extends cdk.Stack {
         blockPublicPolicy: false, // Permite a política de website
         restrictPublicBuckets: false, // Permite a política de website
       }),
-      publicReadAccess: true, // Necessário para o website endpoint
+      publicReadAccess: true,
       lifecycleRules: [{
         id: 'DefaultLifecycle',
         enabled: true,
@@ -224,16 +224,6 @@ export class CostGuardianStack extends cdk.Stack {
         }],
       }]
     });
-
-    // Força a configuração de criptografia através do recurso L1
-    const cfnTemplateBucket = templateBucket.node.defaultChild as s3.CfnBucket;
-    cfnTemplateBucket.bucketEncryption = {
-      serverSideEncryptionConfiguration: [{
-        serverSideEncryptionByDefault: {
-          sseAlgorithm: 'AES256',
-        },
-      }],
-    };
 
     // Conditionally perform deployment ONLY if not in test environment
     if (!props.isTestEnvironment) {
@@ -307,7 +297,7 @@ export class CostGuardianStack extends cdk.Stack {
       handler: 'app', // export do express + serverless é exposto como 'app' no handler.js
       vpc,
       memorySize: 1024,
-      timeout: cdk.Duration.seconds(30),
+      timeout: cdk.Duration.seconds(29), // Ligeiramente menor que o timeout da API GW
       logRetention: cdk.aws_logs.RetentionDays.ONE_MONTH, // Propriedade correta para retenção
       // logGroup será configurado após a criação da função
       reservedConcurrentExecutions: 100,
@@ -327,8 +317,8 @@ export class CostGuardianStack extends cdk.Stack {
         USER_POOL_ID: userPool.userPoolId,
         USER_POOL_CLIENT_ID: userPoolClient.userPoolClientId,
         PLATFORM_ACCOUNT_ID: this.account || process.env.CDK_DEFAULT_ACCOUNT,
-        TRIAL_TEMPLATE_URL: templateBucket.bucketWebsiteUrl + '/cost-guardian-TRIAL-template.yaml',
-        FULL_TEMPLATE_URL: templateBucket.bucketWebsiteUrl + '/cost-guardian-template.yaml',
+        TRIAL_TEMPLATE_URL: trialTemplateUrl,
+        FULL_TEMPLATE_URL: fullTemplateUrl,
       },
     });
     apiHandlerLambda.logGroup.applyRemovalPolicy(cdk.RemovalPolicy.DESTROY); // Aplicar política de remoção
@@ -418,7 +408,7 @@ export class CostGuardianStack extends cdk.Stack {
           iam.ManagedPolicy.fromAwsManagedPolicyName('service-role/AWSLambdaBasicExecutionRole')
         ],
         inlinePolicies: {
-          AssumeCustomerRolePolicy: new iam.PolicyDocument({
+          AssumeAndSupportPolicy: new iam.PolicyDocument({
             statements: [new iam.PolicyStatement({
               actions: ['sts:AssumeRole'],
               resources: ['arn:aws:iam::*:role/CostGuardianDelegatedRole'], 
@@ -488,16 +478,6 @@ export class CostGuardianStack extends cdk.Stack {
         }],
       }]
     });
-
-    // Força a configuração de criptografia através do recurso L1
-    const cfnReportsBucket = reportsBucket.node.defaultChild as s3.CfnBucket;
-    cfnReportsBucket.bucketEncryption = {
-      serverSideEncryptionConfiguration: [{
-        serverSideEncryptionByDefault: {
-          sseAlgorithm: 'AES256',
-        },
-      }],
-    };
 
     // Fornecer o nome do bucket como variável de ambiente para a Lambda (atualiza)
     slaGenerateReportLambda.addEnvironment('REPORTS_BUCKET_NAME', reportsBucket.bucketName);
@@ -784,6 +764,7 @@ export class CostGuardianStack extends cdk.Stack {
 
     const sfn = new stepfunctions.StateMachine(this, 'SLAWorkflow', {
       stateMachineName: 'SLAWorkflow',
+      stateMachineType: stepfunctions.StateMachineType.STANDARD,
       definitionBody: stepfunctions.DefinitionBody.fromChainable(slaDefinition),
       logs: {
         destination: new cdk.aws_logs.LogGroup(this, 'SfnLogGroup', {
@@ -802,7 +783,7 @@ export class CostGuardianStack extends cdk.Stack {
 
     // API Gateway (Usando o 'apiHandlerLambda' correto)
     const api = new apigw.RestApi(this, 'CostGuardianAPI', {
-      restApiName: 'Cost Guardian API',
+      restApiName: 'CostGuardianApi', // Nome sem espaços para facilitar a correspondência
       defaultCorsPreflightOptions: { allowOrigins: apigw.Cors.ALL_ORIGINS },
       deployOptions: {
         tracingEnabled: true,
@@ -951,12 +932,12 @@ export class CostGuardianStack extends cdk.Stack {
     });
 
     if (!props.isTestEnvironment) {
-      new cdk.aws_cloudwatch.Alarm(this, 'Api5xxAlarm', {
+      new cdk.aws_cloudwatch.Alarm(this, 'Api5xxAlarm', { // Corrigido para usar cdk.aws_cloudwatch
         metric: api.metricServerError(),
         threshold: 1,
         evaluationPeriods: 1,
       });
-      new cdk.aws_cloudwatch.Alarm(this, 'ApiLatencyAlarm', {
+      new cdk.aws_cloudwatch.Alarm(this, 'ApiLatencyAlarm', { // Corrigido para usar cdk.aws_cloudwatch
         metric: api.metricLatency(),
         threshold: 1000, // 1 segundo
         evaluationPeriods: 1,

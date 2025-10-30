@@ -83,7 +83,7 @@ describe('CostGuardianStack: Testes de Asserção e Segurança', () => {
       PolicyDocument: {
         Statement: Match.arrayWith([
           Match.objectLike({
-            Action: Match.arrayContaining([
+            Action: Match.arrayWith([
               'dynamodb:PutItem',
               'dynamodb:UpdateItem',
               'dynamodb:Query',
