@@ -28,7 +28,7 @@ exports[`Home Page matches expected snapshot 1`] = `
           href="/login?mode=trial"
         >
           <button
-            class="inline-flex items-center justify-center rounded-md font-medium transition-all duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-primary-blue focus:ring-offset-2 focus:ring-offset-background-dark bg-primary-blue text-text-light hover:bg-primary-blue-light shadow-md hover:shadow-lg px-8 py-3 text-lg"
+            class="inline-flex items-center justify-center rounded-md font-medium transition-all duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-primary-blue focus:ring-offset-2 focus:ring-offset-background-dark bg-gradient-to-r from-primary-blue to-primary-blue-light text-text-light hover:from-primary-blue-light hover:to-primary-blue shadow-md hover:shadow-lg hover:scale-105 px-8 py-3 text-lg"
             tabindex="0"
           >
             Iniciar Análise Gratuita →
@@ -362,7 +362,7 @@ exports[`Home Page matches expected snapshot 1`] = `
           href="/login?mode=trial"
         >
           <button
-            class="inline-flex items-center justify-center rounded-md font-medium transition-all duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-primary-blue focus:ring-offset-2 focus:ring-offset-background-dark text-text-light shadow-md hover:shadow-lg px-10 py-4 text-lg bg-green-600 hover:bg-green-700"
+            class="inline-flex items-center justify-center rounded-md font-medium transition-all duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-primary-blue focus:ring-offset-2 focus:ring-offset-background-dark from-primary-blue to-primary-blue-light text-text-light hover:from-primary-blue-light hover:to-primary-blue shadow-md hover:shadow-lg hover:scale-105 px-10 py-4 text-lg bg-green-600 hover:bg-green-700"
             tabindex="0"
           >
             Iniciar Análise Gratuita →

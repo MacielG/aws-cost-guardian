@@ -9,7 +9,7 @@ React.HTMLAttributes<HTMLDivElement>
 <motion.div
 ref={ref}
 className={cn(
-"rounded-xl border border-border-color bg-background-light text-text-light shadow-sm hover:border-primary-blue/50 p-6",
+"rounded-xl border border-border-color bg-gradient-to-br from-background-light to-background-light/95 text-text-light shadow-sm hover:border-primary-blue/50 p-6 backdrop-blur-sm",
 className
 )}
 whileHover={{ y: -4, scale: 1.01 }}

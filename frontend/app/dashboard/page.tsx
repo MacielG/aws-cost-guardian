@@ -9,6 +9,9 @@ import { AlertCircle, DollarSign, TrendingUp, TrendingDown } from 'lucide-react'
 import { apiFetch } from '@/lib/api';
 import { ProtectedRoute } from '@/components/auth/ProtectedRoute';
 import { formatCurrency, formatDate, sanitizeHtml } from '@/lib/utils';
+import { PageAnimator } from '@/components/ui/PageAnimator';
+import { SavingsWidget } from '@/components/dashboard/SavingsWidget';
+import { useSavings } from '@/hooks/useSavings';
 
 interface Incident {
   id: string;
@@ -28,9 +31,10 @@ function DashboardContent() {
   const [incidentError, setIncidentError] = useState<string | null>(null);
   const [costError, setCostError] = useState<string | null>(null);
   const [authError, setAuthError] = useState<string | null>(null);
-  // Combine errors for display
   const error = authError || incidentError || costError;
   const currentLang = i18n.language || 'en-US';
+  
+  const { data: savingsData, loading: savingsLoading } = useSavings();
 
   const isValidIncident = (inc: any): inc is Incident => {
     return (
@@ -133,16 +137,36 @@ function DashboardContent() {
 
   return (
   <MainLayout title={t('dashboard')}>
-  {error && ( // Certifique-se que o erro combinado é renderizado
-  <Alert variant="destructive" className="mb-4">
-  <AlertCircle className="h-4 w-4" />
-    <AlertTitle>{t('common.error')}</AlertTitle>
-      <AlertDescription>{error}</AlertDescription>
+    <PageAnimator>
+      {error && (
+        <Alert variant="destructive" className="mb-4">
+          <AlertCircle className="h-4 w-4" />
+          <AlertTitle>{t('common.error')}</AlertTitle>
+          <AlertDescription>{error}</AlertDescription>
         </Alert>
       )}
       <div data-testid="dashboard-content">
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-        <Card>
+        {/* Savings Widget - NOVO */}
+        <div className="mb-8">
+          <SavingsWidget data={savingsData} loading={savingsLoading} />
+        </div>
+
+        <motion.div
+          className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8"
+          initial="hidden"
+          animate="visible"
+          variants={{
+            hidden: { opacity: 0 },
+            visible: {
+              opacity: 1,
+              transition: {
+                staggerChildren: 0.1
+              }
+            }
+          }}
+        >
+          <motion.div variants={{ hidden: { y: 20, opacity: 0 }, visible: { y: 0, opacity: 1 } }}>
+            <Card>
         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
         <CardTitle className="text-sm font-medium">{t('dashboard.totalEarnings')}</CardTitle>
         <DollarSign className="h-4 w-4 text-secondary-green" />
@@ -155,7 +179,9 @@ function DashboardContent() {
         </p>
         </CardContent>
         </Card>
-        <Card>
+          </motion.div>
+          <motion.div variants={{ hidden: { y: 20, opacity: 0 }, visible: { y: 0, opacity: 1 } }}>
+            <Card>
         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
         <CardTitle className="text-sm font-medium">{t('dashboard.totalCost')}</CardTitle>
         <DollarSign className="h-4 w-4 text-secondary-red" />
@@ -168,7 +194,9 @@ function DashboardContent() {
         </p>
         </CardContent>
         </Card>
-        <Card>
+          </motion.div>
+          <motion.div variants={{ hidden: { y: 20, opacity: 0 }, visible: { y: 0, opacity: 1 } }}>
+            <Card>
         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
         <CardTitle className="text-sm font-medium">{t('dashboard.activeIncidents')}</CardTitle>
         <AlertCircle className="h-4 w-4 text-secondary-orange" />
@@ -180,7 +208,8 @@ function DashboardContent() {
         </p>
         </CardContent>
         </Card>
-      </div>
+            </motion.div>
+        </motion.div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <Card>

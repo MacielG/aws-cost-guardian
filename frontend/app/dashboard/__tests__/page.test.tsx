@@ -1,8 +1,17 @@
 // Mock AuthProvider to avoid real auth calls and act warnings
 jest.mock('@/components/auth/AuthProvider', () => ({
-  AuthProvider: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
-  useAuth: () => ({ user: { username: 'test', userId: '123' }, loading: false, signOut: jest.fn(), refreshUser: jest.fn() }),
+AuthProvider: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
+useAuth: () => ({ user: { username: 'test', userId: '123' }, loading: false, signOut: jest.fn(), refreshUser: jest.fn() }),
 }));
+
+// Mock MainLayout to avoid JSX issues
+jest.mock('@/components/layouts/main-layout', () => ({
+MainLayout: (props: any) => React.createElement('div', null, props.children),
+}));
+
+// Mock Sidebar and Header
+jest.mock('@/components/ui/sidebar', () => ({ Sidebar: () => <div data-testid="sidebar" /> }));
+jest.mock('@/components/ui/header', () => ({ Header: ({ title }: { title: string }) => <div data-testid="header">{title}</div> }));
 
 // Mock aws-amplify to avoid act warnings
 jest.mock('aws-amplify/auth', () => ({
@@ -54,20 +63,32 @@ jest.mock('@/components/charts/LineChart', () => () => <div data-testid="line-ch
 
 // @ts-ignore
 jest.mock('@/lib/api', () => ({
-  apiFetch: jest.fn(),
+apiFetch: jest.fn(),
+}));
+
+// @ts-ignore
+jest.mock('@/hooks/useSavings', () => ({
+  useSavings: () => ({ data: null, loading: false }),
 }));
 
 // @ts-ignore
 jest.mock('react-i18next', () => ({
-  useTranslation: () => ({
-    t: (key: string) => defaultTranslations[key] || key,
-    i18n: { language: 'pt-BR' }
-  }),
+useTranslation: () => ({
+t: (key: string) => defaultTranslations[key] || key,
+i18n: { language: 'pt-BR' }
+}),
 }));
 
-// Importações principais (APENAS UMA VEZ!)
-import DashboardPage from '../page';
-import { formatCurrency, formatDate } from '@/lib/utils';
+// Mock framer-motion
+jest.mock('framer-motion', () => ({
+motion: {
+div: (props: any) => React.createElement('div', props),
+main: (props: any) => React.createElement('main', props),
+path: (props: any) => React.createElement('path', props),
+},
+AnimatePresence: ({ children }: any) => children,
+}));
+
 
 // Recupera o mock gerado pelo jest para podermos inspecioná-lo nos testes
 const mockApiFetch = (jest.requireMock('@/lib/api') as any).apiFetch as jest.Mock;
@@ -279,6 +300,8 @@ const createTestData = () => {
 const TestWrapper: React.FC<{ children: React.ReactNode }> = ({ children }) => (
   <AuthProvider>{children}</AuthProvider>
 );
+
+// Importações principais (APENAS UMA VEZ!)\nimport DashboardPage from '../page';\nimport { formatCurrency, formatDate } from '@/lib/utils';
 
 describe('DashboardPage', () => {
   const { mockRouter, mockApiFetch } = setupMocks();

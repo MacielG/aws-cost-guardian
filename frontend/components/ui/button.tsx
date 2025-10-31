@@ -20,7 +20,7 @@ export function Button({ className, variant = 'default', size = 'default', asChi
     ? 'border border-border-color bg-transparent text-primary-blue hover:bg-background-light'
     : variant === 'secondary'
       ? 'bg-secondary text-text-medium hover:bg-background-light hover:text-text-light'
-      : 'bg-primary-blue text-text-light hover:bg-primary-blue-light shadow-md hover:shadow-lg';
+      : 'bg-gradient-to-r from-primary-blue to-primary-blue-light text-text-light hover:from-primary-blue-light hover:to-primary-blue shadow-md hover:shadow-lg hover:scale-105';
   const sizeClass = size === 'sm' ? 'px-3 py-1.5 text-sm' : size === 'icon' ? 'p-2 text-sm' : 'px-4 py-2 text-base';
   const classes = cn(base, variantClass, sizeClass, className || '');
 
