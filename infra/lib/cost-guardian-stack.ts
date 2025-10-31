@@ -777,6 +777,42 @@ export class CostGuardianStack extends cdk.Stack {
     });
     table.grantReadWriteData(recommendRdsIdleLambda);
 
+    const recommendIdleInstancesLambda = new lambda.Function(this, 'RecommendIdleInstances', {
+      functionName: 'RecommendIdleInstances',
+      runtime: lambda.Runtime.NODEJS_18_X,
+      code: lambda.Code.fromAsset(backendFunctionsPath),
+      handler: 'recommend-idle-instances.handler',
+      timeout: cdk.Duration.minutes(5),
+      vpc,
+      securityGroups: [lambdaSecurityGroup],
+      vpcSubnets: { subnetType: ec2.SubnetType.PRIVATE_WITH_EGRESS },
+      reservedConcurrentExecutions: 10,
+      logGroup: new cdk.aws_logs.LogGroup(this, 'RecommendIdleInstancesLogGroup', {
+        retention: cdk.aws_logs.RetentionDays.ONE_MONTH,
+        removalPolicy: cdk.RemovalPolicy.DESTROY,
+        encryptionKey: logKmsKey,
+      }),
+      environment: { 
+        DYNAMODB_TABLE: table.tableName,
+        SNS_TOPIC_ARN: anomalyAlertsTopic.topicArn,
+      },
+      role: new iam.Role(this, 'RecommendIdleInstancesRole', {
+        assumedBy: new iam.ServicePrincipal('lambda.amazonaws.com'),
+        managedPolicies: [iam.ManagedPolicy.fromAwsManagedPolicyName('service-role/AWSLambdaBasicExecutionRole')],
+        inlinePolicies: {
+          DynamoAndAssumePolicy: new iam.PolicyDocument({ statements: [
+            new iam.PolicyStatement({ actions: ['dynamodb:Query','dynamodb:Scan','dynamodb:GetItem','dynamodb:PutItem'], resources: [table.tableArn, `${table.tableArn}/index/*`] }),
+            new iam.PolicyStatement({ actions: ['sts:AssumeRole'], resources: ['arn:aws:iam::*:role/CostGuardianDelegatedRole'] }),
+            new iam.PolicyStatement({ actions: ['ec2:DescribeInstances', 'ec2:DescribeReservedInstances'], resources: ['*'] }),
+            new iam.PolicyStatement({ actions: ['cloudwatch:GetMetricStatistics'], resources: ['*'] }),
+            new iam.PolicyStatement({ actions: ['pricing:GetProducts'], resources: ['*'] }),
+          ]})
+        }
+      })
+    });
+    table.grantReadWriteData(recommendIdleInstancesLambda);
+    anomalyAlertsTopic.grantPublish(recommendIdleInstancesLambda);
+
     const deleteUnusedEbsLambda = new lambda.Function(this, 'DeleteUnusedEbs', {
       functionName: 'DeleteUnusedEbs',
       runtime: lambda.Runtime.NODEJS_18_X,

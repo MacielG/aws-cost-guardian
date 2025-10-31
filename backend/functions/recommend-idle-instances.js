@@ -1,10 +1,10 @@
-import { STSClient, AssumeRoleCommand } from '@aws-sdk/client-sts';
-import { EC2Client, DescribeInstancesCommand, DescribeReservedInstancesCommand } from '@aws-sdk/client-ec2';
-import { CloudWatchClient, GetMetricStatisticsCommand } from '@aws-sdk/client-cloudwatch';
-import { PricingClient, GetProductsCommand } from '@aws-sdk/client-pricing';
-import { DynamoDBClient } from '@aws-sdk/client-dynamodb';
-import { DynamoDBDocumentClient, QueryCommand, PutCommand } from '@aws-sdk/lib-dynamodb';
-import { SNSClient, PublishCommand } from '@aws-sdk/client-sns';
+const { STSClient, AssumeRoleCommand } = require('@aws-sdk/client-sts');
+const { EC2Client, DescribeInstancesCommand, DescribeReservedInstancesCommand } = require('@aws-sdk/client-ec2');
+const { CloudWatchClient, GetMetricStatisticsCommand } = require('@aws-sdk/client-cloudwatch');
+const { PricingClient, GetProductsCommand } = require('@aws-sdk/client-pricing');
+const { DynamoDBClient } = require('@aws-sdk/client-dynamodb');
+const { DynamoDBDocumentClient, QueryCommand, PutCommand } = require('@aws-sdk/lib-dynamodb');
+const { SNSClient, PublishCommand } = require('@aws-sdk/client-sns');
 
 const ddbClient = new DynamoDBClient({});
 const dynamoDb = DynamoDBDocumentClient.from(ddbClient);
@@ -14,20 +14,19 @@ const sns = new SNSClient({});
 
 const DYNAMODB_TABLE = process.env.DYNAMODB_TABLE;
 
-function isExcluded(resourceTags, exclusionTagsString) {
-  if (!exclusionTagsString || !resourceTags?.length) return false;
-  const exclusionTags = exclusionTagsString.split(',').map(t => t.trim());
+function isExcludedByTags(resourceTags, exclusionTagsList) {
+  if (!exclusionTagsList?.length || !resourceTags?.length) return false;
   
   for (const tag of resourceTags) {
     const tagString = `${tag.Key}:${tag.Value}`;
-    if (exclusionTags.includes(tagString) || exclusionTags.includes(tag.Key)) {
+    if (exclusionTagsList.includes(tagString) || exclusionTagsList.includes(tag.Key)) {
       return true;
     }
   }
   return false;
 }
 
-export const recommendIdleInstancesHandler = async (event) => {
+exports.handler = async (event) => {
   console.log('Executando automação: Recomendar Instâncias Ociosas (v3)');
 
   const queryParams = {
@@ -36,15 +35,12 @@ export const recommendIdleInstancesHandler = async (event) => {
     KeyConditionExpression: 'sk = :sk',
     ExpressionAttributeNames: {
       '#status': 'status',
-      '#automationSettings': 'automationSettings',
-      '#stopIdleInstances': 'stopIdleInstances'
+      '#automationSettings': 'automationSettings'
     },
     ExpressionAttributeValues: {
-      ':sk': 'CONFIG#ONBOARD',
-      ':true': true
+      ':sk': 'CONFIG#ONBOARD'
     },
-    FilterExpression: '#automationSettings.#stopIdleInstances = :true',
-    ProjectionExpression: 'id, roleArn, automationSettings, exclusionTags, #status'
+    ProjectionExpression: 'id, roleArn, automationSettings, #status'
   };
 
   const response = await dynamoDb.send(new QueryCommand(queryParams));
@@ -56,10 +52,24 @@ export const recommendIdleInstancesHandler = async (event) => {
   }
 
   for (const customer of items) {
+    const config = customer.automationSettings?.stopIdleInstances;
+    
+    if (!config?.enabled) {
+      console.log(`Cliente ${customer.id}: automação STOP_IDLE desabilitada`);
+      continue;
+    }
+
     if (!customer.roleArn) {
       console.warn(`Cliente ${customer.id} sem roleArn; pulando`);
       continue;
     }
+
+    const regions = config.regions || ['us-east-1'];
+    const tagFilters = config.filters?.tags || [{ Key: 'Environment', Values: ['dev', 'staging'] }];
+    const instanceStates = config.filters?.instanceStates || ['running'];
+    const cpuThreshold = config.thresholds?.cpuUtilization || 5;
+    const evaluationHours = config.thresholds?.evaluationPeriodHours || 24;
+    const exclusionTags = config.exclusionTags || [];
 
     try {
       const assumeCommand = new AssumeRoleCommand({ 
@@ -70,108 +80,113 @@ export const recommendIdleInstancesHandler = async (event) => {
       const assume = await sts.send(assumeCommand);
       const creds = assume.Credentials;
 
-      const ec2Client = new EC2Client({ 
-        credentials: {
-          accessKeyId: creds.AccessKeyId,
-          secretAccessKey: creds.SecretAccessKey,
-          sessionToken: creds.SessionToken,
-        },
-        region: 'us-east-1'
-      });
-      const cwClient = new CloudWatchClient({ 
-        credentials: {
-          accessKeyId: creds.AccessKeyId,
-          secretAccessKey: creds.SecretAccessKey,
-          sessionToken: creds.SessionToken,
-        },
-        region: 'us-east-1'
-      });
+      for (const region of regions) {
+        console.log(`Cliente ${customer.id}: Processando região ${region}`);
 
-      const descCommand = new DescribeInstancesCommand({ 
-        Filters: [
-          { Name: 'tag:Environment', Values: ['dev','staging'] }, 
-          { Name: 'instance-state-name', Values: ['running'] }
-        ] 
-      });
-      const desc = await ec2Client.send(descCommand);
+        const ec2Client = new EC2Client({ 
+          credentials: {
+            accessKeyId: creds.AccessKeyId,
+            secretAccessKey: creds.SecretAccessKey,
+            sessionToken: creds.SessionToken,
+          },
+          region
+        });
+        const cwClient = new CloudWatchClient({ 
+          credentials: {
+            accessKeyId: creds.AccessKeyId,
+            secretAccessKey: creds.SecretAccessKey,
+            sessionToken: creds.SessionToken,
+          },
+          region
+        });
+
+        const filters = [
+          ...tagFilters.map(f => ({ Name: `tag:${f.Key}`, Values: f.Values })),
+          { Name: 'instance-state-name', Values: instanceStates }
+        ];
+
+        const descCommand = new DescribeInstancesCommand({ Filters: filters });
+        const desc = await ec2Client.send(descCommand);
       
-      const instances = [];
-      for (const r of desc.Reservations || []) {
-        for (const i of r.Instances || []) instances.push(i);
-      }
+        const instances = [];
+        for (const r of desc.Reservations || []) {
+          for (const i of r.Instances || []) instances.push(i);
+        }
 
-      for (const inst of instances) {
-        try {
-          const id = inst.InstanceId;
-          const now = new Date();
-          
-          const metricCommand = new GetMetricStatisticsCommand({
-            Namespace: 'AWS/EC2',
-            MetricName: 'CPUUtilization',
-            Dimensions: [{ Name: 'InstanceId', Value: id }],
-            StartTime: new Date(now.getTime() - 24 * 60 * 60 * 1000),
-            EndTime: now,
-            Period: 3600,
-            Statistics: ['Average'],
-          });
-          const metric = await cwClient.send(metricCommand);
+        for (const inst of instances) {
+          try {
+            const id = inst.InstanceId;
+            const now = new Date();
+            
+            const metricCommand = new GetMetricStatisticsCommand({
+              Namespace: 'AWS/EC2',
+              MetricName: 'CPUUtilization',
+              Dimensions: [{ Name: 'InstanceId', Value: id }],
+              StartTime: new Date(now.getTime() - evaluationHours * 60 * 60 * 1000),
+              EndTime: now,
+              Period: 3600,
+              Statistics: ['Average'],
+            });
+            const metric = await cwClient.send(metricCommand);
 
-          const points = metric.Datapoints || [];
-          const avg = points.reduce((s,p)=>s+(p.Average||0),0) / (points.length||1);
-          
-          if (isExcluded(inst.Tags, customer.automationSettings?.exclusionTags)) {
-            console.log(`Instância ${id} excluída por tags. Pulando...`);
-            continue;
-          }
-
-          if (avg < 5) {
-            const recommendationId = `REC#EC2#${id}`;
-            const operatingSystem = inst.Platform === 'windows' ? 'Windows' : 'Linux';
-
-            // Check if instance is covered by Reserved Instances
-            const isCoveredByRI = await isInstanceCoveredByRI(ec2Client, inst.InstanceType);
-
-            let potentialSavings = 0;
-            if (!isCoveredByRI) {
-              try {
-                const price = await getEc2HourlyPrice(inst.InstanceType, 'us-east-1', operatingSystem);
-                if (price != null) {
-                  const hoursRemaining = (new Date(now.getFullYear(), now.getMonth()+1, 0).getDate() - now.getDate()) * 24;
-                  potentialSavings = parseFloat((price * hoursRemaining).toFixed(2));
-                }
-              } catch (psErr) {
-                console.warn('Falha ao calcular preço EC2 via Pricing API:', psErr);
-              }
-            } else {
-              console.log(`Instance ${id} is covered by RI, potential savings set to 0`);
+            const points = metric.Datapoints || [];
+            const avg = points.reduce((s,p)=>s+(p.Average||0),0) / (points.length||1);
+            
+            if (isExcludedByTags(inst.Tags, exclusionTags)) {
+              console.log(`Instância ${id} excluída por tags. Pulando...`);
+              continue;
             }
 
-            const putCommand = new PutCommand({
-              TableName: DYNAMODB_TABLE,
-              Item: {
-                id: customer.id,
-                sk: recommendationId,
-                type: 'IDLE_INSTANCE',
-                status: 'RECOMMENDED',
-                potentialSavings: potentialSavings,
-                resourceArn: `arn:aws:ec2:us-east-1:${assume.AssumedRoleUser.Arn.split(':')[4]}:instance/${id}`,
-                details: {
-                  instanceId: id,
-                  instanceType: inst.InstanceType,
-                  launchTime: inst.LaunchTime.toISOString(),
-                  cpuAvg: avg,
-                  tags: inst.Tags || [],
-                  operatingSystem: operatingSystem
-                },
-                createdAt: now.toISOString(),
-              }
-            });
-            await dynamoDb.send(putCommand);
+            if (avg < cpuThreshold) {
+              const recommendationId = `REC#EC2#${id}`;
+              const operatingSystem = inst.Platform === 'windows' ? 'Windows' : 'Linux';
 
-            console.log(`Cliente ${customer.id}: Recomendação criada para instância ${id} (economia potencial: $${potentialSavings}/mês)`);
+              const isCoveredByRI = await isInstanceCoveredByRI(ec2Client, inst.InstanceType);
+
+              let potentialSavings = 0;
+              if (!isCoveredByRI) {
+                try {
+                  const price = await getEc2HourlyPrice(inst.InstanceType, region, operatingSystem);
+                  if (price != null) {
+                    const hoursRemaining = (new Date(now.getFullYear(), now.getMonth()+1, 0).getDate() - now.getDate()) * 24;
+                    potentialSavings = parseFloat((price * hoursRemaining).toFixed(2));
+                  }
+                } catch (psErr) {
+                  console.warn('Falha ao calcular preço EC2 via Pricing API:', psErr);
+                }
+              } else {
+                console.log(`Instance ${id} is covered by RI, potential savings set to 0`);
+              }
+
+              const accountId = assume.AssumedRoleUser.Arn.split(':')[4];
+              const putCommand = new PutCommand({
+                TableName: DYNAMODB_TABLE,
+                Item: {
+                  id: customer.id,
+                  sk: recommendationId,
+                  type: 'IDLE_INSTANCE',
+                  status: 'RECOMMENDED',
+                  potentialSavings: potentialSavings,
+                  resourceArn: `arn:aws:ec2:${region}:${accountId}:instance/${id}`,
+                  region: region,
+                  details: {
+                    instanceId: id,
+                    instanceType: inst.InstanceType,
+                    launchTime: inst.LaunchTime.toISOString(),
+                    cpuAvg: avg,
+                    tags: inst.Tags || [],
+                    operatingSystem: operatingSystem
+                  },
+                  createdAt: now.toISOString(),
+                }
+              });
+              await dynamoDb.send(putCommand);
+
+              console.log(`Cliente ${customer.id}: Recomendação criada para instância ${id} em ${region} (economia potencial: $${potentialSavings}/mês)`);
+            }
+          } catch (innerErr) {
+            console.error('Erro ao avaliar instância:', innerErr);
           }
-        } catch (innerErr) {
-          console.error('Erro ao avaliar instância:', innerErr);
         }
       }
 
@@ -180,12 +195,10 @@ export const recommendIdleInstancesHandler = async (event) => {
     }
   }
 
-  // Check for high-value leads
   for (const customer of items) {
     if (!customer.roleArn) continue;
 
     try {
-      // Query all REC# items for the customer
       const recQuery = {
         TableName: DYNAMODB_TABLE,
         KeyConditionExpression: 'id = :id AND begins_with(sk, :prefix)',
@@ -200,10 +213,9 @@ export const recommendIdleInstancesHandler = async (event) => {
 
       const totalPotentialSavings = recommendations.reduce((sum, rec) => sum + (rec.potentialSavings || 0), 0);
 
-      if (totalPotentialSavings > 500) { // High-value threshold
+      if (totalPotentialSavings > 500) {
         console.log(`High-value lead detected for customer ${customer.id}: $${totalPotentialSavings.toFixed(2)} potential savings`);
 
-        // Publish to SNS
         if (process.env.SNS_TOPIC_ARN) {
           await sns.send(new PublishCommand({
             TopicArn: process.env.SNS_TOPIC_ARN,
@@ -226,9 +238,8 @@ async function getEc2HourlyPrice(instanceType, regionCode, operatingSystem) {
     'us-east-2': 'US East (Ohio)',
     'us-west-2': 'US West (Oregon)',
     'eu-west-1': 'EU (Ireland)',
-    // Add more regions as needed
   };
-  const location = regionNameMap[regionCode] || regionCode; // Fallback to regionCode if not mapped
+  const location = regionNameMap[regionCode] || regionCode;
 
   const filters = [
     { Type: 'TERM_MATCH', Field: 'instanceType', Value: instanceType },
@@ -270,12 +281,12 @@ async function getEc2HourlyPrice(instanceType, regionCode, operatingSystem) {
           console.warn('Error parsing pricing data:', e);
         }
       }
-      return null; // No price found
+      return null;
     } catch (error) {
       lastError = error;
       console.warn(`Attempt ${attempt + 1} failed for getEc2HourlyPrice:`, error);
       if (attempt < maxRetries - 1) {
-        const delay = Math.pow(2, attempt) * 1000; // Exponential backoff: 1s, 2s, 4s
+        const delay = Math.pow(2, attempt) * 1000;
         await new Promise(resolve => setTimeout(resolve, delay));
       }
     }
@@ -293,7 +304,6 @@ async function isInstanceCoveredByRI(ec2Client, instanceType) {
       ]
     });
     const resp = await ec2Client.send(command);
-    // If there are active RIs for this type, assume it's covered
     return (resp.ReservedInstances || []).length > 0;
   } catch (err) {
     console.warn('Error checking RI coverage:', err);

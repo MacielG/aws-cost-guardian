@@ -1,46 +1,44 @@
-const AWS = require('aws-sdk');
-const dynamoDb = new AWS.DynamoDB.DocumentClient();
-const sts = new AWS.STS();
+const { STSClient, AssumeRoleCommand } = require('@aws-sdk/client-sts');
+const { EC2Client, DescribeVolumesCommand } = require('@aws-sdk/client-ec2');
+const { DynamoDBClient } = require('@aws-sdk/client-dynamodb');
+const { DynamoDBDocumentClient, QueryCommand, PutCommand } = require('@aws-sdk/lib-dynamodb');
+
+const ddbClient = new DynamoDBClient({});
+const dynamoDb = DynamoDBDocumentClient.from(ddbClient);
+const sts = new STSClient({});
 
 const DYNAMODB_TABLE = process.env.DYNAMODB_TABLE;
 
-// Helper para verificar se um recurso está excluído pelas tags
-function isExcluded(resourceTags, exclusionTagsString) {
-  if (!exclusionTagsString || !resourceTags?.length) return false;
-  const exclusionTags = exclusionTagsString.split(',').map(t => t.trim());
+function isExcludedByTags(resourceTags, exclusionTagsList) {
+  if (!exclusionTagsList?.length || !resourceTags?.length) return false;
   
   for (const tag of resourceTags) {
     const tagString = `${tag.Key}:${tag.Value}`;
-    if (exclusionTags.includes(tagString) || exclusionTags.includes(tag.Key)) {
+    if (exclusionTagsList.includes(tagString) || exclusionTagsList.includes(tag.Key)) {
       return true;
     }
   }
   return false;
 }
 
-exports.deleteUnusedEbsHandler = async (event) => {
-  console.log('Executando automação: Excluir Volumes EBS Órfãos');
+exports.handler = async (event) => {
+  console.log('Executando automação: Recomendar Remoção de Volumes EBS Não Utilizados');
 
-  // 1. Usar o novo GSI ActiveCustomerIndex para buscar clientes que habilitaram DELETE_UNUSED_EBS
   const queryParams = {
     TableName: DYNAMODB_TABLE,
     IndexName: 'ActiveCustomerIndex',
-    KeyConditionExpression: 'sk = :sk AND #status = :status',
+    KeyConditionExpression: 'sk = :sk',
     ExpressionAttributeNames: { 
       '#status': 'status',
-      '#automationSettings': 'automationSettings',
-      '#deleteUnusedEbs': 'deleteUnusedEbs'
+      '#automationSettings': 'automationSettings'
     },
     ExpressionAttributeValues: { 
-      ':sk': 'CONFIG#ONBOARD',
-      ':status': 'ACTIVE',
-      ':true': true
+      ':sk': 'CONFIG#ONBOARD'
     },
-    FilterExpression: '#automationSettings.#deleteUnusedEbs = :true',
-    ProjectionExpression: 'id, roleArn, automationSettings, exclusionTags'
+    ProjectionExpression: 'id, roleArn, automationSettings, #status'
   };
 
-  const response = await dynamoDb.query(queryParams).promise();
+  const response = await dynamoDb.send(new QueryCommand(queryParams));
   const items = response.Items || [];
 
   if (!items.length) {
@@ -49,72 +47,116 @@ exports.deleteUnusedEbsHandler = async (event) => {
   }
 
   for (const customer of items) {
+    const config = customer.automationSettings?.deleteUnusedEbs;
+    
+    if (!config?.enabled) {
+      console.log(`Cliente ${customer.id}: automação DELETE_UNUSED_EBS desabilitada`);
+      continue;
+    }
+
     if (!customer.roleArn) {
       console.warn(`Cliente ${customer.id} sem roleArn; pulando`);
       continue;
     }
 
+    const regions = config.regions || ['us-east-1'];
+    const tagFilters = config.filters?.tags || [];
+    const volumeStates = config.filters?.volumeStates || ['available'];
+    const daysThreshold = config.thresholds?.daysUnused || 7;
+    const exclusionTags = config.exclusionTags || [];
+
     try {
-      const assume = await sts.assumeRole({ RoleArn: customer.roleArn, RoleSessionName: `delete-ebs-${customer.id}-${Date.now()}`, DurationSeconds: 900 }).promise();
+      const assumeCommand = new AssumeRoleCommand({ 
+        RoleArn: customer.roleArn, 
+        RoleSessionName: `recommend-ebs-${customer.id}-${Date.now()}`, 
+        DurationSeconds: 900 
+      });
+      const assume = await sts.send(assumeCommand);
       const creds = assume.Credentials;
-      const ec2Client = new AWS.EC2({ accessKeyId: creds.AccessKeyId, secretAccessKey: creds.SecretAccessKey, sessionToken: creds.SessionToken, region: 'us-east-1' });
-      const pricing = new AWS.Pricing({ region: 'us-east-1' });
 
-      // Describe volumes with status 'available' (não anexados)
-      const resp = await ec2Client.describeVolumes({ Filters: [{ Name: 'status', Values: ['available'] }] }).promise();
-      const volumes = resp.Volumes || [];
-      for (const v of volumes) {
-        try {
-          // Verificar se o volume está excluído pelas tags
-          if (isExcluded(v.Tags, customer.automationSettings?.exclusionTags)) {
-            console.log(`Volume ${v.VolumeId} excluído por tags. Pulando...`);
-            continue;
-          }
+      for (const region of regions) {
+        console.log(`Cliente ${customer.id}: Processando região ${region}`);
 
-          // Calcular economia potencial (tentar Pricing API, fallback para heurística)
-          let potentialSavings = null;
+        const ec2Client = new EC2Client({ 
+          credentials: {
+            accessKeyId: creds.AccessKeyId,
+            secretAccessKey: creds.SecretAccessKey,
+            sessionToken: creds.SessionToken,
+          },
+          region
+        });
+
+        const filters = [
+          { Name: 'status', Values: volumeStates },
+          ...tagFilters.map(f => ({ Name: `tag:${f.Key}`, Values: f.Values }))
+        ];
+
+        const descCommand = new DescribeVolumesCommand({ Filters: filters });
+        const desc = await ec2Client.send(descCommand);
+      
+        const volumes = desc.Volumes || [];
+
+        for (const vol of volumes) {
           try {
-            const pricePerGb = await getEbsGbMonthPrice(v.VolumeType, 'us-east-1', pricing);
-            if (pricePerGb != null) {
-              potentialSavings = parseFloat((v.Size * pricePerGb).toFixed(2));
+            const volumeId = vol.VolumeId;
+            const createTime = vol.CreateTime;
+            const now = new Date();
+            
+            const daysUnused = (now - createTime) / (1000 * 60 * 60 * 24);
+            
+            if (isExcludedByTags(vol.Tags, exclusionTags)) {
+              console.log(`Volume ${volumeId} excluído por tags. Pulando...`);
+              continue;
             }
-          } catch (priceErr) {
-            console.warn('Erro ao obter preço EBS via Pricing API, usando fallback:', priceErr);
-          }
 
-          if (potentialSavings == null) {
-            // fallback heurístico
-            const fallbackMap = { gp3: 0.08, gp2: 0.10, standard: 0.05 };
-            const key = (v.VolumeType || 'gp2').toLowerCase();
-            const priceGb = fallbackMap[key] || 0.10;
-            potentialSavings = parseFloat((v.Size * priceGb).toFixed(2));
-          }
-          const recommendationId = `REC#EBS#${v.VolumeId}`;
+            if (daysUnused > daysThreshold) {
+              const recommendationId = `REC#EBS#${volumeId}`;
+              
+              const sizeGb = vol.Size;
+              const volumeType = vol.VolumeType;
+              
+              const pricePerGb = {
+                'gp2': 0.10,
+                'gp3': 0.08,
+                'io1': 0.125,
+                'io2': 0.125,
+                'st1': 0.045,
+                'sc1': 0.025,
+                'standard': 0.05,
+              };
+              
+              const monthlyPrice = (pricePerGb[volumeType] || 0.10) * sizeGb;
+              const potentialSavings = parseFloat(monthlyPrice.toFixed(2));
 
-          // Salvar recomendação no DynamoDB
-          await dynamoDb.put({
-            TableName: DYNAMODB_TABLE,
-            Item: {
-              id: customer.id,
-              sk: recommendationId,
-              type: 'UNUSED_EBS_VOLUME',
-              status: 'RECOMMENDED',
-              potentialSavings: parseFloat(potentialSavings),
-              resourceArn: `arn:aws:ec2:${AWS.config.region}:${assume.AssumedRoleUser.Arn.split(':')[4]}:volume/${v.VolumeId}`,
-              details: {
-                volumeId: v.VolumeId,
-                volumeSize: v.Size,
-                volumeType: v.VolumeType,
-                createTime: v.CreateTime,
-                tags: v.Tags || []
-              },
-              createdAt: new Date().toISOString(),
+              const accountId = assume.AssumedRoleUser.Arn.split(':')[4];
+              const putCommand = new PutCommand({
+                TableName: DYNAMODB_TABLE,
+                Item: {
+                  id: customer.id,
+                  sk: recommendationId,
+                  type: 'UNUSED_EBS',
+                  status: 'RECOMMENDED',
+                  potentialSavings: potentialSavings,
+                  resourceArn: `arn:aws:ec2:${region}:${accountId}:volume/${volumeId}`,
+                  region: region,
+                  details: {
+                    volumeId: volumeId,
+                    volumeType: volumeType,
+                    sizeGb: sizeGb,
+                    createTime: createTime.toISOString(),
+                    daysUnused: Math.floor(daysUnused),
+                    tags: vol.Tags || []
+                  },
+                  createdAt: now.toISOString(),
+                }
+              });
+              await dynamoDb.send(putCommand);
+
+              console.log(`Cliente ${customer.id}: Recomendação criada para volume ${volumeId} em ${region} (economia potencial: $${potentialSavings}/mês)`);
             }
-          }).promise();
-          
-          console.log(`Cliente ${customer.id}: Recomendação criada para volume ${v.VolumeId} (economia potencial: $${potentialSavings}/mês)`);
-        } catch (inner) {
-          console.error('Erro ao deletar volume:', inner);
+          } catch (innerErr) {
+            console.error('Erro ao avaliar volume:', innerErr);
+          }
         }
       }
 
@@ -125,44 +167,3 @@ exports.deleteUnusedEbsHandler = async (event) => {
 
   return { status: 'completed' };
 };
-
-async function getEbsGbMonthPrice(volumeType, regionCode, pricingClient) {
-  // best-effort via Pricing API
-  const regionNameMap = {
-    'us-east-1': 'US East (N. Virginia)',
-    'us-east-2': 'US East (Ohio)',
-    'us-west-2': 'US West (Oregon)',
-    'eu-west-1': 'EU (Ireland)'
-  };
-  const location = regionNameMap[regionCode] || 'US East (N. Virginia)';
-
-  const filters = [
-    { Type: 'TERM_MATCH', Field: 'location', Value: location },
-    { Type: 'TERM_MATCH', Field: 'volumeType', Value: volumeType },
-  ];
-
-  const resp = await pricingClient.getProducts({ ServiceCode: 'AmazonEC2', Filters: filters, MaxResults: 100 }).promise();
-  const priceList = resp.PriceList || [];
-  for (const p of priceList) {
-    try {
-      const prod = JSON.parse(p);
-      const onDemandTerms = prod.terms && prod.terms.OnDemand;
-      if (!onDemandTerms) continue;
-      for (const termKey of Object.keys(onDemandTerms)) {
-        const term = onDemandTerms[termKey];
-        const priceDimensions = term.priceDimensions || {};
-        for (const pdKey of Object.keys(priceDimensions)) {
-          const pd = priceDimensions[pdKey];
-          const pricePerUnit = pd.pricePerUnit && pd.pricePerUnit.USD;
-          if (pricePerUnit) {
-            // pricePerUnit here may be per GB-month
-            return parseFloat(pricePerUnit);
-          }
-        }
-      }
-    } catch (e) {
-      // ignore
-    }
-  }
-  return null;
-}
