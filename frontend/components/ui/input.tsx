@@ -2,8 +2,12 @@ import React from 'react';
 import { motion } from 'framer-motion';
 import { cn } from '@/lib/utils';
 
-export const Input = React.forwardRef<HTMLInputElement, React.InputHTMLAttributes<HTMLInputElement> & { hasError?: boolean }>(
-  ({ className, hasError = false, ...props }, ref) => {
+export const Input = React.forwardRef<
+  HTMLInputElement, 
+  Omit<React.InputHTMLAttributes<HTMLInputElement>, 
+    'onDrag' | 'onDragStart' | 'onDragEnd' | 'onAnimationStart' | 'onAnimationEnd' | 'onAnimationIteration'
+  > & { hasError?: boolean }
+>(({ className, hasError = false, ...props }, ref) => {
     return (
       <motion.input
         ref={ref}

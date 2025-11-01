@@ -27,12 +27,28 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       const currentUser = await getCurrentUser();
       const session = await fetchAuthSession();
       
+      if (!session.tokens?.idToken) {
+        console.warn('Sessão sem token válido');
+        setUser(null);
+        setLoading(false);
+        return;
+      }
+      
       setUser({
         username: currentUser.username,
         userId: currentUser.userId,
         email: session.tokens?.idToken?.payload?.email as string | undefined,
       });
-    } catch (err) {
+    } catch (err: any) {
+      console.warn('Erro ao carregar usuário:', err?.message || err);
+      
+      if (err?.name === 'InvalidCharacterError' || err?.message?.includes('token')) {
+        if (typeof window !== 'undefined') {
+          localStorage.clear();
+          sessionStorage.clear();
+        }
+      }
+      
       setUser(null);
     } finally {
       setLoading(false);
@@ -47,8 +63,20 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     try {
       await amplifySignOut();
       setUser(null);
+      
+      if (typeof window !== 'undefined') {
+        localStorage.clear();
+        sessionStorage.clear();
+      }
     } catch (err) {
       console.error('Erro ao fazer logout:', err);
+      
+      if (typeof window !== 'undefined') {
+        localStorage.clear();
+        sessionStorage.clear();
+      }
+      
+      setUser(null);
     }
   };
 

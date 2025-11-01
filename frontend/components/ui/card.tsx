@@ -4,7 +4,9 @@ import { cn } from "@/lib/utils"
 
 const Card = React.forwardRef<
 HTMLDivElement,
-React.HTMLAttributes<HTMLDivElement>
+Omit<React.HTMLAttributes<HTMLDivElement>, 
+  'onDrag' | 'onDragStart' | 'onDragEnd' | 'onAnimationStart' | 'onAnimationEnd' | 'onAnimationIteration'
+>
 >(({ className, ...props }, ref) => (
 <motion.div
 ref={ref}

@@ -127,8 +127,9 @@ function ConnectionsContent() {
                         {conn.status}
                       </span>
                       <Button
-                        variant="destructive"
+                        variant="outline"
                         size="sm"
+                        className="text-red-600 border-red-600 hover:bg-red-50"
                         onClick={() => handleDelete(conn.awsAccountId)}
                         disabled={deleting === conn.awsAccountId}
                       >

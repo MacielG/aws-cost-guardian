@@ -1,6 +1,7 @@
 // frontend/app/onboard/page.tsx
 
 'use client';
+import React from 'react';
 import { useTranslation } from 'react-i18next';
 import { Button } from '@/components/ui/button';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card';
@@ -89,7 +90,7 @@ export default function Onboard() {
     };
 
     return (
-        <div className="min-h-screen bg-background-dark flex items-center justify-center p-6">
+    <div className="min-h-screen bg-background-dark flex items-center justify-center p-6">
             <div className="max-w-2xl w-full">
                 <div className="text-center mb-8">
                     <h1 className="heading-1 mb-2">Welcome to Cost Guardian</h1>
@@ -156,8 +157,8 @@ export default function Onboard() {
                             </Button>
                             <p className="text-sm text-text-medium text-center">
                                 {isConnecting
-                                    ? 'After creating the stack in AWS console, you can close the tab and return here. We're waiting for automatic confirmation.'
-                  : 'This will open the AWS console for you to create the access role. It's safe and transparent.'}
+                                    ? 'After creating the stack in AWS console, you can close the tab and return here. We\'re waiting for automatic confirmation.'
+                                    : 'This will open the AWS console for you to create the access role. It\'s safe and transparent.'}
                             </p>
                         </CardContent>
                     </Card>

@@ -3,30 +3,97 @@
 @tailwind utilities;
 
 @layer base {
+  /* Definição da paleta de cores principal (Modo Claro).
+    Use um gerador de paletas (ex: https://color.adobe.com ou https://tweakcn.com/)
+    para escolher cores profissionais.
+  */
   :root {
-    /* Primary Colors */
-    --primary-blue: #2196F3;
-    --primary-blue-light: #64B5F6;
-    --primary-blue-dark: #1976D2;
+    --background: 0 0% 100%; /* Branco */
+    --foreground: 224 71.4% 4.1%; /* Preto suave */
 
-    /* Secondary Colors */
-    --secondary-green: #4CAF50;
-    --secondary-red: #F44336;
-    --secondary-orange: #FF9800;
+    --card: 0 0% 100%;
+    --card-foreground: 224 71.4% 4.1%;
 
-    /* Neutral Colors */
-    --background-dark: #181A20;
-    --background-light: #282C34;
-    --text-light: #E0E0E0;
-    --text-medium: #B0B0B0;
-    --text-dark: #757575;
-    --border-color: #3A3F47;
+    --popover: 0 0% 100%;
+    --popover-foreground: 224 71.4% 4.1%;
 
-    /* Effects */
-    --shadow-sm: 0 2px 5px rgba(0, 0, 0, 0.2);
-    --shadow-md: 0 5px 15px rgba(0, 0, 0, 0.3);
-    --glass-effect: rgba(255, 255, 255, 0.05);
+    /* Cor Primária (ex: Azul) */
+    --primary: 221.2 83.2% 53.3%;
+    --primary-foreground: 210 20% 98%;
+
+    /* Cor Secundária (ex: Cinza) */
+    --secondary: 220 14.3% 95.9%;
+    --secondary-foreground: 220.9 39.3% 11%;
+
+    --muted: 220 14.3% 95.9%;
+    --muted-foreground: 220 8.9% 46.1%;
+
+    --accent: 220 14.3% 95.9%;
+    --accent-foreground: 220.9 39.3% 11%;
+
+    --destructive: 0 84.2% 60.2%;
+    --destructive-foreground: 210 20% 98%;
+
+    --border: 220 13% 91%;
+    --input: 220 13% 91%;
+    --ring: 221.2 83.2% 53.3%; /* Cor do foco */
+
+    --radius: 0.5rem; /* Arredondamento dos cantos */
   }
+
+  /* Definição da paleta de cores (Modo Escuro).
+  */
+  .dark {
+    --background: 224 71.4% 4.1%; /* Preto suave */
+    --foreground: 210 20% 98%; /* Branco */
+
+    --card: 224 71.4% 4.1%;
+    --card-foreground: 210 20% 98%;
+
+    --popover: 224 71.4% 4.1%;
+    --popover-foreground: 210 20% 98%;
+
+    /* Cor Primária (ex: Azul) */
+    --primary: 217.2 91.2% 59.8%;
+    --primary-foreground: 210 20% 98%;
+
+    /* Cor Secundária (ex: Cinza escuro) */
+    --secondary: 215 27.9% 16.9%;
+    --secondary-foreground: 210 20% 98%;
+
+    --muted: 215 27.9% 16.9%;
+    --muted-foreground: 217.9 10.6% 64.9%;
+
+    --accent: 215 27.9% 16.9%;
+    --accent-foreground: 210 20% 98%;
+
+    --destructive: 0 62.8% 30.6%;
+    --destructive-foreground: 210 20% 98%;
+
+    --border: 215 27.9% 16.9%;
+    --input: 215 27.9% 16.9%;
+    --ring: 217.2 91.2% 59.8%;
+  }
+
+  /* Legacy variables for backward compatibility */
+  --primary-blue: hsl(221.2 83.2% 53.3%);
+  --primary-blue-light: hsl(217.2 91.2% 59.8%);
+  --primary-blue-dark: hsl(224 71.4% 4.1%);
+
+  --secondary-green: hsl(142.1 76.2% 36.3%);
+  --secondary-red: hsl(0 84.2% 60.2%);
+  --secondary-orange: hsl(38.2 92.1% 50.0%);
+
+  --background-dark: hsl(224 71.4% 4.1%);
+  --background-light: hsl(220 14.3% 95.9%);
+  --text-light: hsl(210 20% 98%);
+  --text-medium: hsl(217.9 10.6% 64.9%);
+  --text-dark: hsl(220.9 39.3% 11%);
+  --border-color: hsl(215 27.9% 16.9%);
+
+  --shadow-sm: 0 2px 5px rgba(0, 0, 0, 0.2);
+  --shadow-md: 0 5px 15px rgba(0, 0, 0, 0.3);
+  --glass-effect: rgba(255, 255, 255, 0.05);
 
   body {
     font-family: Inter, sans-serif;

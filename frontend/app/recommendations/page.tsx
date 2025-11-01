@@ -2,7 +2,9 @@
 
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import { useRouter } from 'next/navigation';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import { motion } from 'framer-motion';
 import { Button } from '@/components/ui/button';
 import { MainLayout } from '@/components/layouts/main-layout';
 import { ProtectedRoute } from '@/components/auth/ProtectedRoute';
@@ -22,6 +24,7 @@ interface Recommendation {
 
 function RecommendationsContent() {
   const { t } = useTranslation();
+  const router = useRouter();
   const [recommendations, setRecommendations] = useState<Recommendation[]>([]);
   const [loading, setLoading] = useState(true);
   const [executing, setExecuting] = useState<string | null>(null);
@@ -106,6 +109,30 @@ function RecommendationsContent() {
     .filter(r => r.status === 'RECOMMENDED')
     .reduce((sum, r) => sum + (r.potentialSavings || 0), 0);
 
+  /**
+   * Define a animação para o *container* da lista.
+   * 'staggerChildren: 0.1' diz ao Framer Motion para animar cada filho
+   * com um atraso de 0.1s entre eles.
+   */
+  const containerVariants = {
+    hidden: { opacity: 0 },
+    visible: {
+      opacity: 1,
+      transition: {
+        staggerChildren: 0.1, // Este é o efeito "escalonado"
+      },
+    },
+  };
+
+  /**
+   * Define a animação para *cada item* da lista.
+   * Efeito sutil de "fade in" e "slide up".
+   */
+  const itemVariants = {
+    hidden: { opacity: 0, y: 20 },
+    visible: { opacity: 1, y: 0 },
+  };
+
   return (
     <MainLayout title="Recomendações">
       <div className="space-y-6">
@@ -168,10 +195,16 @@ function RecommendationsContent() {
                 </p>
               </div>
             ) : (
-              <div className="space-y-4">
+              <motion.div
+                className="space-y-4"
+                variants={containerVariants}
+                initial="hidden"
+                animate="visible"
+              >
                 {recommendations.map((rec) => (
-                  <div
+                  <motion.div
                     key={rec.id}
+                    variants={itemVariants}
                     className="border rounded-lg p-4 hover:bg-accent transition-colors"
                   >
                     <div className="flex items-start justify-between">
@@ -257,9 +290,9 @@ function RecommendationsContent() {
                         )}
                       </div>
                     </div>
-                  </div>
+                  </motion.div>
                 ))}
-              </div>
+              </motion.div>
             )}
           </CardContent>
         </Card>

@@ -1,8 +1,34 @@
 {
-  "welcome": "Bem-vindo ao AWS Cost Guardian",
-  "connectAws": "Conecte sua Conta AWS",
-  "dashboard": "Dashboard",
-  "incidents": "Incidentes Detectados",
-  "earnings": "Seus Ganhos",
-  "onboarding": "Comece em 1 Clique"
+  "welcome": "Bem-vindo",
+  "dashboard": "Painel",
+  "loading": "Carregando...",
+  "error": "Erro",
+  "common": {
+    "error": "Erro",
+    "success": "Sucesso"
+  },
+  "dashboard": {
+    "totalEarnings": "Receita Total",
+    "totalCost": "Custo Total",
+    "activeIncidents": "Incidentes Ativos",
+    "fromLastMonth": "do mês passado",
+    "detected": "detectado"
+  },
+  "adminClaims": {
+    "title": "Gerenciamento de Reivindicações (Admin)",
+    "description": "Visualize e gerencie todas as reivindicações de crédito SLA do sistema.",
+    "searchPlaceholder": "Buscar por ID, incidente, conta AWS...",
+    "filterByStatus": "Filtrar por Status",
+    "noClaims": "Nenhuma reivindicação encontrada com os filtros aplicados."
+  },
+  "statuses": {
+    "READY_TO_SUBMIT": "Pronto para Enviar",
+    "SUBMITTED": "Enviado",
+    "SUBMISSION_FAILED": "Falha no Envio",
+    "PAID": "Pago",
+    "REFUNDED": "Reembolsado",
+    "NO_VIOLATION": "Sem Violação",
+    "NO_RESOURCES_LISTED": "Sem Recursos Listados",
+    "REPORT_FAILED": "Falha no Relatório"
+  }
 }

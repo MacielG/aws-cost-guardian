@@ -1,9 +1,12 @@
 "use client";
 
+import React from 'react';
 import { motion } from 'framer-motion';
 import { LucideIcon } from 'lucide-react';
 
-interface EmptyStateProps {
+interface EmptyStateProps extends Omit<React.HTMLAttributes<HTMLDivElement>,
+  'onDrag' | 'onDragStart' | 'onDragEnd' | 'onAnimationStart' | 'onAnimationEnd' | 'onAnimationIteration'
+> {
   icon: LucideIcon;
   title: string;
   description: string;

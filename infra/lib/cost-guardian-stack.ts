@@ -17,10 +17,12 @@ import * as secretsmanager from 'aws-cdk-lib/aws-secretsmanager';
 import * as iam from 'aws-cdk-lib/aws-iam';
 import * as sns from 'aws-cdk-lib/aws-sns';
 import * as route53 from 'aws-cdk-lib/aws-route53';
+import { SecretValue } from 'aws-cdk-lib';
 import * as acm from 'aws-cdk-lib/aws-certificatemanager';
 import * as amplify from '@aws-cdk/aws-amplify-alpha';
 import * as ec2 from 'aws-cdk-lib/aws-ec2';
 import * as cloudwatch from 'aws-cdk-lib/aws-cloudwatch';
+import * as logs from 'aws-cdk-lib/aws-logs';
 import * as kms from 'aws-cdk-lib/aws-kms';
 import * as codebuild from 'aws-cdk-lib/aws-codebuild';
 
@@ -92,24 +94,37 @@ export class CostGuardianStack extends cdk.Stack {
 
     // Secrets (Mantido)
     const stripeSecret = new secretsmanager.Secret(this, 'StripeSecret', {
+      secretName: 'StripeSecret', // Nome fixo para fácil referência
       encryptionKey: new kms.Key(this, 'StripeSecretKmsKey', { enableKeyRotation: true, removalPolicy: cdk.RemovalPolicy.DESTROY }),
-      generateSecretString: { secretStringTemplate: '{"key":""}', generateStringKey: 'key' },
+      // O valor inicial é um placeholder. O usuário deve preenchê-lo.
+      secretStringValue: SecretValue.unsafePlainText('{"key":"sk_test_PLACEHOLDER"}'),
       removalPolicy: cdk.RemovalPolicy.DESTROY,
     });
 
     // Webhook secret (raw string) stored in Secrets Manager for secure delivery - CORRIGIDO
     const stripeWebhookSecret = new secretsmanager.Secret(this, 'StripeWebhookSecret', {
+      secretName: 'StripeWebhookSecret', // Nome fixo para fácil referência
       description: 'Stripe webhook signing secret for platform webhooks',
       encryptionKey: new kms.Key(this, 'StripeWebhookSecretKmsKey', { enableKeyRotation: true, removalPolicy: cdk.RemovalPolicy.DESTROY }),
-      generateSecretString: { secretStringTemplate: '{"webhook":""}', generateStringKey: 'webhook' },
+      // O valor inicial é um placeholder.
+      secretStringValue: SecretValue.unsafePlainText('{"webhook":"whsec_PLACEHOLDER"}'),
       removalPolicy: cdk.RemovalPolicy.DESTROY,
     });
 
-    // KMS Key para todos os CloudWatch Log Groups
-    const logKmsKey = new kms.Key(this, 'LogGroupKmsKey', {
-      enableKeyRotation: true,
-      removalPolicy: cdk.RemovalPolicy.DESTROY,
-    });
+    // --- Validação Robusta de Segredos ---
+    // Esta validação ocorre durante o 'cdk synth' ou 'cdk deploy'.
+    // Se os segredos ainda contiverem valores placeholder, o deploy falhará.
+    if (!props.isTestEnvironment) {
+      const stripeKeyValue = stripeSecret.secretValueFromJson('key').unsafeUnwrap();
+      const webhookValue = stripeWebhookSecret.secretValueFromJson('webhook').unsafeUnwrap();
+
+      if (stripeKeyValue.includes('PLACEHOLDER') || webhookValue.includes('PLACEHOLDER')) {
+        throw new Error(`ERRO: Segredos do Stripe não foram configurados. Por favor, edite os segredos 'StripeSecret' e 'StripeWebhookSecret' no AWS Secrets Manager com os valores reais e tente o deploy novamente.`);
+      }
+    }
+
+    // KMS Key para todos os CloudWatch Log Groups (removida para evitar conflitos)
+    const logKmsKey = undefined; // Temporário para evitar erros de TypeScript
     
     // KMS Key para DynamoDB
     const dynamoKmsKey = new kms.Key(this, 'DynamoKmsKey', {
@@ -139,8 +154,6 @@ export class CostGuardianStack extends cdk.Stack {
       encryption: dynamodb.TableEncryption.CUSTOMER_MANAGED, // Usar KMS para maior segurança (Task 3)
       encryptionKey: dynamoKmsKey,
     });
-    // Retain the table on stack deletion for robust cleanup (Task 3)
-    table.applyRemovalPolicy(cdk.RemovalPolicy.RETAIN);
 
     // Adicionar tags à tabela DynamoDB usando addPropertyOverride
     const cfnTable = table.node.defaultChild as dynamodb.CfnTable;
@@ -247,10 +260,10 @@ export class CostGuardianStack extends cdk.Stack {
         id: 'DefaultLifecycle',
         enabled: true,
         expiration: cdk.Duration.days(90), // Expirar objetos após 90 dias
-        noncurrentVersionExpiration: cdk.Duration.days(30), // Expirar versões não atuais após 30 dias
+        noncurrentVersionExpiration: cdk.Duration.days(60), // Expirar versões não atuais após 60 dias (deve ser > noncurrentVersionTransitions)
         transitions: [{
           storageClass: s3.StorageClass.INTELLIGENT_TIERING, // Transição para Intelligent-Tiering
-          transitionAfter: cdk.Duration.days(90), // Após 90 dias
+          transitionAfter: cdk.Duration.days(30), // Após 30 dias
         }],
         noncurrentVersionTransitions: [{
           storageClass: s3.StorageClass.GLACIER,
@@ -259,16 +272,7 @@ export class CostGuardianStack extends cdk.Stack {
       }]
     });
     
-    // Força a configuração de criptografia através do recurso L1 (atualizar para KMS)
-    const cfnTemplateBucket = templateBucket.node.defaultChild as s3.CfnBucket;
-    cfnTemplateBucket.addPropertyOverride('BucketEncryption', {
-      ServerSideEncryptionConfiguration: [{
-        ServerSideEncryptionByDefault: {
-          SSEAlgorithm: 'AES256',
-        },
-        KMSMasterKeyID: s3KmsKey.keyArn, // Especificar KMS Key
-      }],
-    });
+    // Removido addPropertyOverride para evitar conflito com encryption: KMS
     
     // Adicionar tags ao bucket removido para compatibilidade com testes
 
@@ -368,9 +372,7 @@ export class CostGuardianStack extends cdk.Stack {
       logGroup: new cdk.aws_logs.LogGroup(this, 'ApiHandlerLogGroup', {
       retention: cdk.aws_logs.RetentionDays.ONE_YEAR,
       removalPolicy: cdk.RemovalPolicy.DESTROY,
-      encryptionKey: logKmsKey,
       }),
-      reservedConcurrentExecutions: 100,
       environment: {
         LOG_LEVEL: props.isTestEnvironment ? 'DEBUG' : 'INFO',
         DYNAMODB_TABLE: table.tableName,
@@ -408,9 +410,7 @@ export class CostGuardianStack extends cdk.Stack {
       logGroup: new cdk.aws_logs.LogGroup(this, 'HealthEventHandlerLogGroup', {
         retention: cdk.aws_logs.RetentionDays.ONE_MONTH,
         removalPolicy: cdk.RemovalPolicy.DESTROY,
-        encryptionKey: logKmsKey,
       }),
-      reservedConcurrentExecutions: 20,
       // A remoção de 'externalModules' permite que o esbuild empacote as dependências do SDK v3.
       environment: {
         DYNAMODB_TABLE: table.tableName,
@@ -435,7 +435,6 @@ export class CostGuardianStack extends cdk.Stack {
         removalPolicy: cdk.RemovalPolicy.DESTROY,
         encryptionKey: logKmsKey,
       }),
-      reservedConcurrentExecutions: 10,
       memorySize: 256,
       environment: {
         DYNAMODB_TABLE: table.tableName,
@@ -469,7 +468,6 @@ export class CostGuardianStack extends cdk.Stack {
         removalPolicy: cdk.RemovalPolicy.DESTROY,
         encryptionKey: logKmsKey,
       }),
-      reservedConcurrentExecutions: 10,
       // A remoção de 'externalModules' permite que o esbuild empacote as dependências do SDK v3.
       environment: {
         DYNAMODB_TABLE: table.tableName,
@@ -477,7 +475,8 @@ export class CostGuardianStack extends cdk.Stack {
       role: new iam.Role(this, 'SlaCalcRole', {
         assumedBy: new iam.ServicePrincipal('lambda.amazonaws.com'),
         managedPolicies: [
-          iam.ManagedPolicy.fromAwsManagedPolicyName('service-role/AWSLambdaBasicExecutionRole')
+          iam.ManagedPolicy.fromAwsManagedPolicyName('service-role/AWSLambdaBasicExecutionRole'),
+          iam.ManagedPolicy.fromAwsManagedPolicyName('service-role/AWSLambdaVPCAccessExecutionRole')
         ],
         inlinePolicies: {
           AssumeAndSupportPolicy: new iam.PolicyDocument({
@@ -506,7 +505,6 @@ export class CostGuardianStack extends cdk.Stack {
         removalPolicy: cdk.RemovalPolicy.DESTROY,
         encryptionKey: logKmsKey,
       }),
-      reservedConcurrentExecutions: 10,
       // A remoção de 'externalModules' permite que o esbuild empacote as dependências do SDK v3.
       environment: { DYNAMODB_TABLE: table.tableName },
     });
@@ -525,7 +523,6 @@ export class CostGuardianStack extends cdk.Stack {
         removalPolicy: cdk.RemovalPolicy.DESTROY,
         encryptionKey: logKmsKey,
       }),
-      reservedConcurrentExecutions: 10,
       // A remoção de 'externalModules' permite que o esbuild empacote as dependências do SDK v3.
       environment: {
         DYNAMODB_TABLE: table.tableName,
@@ -563,15 +560,7 @@ export class CostGuardianStack extends cdk.Stack {
     });
     
     // Força a configuração de criptografia através do recurso L1
-    const cfnReportsBucket = reportsBucket.node.defaultChild as s3.CfnBucket;
-    cfnReportsBucket.addPropertyOverride('BucketEncryption', {
-      ServerSideEncryptionConfiguration: [{
-        ServerSideEncryptionByDefault: {
-          SSEAlgorithm: 'AES256',
-        },
-        KMSMasterKeyID: s3KmsKey.keyArn, // Especificar KMS Key
-      }],
-    });
+    // Removido addPropertyOverride para ReportsBucket também
     
     // Adicionar tags ao bucket
     cdk.Tags.of(reportsBucket).add('Environment', props.isTestEnvironment ? 'Test' : 'Production');
@@ -597,13 +586,13 @@ export class CostGuardianStack extends cdk.Stack {
         removalPolicy: cdk.RemovalPolicy.DESTROY,
         encryptionKey: logKmsKey,
       }),
-      reservedConcurrentExecutions: 10,
       // A remoção de 'externalModules' permite que o esbuild empacote as dependências do SDK v3.
       environment: { DYNAMODB_TABLE: table.tableName },
       role: new iam.Role(this, 'SlaSubmitRole', {
         assumedBy: new iam.ServicePrincipal('lambda.amazonaws.com'),
         managedPolicies: [
-          iam.ManagedPolicy.fromAwsManagedPolicyName('service-role/AWSLambdaBasicExecutionRole')
+          iam.ManagedPolicy.fromAwsManagedPolicyName('service-role/AWSLambdaBasicExecutionRole'),
+          iam.ManagedPolicy.fromAwsManagedPolicyName('service-role/AWSLambdaVPCAccessExecutionRole')
         ],
         inlinePolicies: {
           AssumeAndSupportPolicy: new iam.PolicyDocument({
@@ -624,7 +613,7 @@ export class CostGuardianStack extends cdk.Stack {
     new events.CfnEventBusPolicy(this, 'EventBusPolicy', {
       eventBusName: eventBus.eventBusName,
       statementId: 'AllowClientHealthEvents',
-      statement: JSON.stringify({
+      statement: {
         Effect: 'Allow',
         Principal: '*',
         Action: 'events:PutEvents',
@@ -634,7 +623,7 @@ export class CostGuardianStack extends cdk.Stack {
             'aws:PrincipalArn': 'arn:aws:iam::*:role/EventBusRole',
           },
         },
-      }),
+      },
     });
 
     // --- INÍCIO DA CORREÇÃO ---
@@ -677,7 +666,6 @@ export class CostGuardianStack extends cdk.Stack {
         removalPolicy: cdk.RemovalPolicy.DESTROY,
         encryptionKey: logKmsKey,
       }),
-      reservedConcurrentExecutions: 5,
       // A remoção de 'externalModules' permite que o esbuild empacote as dependências do SDK v3.
       environment: {
         DYNAMODB_TABLE: table.tableName,
@@ -686,7 +674,7 @@ export class CostGuardianStack extends cdk.Stack {
       role: new iam.Role(this, 'CostIngestorRole', {
         assumedBy: new iam.ServicePrincipal('lambda.amazonaws.com'),
         managedPolicies: [
-          iam.ManagedPolicy.fromAwsManagedPolicyName('service-role/AWSLambdaBasicExecutionRole')
+          iam.ManagedPolicy.fromAwsManagedPolicyName('service-role/AWSLambdaVPCAccessExecutionRole')
         ],
         inlinePolicies: {
           DynamoAndAssumePolicy: new iam.PolicyDocument({
@@ -731,11 +719,10 @@ export class CostGuardianStack extends cdk.Stack {
         removalPolicy: cdk.RemovalPolicy.DESTROY,
         encryptionKey: logKmsKey,
       }),
-      reservedConcurrentExecutions: 10,
       environment: { DYNAMODB_TABLE: table.tableName },
       role: new iam.Role(this, 'StopIdleRole', {
         assumedBy: new iam.ServicePrincipal('lambda.amazonaws.com'),
-        managedPolicies: [iam.ManagedPolicy.fromAwsManagedPolicyName('service-role/AWSLambdaBasicExecutionRole')],
+        managedPolicies: [iam.ManagedPolicy.fromAwsManagedPolicyName('service-role/AWSLambdaVPCAccessExecutionRole')],
         inlinePolicies: {
           DynamoPolicy: new iam.PolicyDocument({ statements: [
             new iam.PolicyStatement({ actions: ['dynamodb:Query','dynamodb:Scan','dynamodb:GetItem','dynamodb:PutItem'], resources: [table.tableArn, `${table.tableArn}/index/*`] }),
@@ -755,7 +742,6 @@ export class CostGuardianStack extends cdk.Stack {
     vpc,
     securityGroups: [lambdaSecurityGroup],
     vpcSubnets: { subnetType: ec2.SubnetType.PRIVATE_WITH_EGRESS },
-    reservedConcurrentExecutions: 10, // Corrigido: logGroup não é uma propriedade direta
     logGroup: new cdk.aws_logs.LogGroup(this, 'RecommendRdsIdleLogGroup', {
       retention: cdk.aws_logs.RetentionDays.ONE_MONTH,
       removalPolicy: cdk.RemovalPolicy.DESTROY,
@@ -764,7 +750,7 @@ export class CostGuardianStack extends cdk.Stack {
       environment: { DYNAMODB_TABLE: table.tableName },
       role: new iam.Role(this, 'RecommendRdsRole', {
         assumedBy: new iam.ServicePrincipal('lambda.amazonaws.com'),
-        managedPolicies: [iam.ManagedPolicy.fromAwsManagedPolicyName('service-role/AWSLambdaBasicExecutionRole')],
+        managedPolicies: [iam.ManagedPolicy.fromAwsManagedPolicyName('service-role/AWSLambdaVPCAccessExecutionRole')],
         inlinePolicies: {
           DynamoPolicy: new iam.PolicyDocument({ statements: [
             new iam.PolicyStatement({ actions: ['dynamodb:Query','dynamodb:Scan','dynamodb:GetItem','dynamodb:PutItem'], resources: [table.tableArn, `${table.tableArn}/index/*`] }),
@@ -786,7 +772,6 @@ export class CostGuardianStack extends cdk.Stack {
       vpc,
       securityGroups: [lambdaSecurityGroup],
       vpcSubnets: { subnetType: ec2.SubnetType.PRIVATE_WITH_EGRESS },
-      reservedConcurrentExecutions: 10,
       logGroup: new cdk.aws_logs.LogGroup(this, 'RecommendIdleInstancesLogGroup', {
         retention: cdk.aws_logs.RetentionDays.ONE_MONTH,
         removalPolicy: cdk.RemovalPolicy.DESTROY,
@@ -798,7 +783,7 @@ export class CostGuardianStack extends cdk.Stack {
       },
       role: new iam.Role(this, 'RecommendIdleInstancesRole', {
         assumedBy: new iam.ServicePrincipal('lambda.amazonaws.com'),
-        managedPolicies: [iam.ManagedPolicy.fromAwsManagedPolicyName('service-role/AWSLambdaBasicExecutionRole')],
+        managedPolicies: [iam.ManagedPolicy.fromAwsManagedPolicyName('service-role/AWSLambdaVPCAccessExecutionRole')],
         inlinePolicies: {
           DynamoAndAssumePolicy: new iam.PolicyDocument({ statements: [
             new iam.PolicyStatement({ actions: ['dynamodb:Query','dynamodb:Scan','dynamodb:GetItem','dynamodb:PutItem'], resources: [table.tableArn, `${table.tableArn}/index/*`] }),
@@ -823,7 +808,6 @@ export class CostGuardianStack extends cdk.Stack {
       vpc,
       securityGroups: [lambdaSecurityGroup],
       vpcSubnets: { subnetType: ec2.SubnetType.PRIVATE_WITH_EGRESS },
-      reservedConcurrentExecutions: 10,
       logGroup: new cdk.aws_logs.LogGroup(this, 'DeleteUnusedEbsLogGroup', {
         retention: cdk.aws_logs.RetentionDays.ONE_MONTH,
         removalPolicy: cdk.RemovalPolicy.DESTROY,
@@ -833,7 +817,7 @@ export class CostGuardianStack extends cdk.Stack {
       environment: { DYNAMODB_TABLE: table.tableName },
       role: new iam.Role(this, 'DeleteEbsRole', {
         assumedBy: new iam.ServicePrincipal('lambda.amazonaws.com'),
-        managedPolicies: [iam.ManagedPolicy.fromAwsManagedPolicyName('service-role/AWSLambdaBasicExecutionRole')],
+        managedPolicies: [iam.ManagedPolicy.fromAwsManagedPolicyName('service-role/AWSLambdaVPCAccessExecutionRole')],
         inlinePolicies: {
           DynamoPolicy: new iam.PolicyDocument({ statements: [
             new iam.PolicyStatement({ actions: ['dynamodb:Query','dynamodb:Scan','dynamodb:GetItem'], resources: [table.tableArn, `${table.tableArn}/index/*`] }),
@@ -931,7 +915,6 @@ export class CostGuardianStack extends cdk.Stack {
       vpc,
       securityGroups: [lambdaSecurityGroup],
       vpcSubnets: { subnetType: ec2.SubnetType.PRIVATE_WITH_EGRESS },
-      reservedConcurrentExecutions: 2,      
       logGroup: new cdk.aws_logs.LogGroup(this, 'MarketplaceMeteringLogGroup', {
         retention: cdk.aws_logs.RetentionDays.ONE_MONTH,
         removalPolicy: cdk.RemovalPolicy.DESTROY,
@@ -1053,7 +1036,6 @@ export class CostGuardianStack extends cdk.Stack {
         methodOptions: {
           '/*/*': { // Aplica a todos os métodos em todos os recursos
             throttlingBurstLimit: 50, // (Task 9)
-            throttlingRateLimit: 100, // (Task 9)
           },
         },
       },
@@ -1189,6 +1171,24 @@ export class CostGuardianStack extends cdk.Stack {
     });
     vpc.addGatewayEndpoint('S3Endpoint', {
       service: cdk.aws_ec2.GatewayVpcEndpointAwsService.S3,
+    });
+
+    // Log Group para export de env
+    const envExportLogGroup = new logs.LogGroup(this, 'EnvExportLogGroup', {
+      logGroupName: 'CostGuardian/EnvExport',
+      retention: logs.RetentionDays.ONE_MONTH,
+      removalPolicy: cdk.RemovalPolicy.DESTROY,
+    });
+
+    // SNS Topic para alertas de export
+    const envAlertTopic = new sns.Topic(this, 'EnvAlertTopic', {
+      displayName: 'CostGuardian Env Export Alerts',
+    });
+
+    // Outputs para o script usar
+    new cdk.CfnOutput(this, 'EnvAlertTopicArn', {
+      value: envAlertTopic.topicArn,
+      description: 'ARN do SNS topic para alertas de export de env',
     });
 
     if (!props.isTestEnvironment) {

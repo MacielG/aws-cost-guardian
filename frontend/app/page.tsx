@@ -37,7 +37,7 @@ return (
   className="flex flex-col sm:flex-row gap-4 justify-center mb-12"
 >
 <Link href="/login?mode=trial">
-<Button size="lg" className="px-8 py-3 text-lg">
+<Button className="px-8 py-3 text-lg">
 Iniciar Análise Gratuita →
 </Button>
 </Link>
@@ -229,7 +229,7 @@ className="grid md:grid-cols-3 gap-8 mb-16"
               Cadastre-se gratuitamente e veja quanto você pode economizar na sua conta AWS.
             </p>
             <Link href="/login?mode=trial">
-              <Button size="lg" className="px-10 py-4 text-lg bg-green-600 hover:bg-green-700">
+              <Button className="px-10 py-4 text-lg bg-green-600 hover:bg-green-700">
               Iniciar Análise Gratuita →
               </Button>
               </Link>

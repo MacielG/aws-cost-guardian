@@ -1,15 +1,17 @@
 'use client';
+import React from 'react';
 import { useTranslation } from 'react-i18next';
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { motion } from 'framer-motion';
 import { MainLayout } from '@/components/layouts/main-layout';
 import { AlertCircle, DollarSign, TrendingUp, TrendingDown } from 'lucide-react';
 import { apiFetch } from '@/lib/api';
 import { ProtectedRoute } from '@/components/auth/ProtectedRoute';
 import { formatCurrency, formatDate, sanitizeHtml } from '@/lib/utils';
-import { PageAnimator } from '@/components/ui/PageAnimator';
+
 import { SavingsWidget } from '@/components/dashboard/SavingsWidget';
 import { useSavings } from '@/hooks/useSavings';
 
@@ -19,6 +21,7 @@ interface Incident {
   impact: number;
   confidence: number;
   status: 'detected' | 'submitted' | 'refunded';
+  timestamp: string;
 }
 
 function DashboardContent() {
@@ -130,14 +133,15 @@ function DashboardContent() {
     : 0;
   const totalCost = costs.reduce((sum, day) => {
     if (day && day.Groups) {
-      return sum + day.Groups.reduce((daySum: number, g: any) => daySum + parseFloat(g.Metrics?.UnblendedCost?.Amount || 0), 0);
+      return sum + day.Groups.reduce((daySum: number, g: any) => {
+        return daySum + parseFloat(g.Metrics?.UnblendedCost?.Amount || 0);
+      }, 0);
     }
     return sum;
   }, 0);
 
   return (
-  <MainLayout title={t('dashboard')}>
-    <PageAnimator>
+    <MainLayout title={t('dashboard')}>
       {error && (
         <Alert variant="destructive" className="mb-4">
           <AlertCircle className="h-4 w-4" />
@@ -246,44 +250,44 @@ function DashboardContent() {
         </Card>
 
         <Card>
-        <CardHeader>
-        <CardTitle>{t('dashboard.topCostServices')}</CardTitle>
-        </CardHeader>
+          <CardHeader>
+            <CardTitle>{t('dashboard.topCostServices')}</CardTitle>
+          </CardHeader>
         <CardContent>
-        {loadingCosts ? (
-        <p className="text-muted">{t('dashboard.loadingCostData')}</p>
-        ) : costs.length === 0 ? (
-        <p className="text-muted">{t('dashboard.noCostData')}</p>
-        ) : (
-        <div className="space-y-4">
-        {(() => {
-        const serviceCosts: { [key: string]: number } = {};
-        try {
-        for (const day of costs) {
-        if (day && day.Groups) {
-        for (const g of day.Groups) {
-        const service = g.Keys?.[0] || 'Unknown';
-        const amount = parseFloat(g.Metrics?.UnblendedCost?.Amount || 0);
-        serviceCosts[service] = (serviceCosts[service] || 0) + amount;
-        }
-        }
-        }
-        } catch (e) {}
-        return Object.entries(serviceCosts)
-        .sort(([,a], [,b]) => b - a)
-        .slice(0, 5)
-        .map(([service, amount]) => (
-        <div key={service} className="flex items-center justify-between">
-        <span className="text-sm font-medium text-text-light">{service}</span>
-        <span className="text-sm text-text-medium">${amount.toFixed(2)}</span>
-        </div>
-        ));
-        })()}
-        </div>
-        )}
-        </CardContent>
+          {loadingCosts ? (
+            <p className="text-muted">{t('dashboard.loadingCostData')}</p>
+          ) : costs.length === 0 ? (
+            <p className="text-muted">{t('dashboard.noCostData')}</p>
+          ) : (
+            <div className="space-y-4">
+              {(() => {
+                const serviceCosts: { [key: string]: number } = {};
+                try {
+                  for (const day of costs) {
+                    if (day && day.Groups) {
+                      for (const g of day.Groups) {
+                        const service = g.Keys?.[0] || 'Unknown';
+                        const amount = parseFloat(g.Metrics?.UnblendedCost?.Amount || 0);
+                        serviceCosts[service] = (serviceCosts[service] || 0) + amount;
+                      }
+                    }
+                  }
+                } catch (e) {}
+                return Object.entries(serviceCosts)
+                  .sort(([, a], [, b]) => b - a)
+                  .slice(0, 5)
+                  .map(([service, amount]) => (
+                    <div key={service} className="flex items-center justify-between">
+                      <span className="text-sm font-medium text-text-light">{service}</span>
+                      <span className="text-sm text-text-medium">${amount.toFixed(2)}</span>
+                    </div>
+                  ));
+              })()}
+            </div>
+          )}
+          </CardContent>
         </Card>
-      </div>
+        </div>
       </div>
     </MainLayout>
   );

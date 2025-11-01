@@ -94,7 +94,7 @@ export default function TrialPage() {
               <p className="mb-6">
                 Ative a versão completa para começar a economizar automaticamente. Cobramos apenas <strong>30%</strong> do valor recuperado.
               </p>
-              <Button size="lg" className="bg-white text-blue-600 hover:bg-gray-100" onClick={() => router.push('/billing')}>
+              <Button className="bg-white text-blue-600 hover:bg-gray-100 px-8 py-3 text-lg" onClick={() => router.push('/billing')}>
                 Ativar Agora e Economizar →
               </Button>
             </div>
@@ -162,7 +162,7 @@ export default function TrialPage() {
             <p className="text-muted-foreground mb-6">
               Ative sua conta completa e deixe o AWS Cost Guardian trabalhar para você automaticamente.
             </p>
-            <Button size="lg" onClick={() => router.push('/billing')}>
+            <Button className="px-8 py-3 text-lg" onClick={() => router.push('/billing')}>
               Começar a Economizar Agora
             </Button>
           </CardContent>

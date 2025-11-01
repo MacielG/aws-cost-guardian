@@ -24,10 +24,23 @@ export async function apiFetch(endpoint: string, options: RequestInit = {}, skip
   if (!skipAuth) {
     try {
       const session = await fetchAuthSession();
-      token = session.tokens?.idToken?.toString() || '';
-    } catch (err) {
-      console.warn('Não foi possível obter sessão de autenticação:', err);
-      // Continua sem token - a API retornará 401 se necessário
+      const idToken = session.tokens?.idToken;
+      
+      if (!idToken) {
+        console.warn('Sessão sem token de ID válido');
+      } else {
+        token = idToken.toString();
+      }
+    } catch (err: any) {
+      console.warn('Não foi possível obter sessão de autenticação:', err?.message || err);
+      
+      if (err?.name === 'InvalidCharacterError' || err?.message?.includes('token')) {
+        if (typeof window !== 'undefined') {
+          localStorage.clear();
+          sessionStorage.clear();
+        }
+        throw new Error('Token inválido. Por favor, faça login novamente.');
+      }
     }
   }
 
@@ -51,8 +64,11 @@ export async function apiFetch(endpoint: string, options: RequestInit = {}, skip
       const errorText = await response.text();
       console.error(`Falha na API [${response.status}]: ${errorText}`);
       
-      // Se for erro de autenticação, pode redirecionar para login
       if (response.status === 401) {
+        if (typeof window !== 'undefined') {
+          localStorage.clear();
+          sessionStorage.clear();
+        }
         throw new Error('Sessão expirada. Por favor, faça login novamente.');
       }
       

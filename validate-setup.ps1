@@ -58,23 +58,37 @@ function Check-AWSRegion {
     }
 }
 
-function Check-Secret {
-    param($SecretName)
+function Check-Secret-Content {
+    param($SecretName, $JsonField, $Placeholder)
     
     try {
-        $result = aws secretsmanager describe-secret --secret-id $SecretName --region us-east-1 2>&1
+        $secretValueJson = aws secretsmanager get-secret-value --secret-id $SecretName --region us-east-1 --query SecretString --output text 2>&1
+        
         if ($LASTEXITCODE -eq 0) {
-            Write-Host "[OK] Segredo '$SecretName' existe" -ForegroundColor Green
-            return $true
+            Write-Host "[OK] Segredo '$SecretName' encontrado." -ForegroundColor Green
+            $secretObject = $secretValueJson | ConvertFrom-Json
+            $secretValue = $secretObject.$JsonField
+            
+            if ($secretValue -and !$secretValue.Contains($Placeholder)) {
+                Write-Host "[OK] Valor do segredo '$SecretName' parece estar configurado." -ForegroundColor Green
+                return $true
+            }
+            else {
+                Write-Host "[ERRO] O segredo '$SecretName' ainda contém o valor de exemplo ('$Placeholder')." -ForegroundColor Red
+                Write-Host "       Ação: Edite o segredo no AWS Secrets Manager com o valor real." -ForegroundColor Yellow
+                $script:Errors++
+                return $false
+            }
         }
         else {
-            Write-Host "[ERRO] Segredo '$SecretName' nao encontrado" -ForegroundColor Red
-            $script:Errors++
+            Write-Host "[AVISO] Segredo '$SecretName' não encontrado. Ele será criado no primeiro deploy com um valor de exemplo." -ForegroundColor Yellow
+            Write-Host "         Após o primeiro deploy, você precisará preenchê-lo manualmente no AWS Secrets Manager." -ForegroundColor Yellow
+            $script:Warnings++
             return $false
         }
     }
     catch {
-        Write-Host "[ERRO] Segredo '$SecretName' nao encontrado" -ForegroundColor Red
+        Write-Host "[ERRO] Falha ao verificar o segredo '$SecretName': $_" -ForegroundColor Red
         $script:Errors++
         return $false
     }
@@ -172,9 +186,9 @@ Check-AWSRegion
 Write-Host ""
 
 Write-Host "Passo 3: Verificando segredos no Secrets Manager..." -ForegroundColor Cyan
-Check-Secret "github/amplify-token"
 Check-GitHubSecretStructure
-Check-Secret "StripeSecret80A38A68-b8L7a52OBjnP"
+Check-Secret-Content "StripeSecret" "key" "sk_test_PLACEHOLDER"
+Check-Secret-Content "StripeWebhookSecret" "webhook" "PLACEHOLDER"
 Write-Host ""
 
 Write-Host "Passo 4: Verificando Route53..." -ForegroundColor Cyan

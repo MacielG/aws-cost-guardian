@@ -2,28 +2,106 @@
 
 /**
  * Script para exportar os outputs do CloudFormation para .env.local do frontend
- * Uso: npm run export-outputs
+ * Uso: npm run export-outputs [--force|--merge|--skip-if-exists]
  */
 
 const { CloudFormationClient, DescribeStacksCommand } = require('@aws-sdk/client-cloudformation');
+const { CloudWatchLogsClient, PutLogEventsCommand } = require('@aws-sdk/client-cloudwatch-logs');
+const { SNSClient, PublishCommand } = require('@aws-sdk/client-sns');
 const fs = require('fs');
 const path = require('path');
+
+// Parse CLI arguments
+const args = process.argv.slice(2);
+const force = args.includes('--force');
+const merge = args.includes('--merge');
+const skipIfExists = args.includes('--skip-if-exists');
+
+// Default to force if no option specified
+const defaultBehavior = !merge && !skipIfExists ? 'force' : (merge ? 'merge' : (skipIfExists ? 'skip' : 'force'));
 
 const STACK_NAME = 'CostGuardianStack';
 const REGION = 'us-east-1';
 const ENV_FILE_PATH = path.join(__dirname, '../../frontend/.env.local');
+const BACKUP_FILE_PATH = path.join(__dirname, '../../frontend/.env.local.backup');
+
+// AWS Clients
+const cfClient = new CloudFormationClient({ region: REGION });
+const logsClient = new CloudWatchLogsClient({ region: REGION });
+const snsClient = new SNSClient({ region: REGION });
+
+// Log Group and Topic (configure as needed)
+const LOG_GROUP_NAME = 'CostGuardian/EnvExport';
+const SNS_TOPIC_ARN = process.env.SNS_ALERT_TOPIC_ARN || process.env.ENV_ALERT_TOPIC_ARN; // Set via env or CDK output
+
+// Helper functions
+async function logToCloudWatch(message, level = 'INFO') {
+  try {
+    const logStreamName = `env-export-${new Date().toISOString().split('T')[0]}`;
+    const logEvent = {
+      message: JSON.stringify({ timestamp: new Date().toISOString(), level, message }),
+      timestamp: Date.now(),
+    };
+    // Assume log group/stream exists; in production, create if needed
+    await logsClient.send(new PutLogEventsCommand({
+      logGroupName: LOG_GROUP_NAME,
+      logStreamName,
+      logEvents: [logEvent],
+    }));
+  } catch (error) {
+    console.warn('Failed to log to CloudWatch:', error.message);
+  }
+}
+
+async function sendAlert(message) {
+  if (!SNS_TOPIC_ARN) return;
+  try {
+    await snsClient.send(new PublishCommand({
+      TopicArn: SNS_TOPIC_ARN,
+      Subject: 'Env Export Alert',
+      Message: message,
+    }));
+  } catch (error) {
+    console.warn('Failed to send SNS alert:', error.message);
+  }
+}
+
+function loadExistingEnv() {
+  if (fs.existsSync(ENV_FILE_PATH)) {
+    const content = fs.readFileSync(ENV_FILE_PATH, 'utf8');
+    const lines = content.split('\n').filter(line => line.includes('=') && !line.startsWith('#'));
+    const env = {};
+    lines.forEach(line => {
+      const [key, ...valueParts] = line.split('=');
+      env[key.trim()] = valueParts.join('=').trim();
+    });
+    return env;
+  }
+  return {};
+}
+
+function areEnvsEqual(existing, newEnv) {
+  const keys = new Set([...Object.keys(existing), ...Object.keys(newEnv)]);
+  for (const key of keys) {
+    if (existing[key] !== newEnv[key]) return false;
+  }
+  return true;
+}
 
 async function exportOutputs() {
   console.log('🔍 Buscando outputs do stack CloudFormation...\n');
 
-  const client = new CloudFormationClient({ region: REGION });
+
 
   try {
     const command = new DescribeStacksCommand({ StackName: STACK_NAME });
-    const response = await client.send(command);
+    const response = await cfClient.send(command);
 
     if (!response.Stacks || response.Stacks.length === 0) {
-      console.error(`❌ Stack '${STACK_NAME}' não encontrado na região ${REGION}`);
+      const msg = `Stack '${STACK_NAME}' não encontrado na região ${REGION}`;
+      console.error(`❌ ${msg}`);
+      await logToCloudWatch(msg, 'ERROR');
+      await sendAlert(msg);
       process.exit(1);
     }
 
@@ -31,7 +109,10 @@ async function exportOutputs() {
     const outputs = stack.Outputs || [];
 
     if (outputs.length === 0) {
-      console.error(`❌ Stack '${STACK_NAME}' não possui outputs`);
+      const msg = `Stack '${STACK_NAME}' não possui outputs`;
+      console.error(`❌ ${msg}`);
+      await logToCloudWatch(msg, 'ERROR');
+      await sendAlert(msg);
       process.exit(1);
     }
 
@@ -62,12 +143,38 @@ async function exportOutputs() {
     envVars['NEXT_PUBLIC_AMPLIFY_REGION'] = REGION;
     console.log(`✓ Region → NEXT_PUBLIC_AWS_REGION`);
 
+    // Verificar duplicidades e comportamento
+    const existingEnv = loadExistingEnv();
+    if (areEnvsEqual(existingEnv, envVars)) {
+      console.log('\\nℹ️  Nenhuma mudança detectada nos valores. Pulando exportação.');
+      await logToCloudWatch('No changes detected in env vars', 'INFO');
+      return;
+    }
+
+    if (skipIfExists && Object.keys(existingEnv).length > 0) {
+      console.log('\\nℹ️  Arquivo já existe e --skip-if-exists definido. Pulando exportação.');
+      await logToCloudWatch('Skipped due to existing file and --skip-if-exists', 'INFO');
+      return;
+    }
+
+    if (merge) {
+      Object.assign(envVars, existingEnv); // Merge: novos sobrescrevem existentes
+      console.log('\\n🔄 Modo merge: Mantendo variáveis existentes e adicionando novas.');
+    }
+
+    // Criar backup se arquivo existir
+    if (fs.existsSync(ENV_FILE_PATH)) {
+      fs.copyFileSync(ENV_FILE_PATH, BACKUP_FILE_PATH);
+      console.log(`💾 Backup criado: ${BACKUP_FILE_PATH}`);
+    }
+
     // Criar conteúdo do .env.local
     const envContent = Object.entries(envVars)
       .map(([key, value]) => `${key}=${value}`)
       .join('\n');
 
-    const fullContent = `# Auto-generated by export-outputs.js
+    const timestamp = new Date().toISOString();
+    const fullContent = `# Auto-generated by export-outputs.js at ${timestamp}
 # Do not edit manually - run 'npm run export-outputs' to update
 
 ${envContent}
@@ -91,14 +198,14 @@ ${envContent}
     console.log('   cd frontend');
     console.log('   npm run dev\n');
 
+    await logToCloudWatch('Env export successful', 'INFO');
+
   } catch (error) {
-    if (error.name === 'ResourceNotFoundException') {
-      console.error(`\n❌ Stack '${STACK_NAME}' não encontrado.`);
-      console.error('   Certifique-se de ter feito o deploy primeiro: npm run cdk deploy\n');
-    } else {
-      console.error('\n❌ Erro ao buscar outputs:', error.message);
-      console.error('\nDetalhes:', error);
-    }
+    const msg = `Erro ao buscar outputs: ${error.message}`;
+    console.error(`\n❌ ${msg}`);
+    console.error('\nDetalhes:', error);
+    await logToCloudWatch(msg, 'ERROR');
+    await sendAlert(msg);
     process.exit(1);
   }
 }

@@ -9,10 +9,16 @@ i18n
   .use(initReactI18next)
   .init({
     fallbackLng: 'en',
-    supportedLngs: ['en', 'pt-BR', 'es', 'fr', 'de', 'ja', 'zh-CN'],
+    supportedLngs: ['en', 'pt-BR'],
+    defaultNS: 'common',
     interpolation: { escapeValue: false },
     backend: {
-      loadPath: '/public/locales/{{lng}}/{{ns}}.json',
+      loadPath: '/locales/{{lng}}/common.json',
+    },
+    detection: {
+      caches: ['localStorage', 'cookie'],
+      lookupLocalStorage: 'i18nextLng',
+      lookupCookie: 'i18next',
     },
   });
 
