@@ -1,13 +1,14 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/Card';
-import { Button } from '@/components/ui/Button';
-import { LoadingState } from '@/components/ui/LoadingSpinner';
-import { Alert } from '@/components/ui/Alert';
-import { Badge } from '@/components/ui/Badge';
+import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { LoadingState } from '@/components/ui/loadingspinner';
+import { Alert } from '@/components/ui/alert';
+import { Badge } from '@/components/ui/badge';
 import Link from 'next/link';
 import { apiClient } from '@/lib/api';
+import PageShell from '@/components/layout/PageShell';
 
 interface AWSConnection {
   awsAccountId: string;
@@ -70,7 +71,7 @@ export default function ConnectionsPage() {
   }
 
   return (
-    <div className="space-y-6">
+    <PageShell title="Conexões AWS" subtitle="Gerencie suas contas AWS conectadas">
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-bold text-gray-900">Conexões AWS</h1>
@@ -145,6 +146,6 @@ export default function ConnectionsPage() {
           ))}
         </div>
       )}
-    </div>
+    </PageShell>
   );
 }

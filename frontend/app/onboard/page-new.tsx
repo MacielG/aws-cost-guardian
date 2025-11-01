@@ -2,10 +2,10 @@
 
 import { useEffect, useState, useCallback } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/Card';
-import { Button } from '@/components/ui/Button';
-import { LoadingState } from '@/components/ui/LoadingSpinner';
-import { Alert } from '@/components/ui/Alert';
+import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { LoadingState } from '@/components/ui/loadingspinner';
+import { Alert } from '@/components/ui/alert';
 import { apiClient } from '@/lib/api';
 
 export default function OnboardPage() {

@@ -6,7 +6,7 @@ import ConfigureAmplifyClientSide from '../components/ConfigureAmplifyClientSide
 import { ToasterProvider } from '../components/ui/toaster';
 import { I18nClientProvider } from '@/components/I18nClientProvider';
 import { AuthProvider } from '@/components/auth/AuthProvider';
-import AppLayout from '@/components/layout/AppLayout';
+import AuthLayoutClient from '@/components/layout/AuthLayoutClient';
 
 const inter = Inter({ subsets: ['latin'] });
 
@@ -17,13 +17,13 @@ export const metadata: Metadata = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en">
+    <html lang="pt-BR">
       <body className={inter.className}>
         <ToasterProvider>
           <ConfigureAmplifyClientSide />
           <AuthProvider>
             <I18nClientProvider>
-              <AppLayout>{children}</AppLayout>
+              <AuthLayoutClient>{children}</AuthLayoutClient>
             </I18nClientProvider>
           </AuthProvider>
         </ToasterProvider>

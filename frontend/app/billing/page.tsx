@@ -1,10 +1,11 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/Card';
-import { LoadingState } from '@/components/ui/LoadingSpinner';
-import { Alert } from '@/components/ui/Alert';
+import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
+import { LoadingState } from '@/components/ui/loadingspinner';
+import { Alert } from '@/components/ui/alert';
 import { apiClient } from '@/lib/api';
+import PageShell from '@/components/layout/PageShell';
 
 interface BillingData {
   summary: {
@@ -69,13 +70,7 @@ export default function BillingPage() {
   }
 
   return (
-    <div className="space-y-6">
-      <div>
-        <h1 className="text-3xl font-bold text-gray-900">Billing</h1>
-        <p className="mt-2 text-gray-600">
-          Transparência total sobre suas economias e nossa comissão
-        </p>
-      </div>
+    <PageShell title="Billing" subtitle="Transparência total sobre suas economias e nossa comissão">
 
       {/* Resumo */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
@@ -147,6 +142,6 @@ export default function BillingPage() {
           <p>• Sem custos fixos ou mensalidades</p>
         </div>
       </Alert>
-    </div>
+    </PageShell>
   );
 }

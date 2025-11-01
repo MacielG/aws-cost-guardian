@@ -5,6 +5,7 @@ import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useNotify } from '@/hooks/useNotify';
+import PageShell from '@/components/layout/PageShell';
 
 interface Alert {
   id: string;
@@ -35,8 +36,7 @@ export default function AlertsPage() {
   if (error) return <div className="text-destructive">{error}</div>;
 
   return (
-    <div className="max-w-2xl mx-auto py-8">
-      <h1 className="heading-2 mb-6">Alertas</h1>
+    <PageShell title="Alertas" subtitle="Notificações e eventos importantes">
       {alerts.length === 0 ? (
         <div className="muted">Nenhum alerta encontrado.</div>
       ) : (
@@ -54,6 +54,6 @@ export default function AlertsPage() {
           ))}
         </div>
       )}
-    </div>
+    </PageShell>
   );
 }

@@ -4,7 +4,8 @@ import { Button } from '@/components/ui/button';
 import Link from 'next/link';
 import { BarChart3, Shield, TrendingDown, DollarSign, Zap, Award } from 'lucide-react';
 import { motion } from 'framer-motion';
-import { PageAnimator } from '@/components/ui/PageAnimator';
+// Corrigido para usar o import correto, mantendo consistência de casing
+import { PageAnimator } from '@/components/ui/pageanimator';
 
 export default function Home() {
 return (

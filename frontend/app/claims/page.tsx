@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Download, ExternalLink, RefreshCw } from 'lucide-react';
 import { useEffect, useState, useCallback } from 'react';
 import { Badge } from '@/components/ui/badge';
+import PageShell from '@/components/layout/PageShell';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { toast } from 'sonner'; // Assuming you have sonner for toasts
@@ -127,7 +128,7 @@ export default function AdminClaims() {
   };
 
   return (
-    <div className="p-8">
+    <PageShell title="Claims" subtitle="Gerenciamento de Reivindicações">
       <Card>
         <CardHeader>
           <CardTitle>{t('adminClaims.title', 'Gerenciamento de Reivindicações (Admin)')}</CardTitle>
@@ -183,18 +184,18 @@ export default function AdminClaims() {
 
                     <div className="mt-4 space-x-2 flex flex-wrap gap-2">
                       {claim.reportUrl && (
-                        <Button variant="outline" size="sm" asChild>
-                          <a href={claim.reportUrl} target="_blank" rel="noopener noreferrer">
+                        <a href={claim.reportUrl} target="_blank" rel="noopener noreferrer" className="inline-flex items-center">
+                          <Button variant="outline" size="sm">
                             <Download className="mr-2 h-4 w-4" /> {t('adminClaims.downloadReport', 'Baixar Relatório')}
-                          </a>
-                        </Button>
+                          </Button>
+                        </a>
                       )}
                       {claim.caseId && (
-                        <Button variant="outline" size="sm" asChild>
-                          <a href={`https://console.aws.amazon.com/support/cases/#/case/${claim.caseId}`} target="_blank" rel="noopener noreferrer">
+                        <a href={`https://console.aws.amazon.com/support/cases/#/case/${claim.caseId}`} target="_blank" rel="noopener noreferrer" className="inline-flex items-center">
+                          <Button variant="outline" size="sm">
                             <ExternalLink className="mr-2 h-4 w-4" /> {t('adminClaims.viewSupportCase', 'Ver Caso de Suporte')}
-                          </a>
-                        </Button>
+                          </Button>
+                        </a>
                       )}
                       {/* Botão para marcar como reembolsado e gerar fatura */}
                       {claim.status === 'READY_TO_SUBMIT' && (
@@ -231,7 +232,7 @@ export default function AdminClaims() {
           )}
         </CardContent>
       </Card>
-    </div>
+    </PageShell>
   );
 }
 

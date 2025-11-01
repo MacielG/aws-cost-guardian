@@ -1,7 +1,7 @@
 import React from 'react';
 import { Sidebar } from '../ui/sidebar';
 import { Header } from '../ui/header';
-import { PageAnimator } from '../ui/PageAnimator';
+import { PageAnimator } from '../ui/pageanimator';
 
 interface MainLayoutProps {
   children: React.ReactNode;

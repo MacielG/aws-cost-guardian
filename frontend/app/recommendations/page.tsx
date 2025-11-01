@@ -1,12 +1,13 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/Card';
-import { Button } from '@/components/ui/Button';
-import { LoadingState } from '@/components/ui/LoadingSpinner';
-import { Alert } from '@/components/ui/Alert';
-import { Badge } from '@/components/ui/Badge';
+import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { LoadingState } from '@/components/ui/loadingspinner';
+import { Alert } from '@/components/ui/alert';
+import { Badge } from '@/components/ui/badge';
 import { apiClient } from '@/lib/api';
+import PageShell from '@/components/layout/PageShell';
 
 interface Recommendation {
   sk: string;
@@ -93,7 +94,6 @@ export default function RecommendationsPage() {
     const config = statusMap[status] || { variant: 'default', label: status };
     return <Badge variant={config.variant}>{config.label}</Badge>;
   };
-
   const getTypeLabel = (type: string) => {
     const typeMap: Record<string, string> = {
       IDLE_INSTANCE: 'Instância Ociosa',
@@ -133,7 +133,7 @@ export default function RecommendationsPage() {
   }
 
   return (
-    <div className="space-y-6">
+    <PageShell title="Recomendações" subtitle="Sugestões automáticas para reduzir seus custos">
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
@@ -276,6 +276,6 @@ export default function RecommendationsPage() {
           ))}
         </div>
       )}
-    </div>
+    </PageShell>
   );
 }

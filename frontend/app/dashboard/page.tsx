@@ -1,14 +1,15 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/Card';
-import { LoadingState } from '@/components/ui/LoadingSpinner';
-import { Alert } from '@/components/ui/Alert';
-import { Badge } from '@/components/ui/Badge';
+import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
+import { LoadingState } from '@/components/ui/loadingspinner';
+import { Alert } from '@/components/ui/alert';
+import { Badge } from '@/components/ui/badge';
 import Link from 'next/link';
 import { apiClient } from '@/lib/api';
 import { SavingsChart } from '@/components/charts/SavingsChart';
 import { RecommendationsChart } from '@/components/charts/RecommendationsChart';
+import PageShell from '@/components/layout/PageShell';
 
 interface BillingSummary {
   summary: {
@@ -73,7 +74,7 @@ export default function DashboardPage() {
 
   if (error) {
     return (
-      <div className="space-y-4">
+      <PageShell title="Dashboard" subtitle="Visão geral das suas economias e recomendações AWS">
         <Alert variant="error">
           <h4 className="font-semibold">Erro ao carregar dashboard</h4>
           <p className="mt-1 text-sm">{error}</p>
@@ -84,7 +85,7 @@ export default function DashboardPage() {
             Tentar novamente
           </button>
         </Alert>
-      </div>
+      </PageShell>
     );
   }
 
@@ -119,7 +120,7 @@ export default function DashboardPage() {
   };
 
   return (
-    <div className="space-y-6">
+    <PageShell title="Dashboard" subtitle="Visão geral das suas economias e recomendações AWS">
       {/* Header */}
       <div>
         <h1 className="text-3xl font-bold text-gray-900">Dashboard</h1>
@@ -328,7 +329,7 @@ export default function DashboardPage() {
           </Link>
         </Alert>
       )}
-    </div>
+    </PageShell>
   );
 }
 

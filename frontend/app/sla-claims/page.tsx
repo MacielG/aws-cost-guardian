@@ -1,12 +1,13 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/Card';
-import { Button } from '@/components/ui/Button';
-import { LoadingState } from '@/components/ui/LoadingSpinner';
-import { Alert } from '@/components/ui/Alert';
-import { Badge } from '@/components/ui/Badge';
+import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { LoadingState } from '@/components/ui/loadingspinner';
+import { Alert } from '@/components/ui/alert';
+import { Badge } from '@/components/ui/badge';
 import { apiClient } from '@/lib/api';
+import PageShell from '@/components/layout/PageShell';
 
 interface SLAClaim {
   sk: string;
@@ -114,7 +115,7 @@ export default function SLAClaimsPage() {
   }
 
   return (
-    <div className="space-y-6">
+    <PageShell title="SLA Claims" subtitle="Violações de SLA detectadas e créditos recuperados">
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
@@ -304,6 +305,6 @@ export default function SLAClaimsPage() {
           ))}
         </div>
       )}
-    </div>
+    </PageShell>
   );
 }

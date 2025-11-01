@@ -1,11 +1,12 @@
 'use client';
 
 import { useState } from 'react';
-import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/Card';
-import { Button } from '@/components/ui/Button';
-import { Alert } from '@/components/ui/Alert';
+import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Alert } from '@/components/ui/alert';
 import { useAuth } from '@/components/auth/AuthProvider';
 import { updatePassword } from 'aws-amplify/auth';
+import PageShell from '@/components/layout/PageShell';
 
 export default function ProfilePage() {
   const { user } = useAuth();
@@ -57,7 +58,7 @@ export default function ProfilePage() {
   };
 
   return (
-    <div className="max-w-4xl mx-auto space-y-6">
+    <PageShell title="Meu Perfil" subtitle="Gerencie suas informações pessoais e configurações de conta">
       <div>
         <h1 className="text-3xl font-bold text-gray-900">Meu Perfil</h1>
         <p className="mt-2 text-gray-600">
@@ -257,6 +258,6 @@ export default function ProfilePage() {
           </div>
         </CardContent>
       </Card>
-    </div>
+    </PageShell>
   );
 }

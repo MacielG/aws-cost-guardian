@@ -10,7 +10,7 @@ function TestComponent() {
   return (
     <div>
       <button
-        onClick={() => showToast({ message: 'Test message', type: 'success' })}
+        onClick={() => showToast({ message: 'Test message', variant: 'success' })}
         data-testid="show-toast-btn"
       >
         Show Toast
@@ -85,7 +85,7 @@ describe('ToasterProvider', () => {
       const toast = screen.getByText('Test message')
       expect(toast).toBeInTheDocument()
       // Check if it has success styling (this depends on your toast component implementation)
-      expect(toast.closest('div')).toHaveClass('bg-primary')
+      expect(toast.closest('div')).toHaveClass('bg-accent-green')
     })
   })
 })

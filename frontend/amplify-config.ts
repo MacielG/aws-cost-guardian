@@ -27,9 +27,9 @@ if (!region || !userPoolId || !userPoolClientId) {
 const amplifyConfig: ResourcesConfig = {
   Auth: {
     Cognito: {
-      region,
       userPoolId,
       userPoolClientId,
+      signUpVerificationMethod: 'code',
       loginWith: { email: true }, // Simplificado para focar no login com email.
     },
   },

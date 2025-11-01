@@ -1,85 +1,106 @@
-'use client';
+"use client";
 
-import { useAuth } from '@/components/auth/AuthProvider';
-import { useRouter } from 'next/navigation';
-import { useState } from 'react';
+import { useState } from "react";
+import { useRouter } from "next/navigation";
+import { Menu, LogOut, UserCircle, LayoutDashboard, Settings, CreditCard, LifeBuoy, Lightbulb, ShieldCheck, BarChart3 } from "lucide-react";
+import { useAuth } from "@/components/auth/AuthProvider";
+import { Button } from "@/components/ui/button";
+import Link from "next/link";
 
-export default function Header() {
+interface HeaderProps {
+  onToggleMobileMenu?: () => void;
+}
+
+const navItems = [
+  { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
+  { href: "/recommendations", label: "Recomendações", icon: Lightbulb },
+  { href: "/sla-claims", label: "Créditos SLA", icon: ShieldCheck },
+  { href: "/billing", label: "Faturamento", icon: CreditCard },
+  { href: "/settings/connections", label: "Configurações", icon: Settings },
+];
+
+export function Header({ onToggleMobileMenu }: HeaderProps) {
   const { user, signOut } = useAuth();
   const router = useRouter();
-  const [isLoggingOut, setIsLoggingOut] = useState(false);
+  const [isDropdownOpen, setIsDropdownOpen] = useState(false);
 
   const handleLogout = async () => {
     try {
-      setIsLoggingOut(true);
       await signOut();
-      router.push('/login');
+      router.push("/login");
     } catch (error) {
-      console.error('Erro ao fazer logout:', error);
-      // Mesmo com erro, redirecionar para login
-      router.push('/login');
-    } finally {
-      setIsLoggingOut(false);
+      console.error("Erro ao fazer logout:", error);
     }
   };
 
-  if (!user) {
-    return null; // Não mostrar header se não estiver logado
-  }
+  const userEmail = (user?.email || user?.username || "").toString();
 
   return (
-    <header className="bg-white border-b border-gray-200 shadow-sm">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex justify-between items-center h-16">
-          {/* Logo e Título */}
-          <div className="flex items-center">
-            <div className="flex-shrink-0">
-              <h1 className="text-xl font-bold text-gray-900">
-                AWS Cost Guardian
-              </h1>
-            </div>
+    <header className="fixed inset-x-0 top-0 z-50 flex h-16 items-center justify-between border-b bg-white/95 backdrop-blur-sm px-4 md:px-6">
+      {/* Left: logo + nav icons */}
+      <div className="flex items-center gap-4">
+        <Link href="/dashboard" className="flex items-center gap-2 text-lg font-semibold text-gray-900">
+          <BarChart3 className="h-6 w-6 text-blue-600" />
+          <span className="hidden md:inline">AWS Cost Guardian</span>
+        </Link>
+
+        <nav className="hidden md:flex items-center gap-1">
+          {navItems.map((item) => {
+            const Icon = item.icon;
+            return (
+              <Link key={item.href} href={item.href} className="group flex items-center gap-2 rounded-md px-2 py-2 text-sm font-medium text-gray-600 hover:bg-gray-50 hover:text-gray-900">
+                <Icon className="h-5 w-5 text-gray-500 group-hover:text-gray-700" />
+                <span className="hidden lg:inline">{item.label}</span>
+              </Link>
+            );
+          })}
+        </nav>
+      </div>
+
+      {/* Right: controls */}
+      <div className="flex items-center gap-3">
+        <Button variant="ghost" className="md:hidden" onClick={onToggleMobileMenu}>
+          <Menu className="h-6 w-6" />
+          <span className="sr-only">Abrir menu</span>
+        </Button>
+
+        {!user && (
+          <Link href="/login">
+            <Button variant="primary" size="sm">Entrar</Button>
+          </Link>
+        )}
+
+        {user && (
+          <div className="relative">
+            <Button variant="ghost" className="flex items-center gap-2" onClick={() => setIsDropdownOpen(!isDropdownOpen)}>
+              <UserCircle className="h-6 w-6 text-gray-500" />
+              <span className="hidden text-sm font-medium md:block">{userEmail || "Carregando..."}</span>
+            </Button>
+
+            {isDropdownOpen && (
+              <div className="absolute right-0 mt-2 w-56 origin-top-right rounded-md bg-white shadow-lg ring-1 ring-black ring-opacity-5">
+                <div className="py-1" role="menu" aria-orientation="vertical">
+                  <div className="block border-b px-4 py-2 text-sm text-gray-700">
+                    <p className="font-medium">Logado como</p>
+                    <p className="truncate text-gray-500">{userEmail}</p>
+                  </div>
+                  <a
+                    href="#"
+                    onClick={(e) => {
+                      e.preventDefault();
+                      handleLogout();
+                    }}
+                    className="group flex w-full items-center gap-2 px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                    role="menuitem"
+                  >
+                    <LogOut className="h-4 w-4 text-gray-500 group-hover:text-gray-600" />
+                    Sair (Logout)
+                  </a>
+                </div>
+              </div>
+            )}
           </div>
-
-          {/* Informações do Usuário e Logout */}
-          <div className="flex items-center gap-4">
-            {/* Email do Usuário */}
-            <div className="hidden md:block text-sm text-gray-700">
-              <span className="font-medium">{user.email || user.username}</span>
-            </div>
-
-            {/* Avatar/Ícone do Usuário */}
-            <div className="flex items-center justify-center w-8 h-8 rounded-full bg-blue-600 text-white text-sm font-medium">
-              {(user.email || user.username).charAt(0).toUpperCase()}
-            </div>
-
-            {/* Botão de Logout */}
-            <button
-              onClick={handleLogout}
-              disabled={isLoggingOut}
-              className={`
-                px-4 py-2 text-sm font-medium rounded-md
-                transition-colors duration-200
-                ${isLoggingOut 
-                  ? 'bg-gray-300 text-gray-500 cursor-not-allowed' 
-                  : 'bg-red-600 text-white hover:bg-red-700 active:bg-red-800'
-                }
-              `}
-              aria-label="Sair da conta"
-            >
-              {isLoggingOut ? (
-                <span className="flex items-center gap-2">
-                  <svg className="animate-spin h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                  </svg>
-                  Saindo...
-                </span>
-              ) : (
-                'Logout'
-              )}
-            </button>
-          </div>
-        </div>
+        )}
       </div>
     </header>
   );

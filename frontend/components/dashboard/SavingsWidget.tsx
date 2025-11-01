@@ -2,7 +2,7 @@
 
 import { motion } from 'framer-motion';
 import { DollarSign, TrendingUp, TrendingDown, Award, Database, Server, HardDrive } from 'lucide-react';
-import { AnimatedCounter } from '@/components/ui/AnimatedCounter';
+import { AnimatedCounter } from '@/components/ui/animatedcounter';
 import {
   Card,
   CardContent,

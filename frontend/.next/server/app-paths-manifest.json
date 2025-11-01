@@ -1,8 +1,3 @@
 {
-  "/page": "app/page.js",
-  "/_not-found/page": "app/_not-found/page.js",
-  "/settings/connections/page": "app/settings/connections/page.js",
-  "/profile/page": "app/profile/page.js",
-  "/onboard/page": "app/onboard/page.js",
-  "/login/page": "app/login/page.js"
+  "/page": "app/page.js"
 }

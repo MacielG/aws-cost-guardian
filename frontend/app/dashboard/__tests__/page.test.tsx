@@ -24,6 +24,7 @@ import React from 'react';
 import { render, screen, waitFor, within, act } from '@testing-library/react';
 import '@testing-library/jest-dom';
 import { AuthProvider } from '@/components/auth/AuthProvider';
+import DashboardPage from '../page';
 
 // Top-level mocks (must be declared before importing the page under test)
 let mockRouter = { push: jest.fn(), pathname: '/', query: {} } as any;
@@ -301,7 +302,7 @@ const TestWrapper: React.FC<{ children: React.ReactNode }> = ({ children }) => (
   <AuthProvider>{children}</AuthProvider>
 );
 
-// Importações principais (APENAS UMA VEZ!)\nimport DashboardPage from '../page';\nimport { formatCurrency, formatDate } from '@/lib/utils';
+// Importações principais (APENAS UMA VEZ!)\n// Removed test file import\nimport { formatCurrency, formatDate } from '@/lib/utils';
 
 describe('DashboardPage', () => {
   const { mockRouter, mockApiFetch } = setupMocks();
