@@ -1,134 +1,309 @@
 'use client';
-import { useTranslation } from 'react-i18next';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Download, ExternalLink } from 'lucide-react';
-import Link from 'next/link';
-import { useEffect, useState } from 'react';
-import { Badge } from '@/components/ui/badge';
 
-interface Claim {
-  id: string; // customerId
-  sk: string; // CLAIM#... ou INCIDENT#...
-  // Status possíveis para uma claim (inclui REPORT_FAILED para compatibilidade)
-  status: 'READY_TO_SUBMIT' | 'SUBMITTED' | 'SUBMISSION_FAILED' | 'REPORT_FAILED' | 'PAID' | 'REFUNDED' | 'NO_VIOLATION' | 'NO_RESOURCES_LISTED' | 'PENDING_MANUAL_SUBMISSION';
-  creditAmount: number;
-  reportUrl?: string;
+import { useEffect, useState } from 'react';
+import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/Card';
+import { Button } from '@/components/ui/Button';
+import { LoadingState } from '@/components/ui/LoadingSpinner';
+import { Alert } from '@/components/ui/Alert';
+import { Badge } from '@/components/ui/Badge';
+import { apiClient } from '@/lib/api';
+
+interface SLAClaim {
+  sk: string;
   incidentId: string;
   awsAccountId: string;
-  stripeInvoiceId?: string;
-  caseId?: string; // AWS Support Case ID
-  submissionError?: string;
-  commissionAmount?: number;
+  service: string;
+  region: string;
+  startTime: string;
+  endTime?: string;
+  impact: {
+    affectedResources: number;
+    estimatedCost: number;
+  };
+  status: string;
+  reportUrl?: string;
+  ticketId?: string;
+  creditAmount?: number;
+  createdAt: string;
+  updatedAt: string;
 }
 
-const getStatusVariant = (status: Claim['status']) => {
-  switch (status) { // Mapeamento de cor para o Badge
-    case 'PAID': case 'REFUNDED': return 'success';
-    case 'SUBMITTED': return 'default';
-    case 'READY_TO_SUBMIT': case 'PENDING_MANUAL_SUBMISSION': return 'secondary';
-    case 'SUBMISSION_FAILED': case 'REPORT_FAILED': return 'destructive';
-    case 'NO_VIOLATION': case 'NO_RESOURCES_LISTED': return 'outline';
-    default: return 'default';
-  }
-};
-
-export default function SLAClaims() {
-  const { t } = useTranslation();
-  const [claims, setClaims] = useState<Claim[]>([]);
+export default function SLAClaimsPage() {
+  const [claims, setClaims] = useState<SLAClaim[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    setLoading(true);
-    fetch('/api/sla-claims')
-      .then(res => res.ok ? res.json() : Promise.reject('Erro ao buscar claims'))
-      .then(data => setClaims(data))
-      .catch(err => setError(String(err)))
-      .finally(() => setLoading(false));
+    loadClaims();
   }, []);
 
+  const loadClaims = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      const response = await apiClient.get('/api/sla-claims');
+      setClaims(response.data || []);
+    } catch (err: any) {
+      console.error('Erro ao carregar claims:', err);
+      setError(err.message || 'Erro ao carregar claims de SLA');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleDownloadReport = async (claimId: string) => {
+    try {
+      window.open(`/api/sla-reports/${claimId}`, '_blank');
+    } catch (err: any) {
+      alert(`Erro ao baixar relatório: ${err.message}`);
+    }
+  };
+
+  const formatCurrency = (value: number) => {
+    return new Intl.NumberFormat('pt-BR', {
+      style: 'currency',
+      currency: 'USD',
+    }).format(value);
+  };
+
+  const getStatusBadge = (status: string) => {
+    const statusMap: Record<string, { variant: 'default' | 'success' | 'warning' | 'danger' | 'info'; label: string }> = {
+      DETECTED: { variant: 'info', label: 'Detectado' },
+      READY_TO_SUBMIT: { variant: 'warning', label: 'Pronto para Submeter' },
+      SUBMITTED: { variant: 'warning', label: 'Submetido' },
+      RECOVERED: { variant: 'success', label: 'Recuperado' },
+      REFUNDED: { variant: 'success', label: 'Reembolsado' },
+      FAILED: { variant: 'danger', label: 'Falhou' },
+      NO_VIOLATION: { variant: 'default', label: 'Sem Violação' },
+    };
+
+    const config = statusMap[status] || { variant: 'default', label: status };
+    return <Badge variant={config.variant}>{config.label}</Badge>;
+  };
+
+  const getStatusTimeline = (claim: SLAClaim) => {
+    const steps = [
+      { key: 'DETECTED', label: 'Detectado', completed: true },
+      { key: 'READY_TO_SUBMIT', label: 'Análise Completa', completed: ['READY_TO_SUBMIT', 'SUBMITTED', 'RECOVERED', 'REFUNDED'].includes(claim.status) },
+      { key: 'SUBMITTED', label: 'Submetido à AWS', completed: ['SUBMITTED', 'RECOVERED', 'REFUNDED'].includes(claim.status) },
+      { key: 'RECOVERED', label: 'Crédito Recuperado', completed: ['RECOVERED', 'REFUNDED'].includes(claim.status) },
+    ];
+
+    return steps;
+  };
+
+  if (loading) {
+    return <LoadingState message="Carregando claims de SLA..." />;
+  }
+
+  if (error) {
+    return (
+      <div className="space-y-4">
+        <Alert variant="error">
+          <h4 className="font-semibold">Erro ao carregar claims</h4>
+          <p className="mt-1 text-sm">{error}</p>
+          <button
+            onClick={loadClaims}
+            className="mt-3 text-sm underline hover:no-underline"
+          >
+            Tentar novamente
+          </button>
+        </Alert>
+      </div>
+    );
+  }
+
   return (
-    <div className="max-w-3xl mx-auto py-8">
-      <h1 className="heading-2 mb-6">Reivindicações de Crédito SLA</h1>
-      <Card>
-        <CardHeader>
-          <CardTitle>Histórico de Claims</CardTitle>
-          <CardDescription>
-            Visualize o status e os detalhes das suas reivindicações de crédito SLA.
-            <Link href="/docs/como-funciona.md" target="_blank" className="text-primary underline ml-2">
-              Como calculamos isso?
-            </Link>
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          {loading && <div className="w-full h-24"><span className="muted">Carregando...</span></div>}
-          {error && <p className="text-destructive">Erro: {error}</p>}
-          {!loading && !error && claims.length === 0 && (
-            <p className="muted">Nenhuma reivindicação encontrada.</p>
-          )}
-          {!loading && !error && claims.length > 0 && (
-            <div className="space-y-4">
-              {claims.map(claim => (
-                <Card key={claim.sk} className="shadow-md">
-                  <CardContent className="p-4">
-                    <div className="flex items-center justify-between">
-                      <h3 className="text-lg font-semibold">Claim: {claim.sk.replace('CLAIM#', '')}</h3>
-                      <Badge variant={getStatusVariant(claim.status)}>{claim.status}</Badge>
-                    </div>
-                    <p className="text-sm text-muted">Incidente: {claim.incidentId.replace('INCIDENT#', '')}</p>
-                    <p className="mt-2">Conta AWS: {claim.awsAccountId}</p>
-                    <p>Crédito Estimado: <span className="font-medium">${claim.creditAmount?.toFixed(2) || '0.00'}</span></p>
-                    {claim.commissionAmount && <p>Comissão Paga: <span className="font-medium">${claim.commissionAmount.toFixed(2)}</span></p>}
-                    {claim.caseId && <p>ID do Caso AWS: <span className="font-medium">{claim.caseId}</span></p>}
-                    {claim.stripeInvoiceId && <p>ID da Fatura Stripe: <span className="font-medium">{claim.stripeInvoiceId}</span></p>}
-                    {claim.submissionError && <p className="text-destructive">Erro no Envio: {claim.submissionError}</p>}
+    <div className="space-y-6">
+      {/* Header */}
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-3xl font-bold text-gray-900">SLA Claims</h1>
+          <p className="mt-2 text-gray-600">
+            Violações de SLA detectadas e créditos recuperados
+          </p>
+        </div>
+        <Button onClick={loadClaims} variant="secondary">
+          <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+          </svg>
+          Atualizar
+        </Button>
+      </div>
 
-                    {claim.status === 'PENDING_MANUAL_SUBMISSION' && (
-                      <Card className="mt-4 bg-yellow-50 border-yellow-300">
-                        <CardHeader>
-                          <CardTitle>Ação Requerida</CardTitle>
-                          <CardDescription>
-                            Seu plano AWS Support não permite abertura automática de tickets. Siga os passos abaixo para enviar manualmente:
-                          </CardDescription>
-                        </CardHeader>
-                        <CardContent className="font-mono text-sm bg-gray-100 rounded p-4 space-y-2">
-                          <p>1. Abra o Console AWS e navegue até AWS Support Center</p>
-                          <p>2. Clique em "Criar Caso" e selecione "Faturamento"</p>
-                          <p>3. Use o assunto e descrição abaixo:</p>
-                          <div className="mt-2 p-3 bg-white rounded">
-                            <p className="font-bold">Assunto:</p>
-                            <p>[Cost Guardian] Reivindicação de Crédito SLA - {claim.incidentId.replace('INCIDENT#', '')}</p>
-                            <p className="font-bold mt-2">Descrição:</p>
-                            <p>Solicito crédito de SLA no valor de ${claim.creditAmount?.toFixed(2)} para o incidente: {claim.incidentId.replace('INCIDENT#', '')}</p>
-                          </div>
-                        </CardContent>
-                      </Card>
-                    )}
-
-                    <div className="mt-4 space-x-2">
-                      {claim.reportUrl && (
-                        <Button variant="outline" size="sm" asChild>
-                          <a href={claim.reportUrl} target="_blank" rel="noopener noreferrer">
-                            <Download className="mr-2 h-4 w-4" /> Baixar Relatório
-                          </a>
-                        </Button>
-                      )}
-                      {claim.caseId && (
-                        <Button variant="outline" size="sm" asChild>
-                          <a href={`https://console.aws.amazon.com/support/cases/#/case/${claim.caseId}`} target="_blank" rel="noopener noreferrer">
-                            <ExternalLink className="mr-2 h-4 w-4" /> Ver Caso AWS
-                          </a>
-                        </Button>
-                      )}
-                    </div>
-                  </CardContent>
-                </Card>
-              ))}
+      {/* Lista de Claims */}
+      {claims.length === 0 ? (
+        <Card>
+          <CardContent className="py-12">
+            <div className="text-center">
+              <svg className="mx-auto h-12 w-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+              <h3 className="mt-2 text-sm font-medium text-gray-900">
+                Nenhum claim de SLA encontrado
+              </h3>
+              <p className="mt-1 text-sm text-gray-500">
+                Monitoramos continuamente seus serviços AWS. Quando detectamos uma violação de SLA, criamos automaticamente um claim.
+              </p>
             </div>
-          )}
-        </CardContent>
-      </Card>
+          </CardContent>
+        </Card>
+      ) : (
+        <div className="space-y-6">
+          {claims.map((claim) => (
+            <Card key={claim.sk}>
+              <CardHeader>
+                <div className="flex items-start justify-between">
+                  <div>
+                    <CardTitle>Incidente AWS Health</CardTitle>
+                    <p className="mt-1 text-sm text-gray-600">
+                      {claim.service} • {claim.region}
+                    </p>
+                  </div>
+                  {getStatusBadge(claim.status)}
+                </div>
+              </CardHeader>
+              
+              <CardContent className="space-y-6">
+                {/* Informações do Incidente */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <h4 className="text-sm font-medium text-gray-700">ID do Incidente</h4>
+                    <p className="mt-1 text-sm text-gray-900 font-mono">{claim.incidentId}</p>
+                  </div>
+                  
+                  <div>
+                    <h4 className="text-sm font-medium text-gray-700">Conta AWS</h4>
+                    <p className="mt-1 text-sm text-gray-900 font-mono">{claim.awsAccountId}</p>
+                  </div>
+                  
+                  <div>
+                    <h4 className="text-sm font-medium text-gray-700">Início do Incidente</h4>
+                    <p className="mt-1 text-sm text-gray-900">
+                      {new Date(claim.startTime).toLocaleString('pt-BR')}
+                    </p>
+                  </div>
+                  
+                  {claim.endTime && (
+                    <div>
+                      <h4 className="text-sm font-medium text-gray-700">Fim do Incidente</h4>
+                      <p className="mt-1 text-sm text-gray-900">
+                        {new Date(claim.endTime).toLocaleString('pt-BR')}
+                      </p>
+                    </div>
+                  )}
+                </div>
+
+                {/* Impacto */}
+                <div className="bg-gray-50 rounded-lg p-4">
+                  <h4 className="text-sm font-medium text-gray-700 mb-3">Impacto</h4>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="flex items-center gap-3">
+                      <div className="flex-shrink-0">
+                        <svg className="w-5 h-5 text-orange-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                        </svg>
+                      </div>
+                      <div>
+                        <p className="text-xs text-gray-600">Recursos Afetados</p>
+                        <p className="text-lg font-semibold text-gray-900">{claim.impact.affectedResources}</p>
+                      </div>
+                    </div>
+                    
+                    <div className="flex items-center gap-3">
+                      <div className="flex-shrink-0">
+                        <svg className="w-5 h-5 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                        </svg>
+                      </div>
+                      <div>
+                        <p className="text-xs text-gray-600">Custo Estimado</p>
+                        <p className="text-lg font-semibold text-gray-900">
+                          {formatCurrency(claim.impact.estimatedCost)}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Timeline de Status */}
+                <div>
+                  <h4 className="text-sm font-medium text-gray-700 mb-4">Progresso</h4>
+                  <div className="flex items-center justify-between">
+                    {getStatusTimeline(claim).map((step, index) => (
+                      <div key={step.key} className="flex-1">
+                        <div className="flex items-center">
+                          <div className={`flex items-center justify-center w-8 h-8 rounded-full ${
+                            step.completed ? 'bg-green-600 text-white' : 'bg-gray-200 text-gray-600'
+                          }`}>
+                            {step.completed ? (
+                              <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+                                <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                              </svg>
+                            ) : (
+                              <span className="text-xs">{index + 1}</span>
+                            )}
+                          </div>
+                          {index < getStatusTimeline(claim).length - 1 && (
+                            <div className={`flex-1 h-1 mx-2 ${
+                              step.completed ? 'bg-green-600' : 'bg-gray-200'
+                            }`} />
+                          )}
+                        </div>
+                        <p className="mt-2 text-xs text-center text-gray-600">{step.label}</p>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Crédito Recuperado */}
+                {claim.creditAmount && (
+                  <Alert variant="success">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <h4 className="font-semibold">Crédito Recuperado!</h4>
+                        <p className="mt-1 text-sm">
+                          A AWS concedeu um crédito de {formatCurrency(claim.creditAmount)} para sua conta.
+                        </p>
+                      </div>
+                      <div className="text-right">
+                        <p className="text-2xl font-bold text-green-700">
+                          {formatCurrency(claim.creditAmount)}
+                        </p>
+                      </div>
+                    </div>
+                  </Alert>
+                )}
+
+                {/* Ações */}
+                <div className="flex items-center gap-3">
+                  {claim.reportUrl && (
+                    <Button
+                      onClick={() => handleDownloadReport(claim.sk)}
+                      variant="secondary"
+                      size="sm"
+                    >
+                      <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                      </svg>
+                      Baixar Relatório PDF
+                    </Button>
+                  )}
+                  
+                  {claim.ticketId && (
+                    <div className="flex items-center gap-2 text-sm text-gray-600">
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 5v2m0 4v2m0 4v2M5 5a2 2 0 00-2 2v3a2 2 0 110 4v3a2 2 0 002 2h14a2 2 0 002-2v-3a2 2 0 110-4V7a2 2 0 00-2-2H5z" />
+                      </svg>
+                      <span>Ticket AWS: <span className="font-mono">{claim.ticketId}</span></span>
+                    </div>
+                  )}
+                </div>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+      )}
     </div>
   );
 }

@@ -1,310 +1,281 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { useTranslation } from 'react-i18next';
-import { useRouter } from 'next/navigation';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { motion } from 'framer-motion';
-import { Button } from '@/components/ui/button';
-import { MainLayout } from '@/components/layouts/main-layout';
-import { ProtectedRoute } from '@/components/auth/ProtectedRoute';
-import { apiFetch } from '@/lib/api';
-import { AlertCircle, CheckCircle, Clock, DollarSign } from 'lucide-react';
-import { toast } from 'sonner';
+import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/Card';
+import { Button } from '@/components/ui/Button';
+import { LoadingState } from '@/components/ui/LoadingSpinner';
+import { Alert } from '@/components/ui/Alert';
+import { Badge } from '@/components/ui/Badge';
+import { apiClient } from '@/lib/api';
 
 interface Recommendation {
-  id: string;
+  sk: string;
   type: string;
   status: string;
+  resourceId: string;
+  resourceType: string;
+  region: string;
   potentialSavings: number;
-  resourceArn: string;
-  details: any;
+  reason: string;
   createdAt: string;
+  executedAt?: string;
 }
 
-function RecommendationsContent() {
-  const { t } = useTranslation();
-  const router = useRouter();
+export default function RecommendationsPage() {
   const [recommendations, setRecommendations] = useState<Recommendation[]>([]);
   const [loading, setLoading] = useState(true);
-  const [executing, setExecuting] = useState<string | null>(null);
-  const [accountType, setAccountType] = useState<string>('TRIAL');
+  const [error, setError] = useState<string | null>(null);
+  const [executingIds, setExecutingIds] = useState<Set<string>>(new Set());
+  const [filter, setFilter] = useState<string>('all');
+
+  useEffect(() => {
+    loadRecommendations();
+  }, []);
 
   const loadRecommendations = async () => {
     try {
       setLoading(true);
-      const data = await apiFetch('/api/recommendations');
-      setRecommendations(data.recommendations || []);
+      setError(null);
+      const response = await apiClient.get('/api/recommendations');
+      setRecommendations(response.data || []);
     } catch (err: any) {
       console.error('Erro ao carregar recomendações:', err);
-      toast.error('Erro ao carregar recomendações');
+      setError(err.message || 'Erro ao carregar recomendações');
     } finally {
       setLoading(false);
     }
   };
 
-  const loadUserStatus = async () => {
-    try {
-      const data = await apiFetch('/api/user/status');
-      setAccountType(data.accountType);
-    } catch (err: any) {
-      console.error('Erro ao carregar status do usuário:', err);
-    }
-  };
-
-  useEffect(() => {
-    loadRecommendations();
-    loadUserStatus();
-  }, []);
-
-  const handleExecute = async (recommendationId: string) => {
-    if (!confirm('Deseja realmente executar esta recomendação? Esta ação não pode ser desfeita.')) {
+  const handleExecute = async (recommendation: Recommendation) => {
+    if (!confirm(`Tem certeza que deseja executar esta recomendação? Esta ação não pode ser desfeita.`)) {
       return;
     }
 
     try {
-      setExecuting(recommendationId);
-      await apiFetch('/api/recommendations/execute', {
-        method: 'POST',
-        body: JSON.stringify({ recommendationId }),
-      });
+      setExecutingIds(prev => new Set(prev).add(recommendation.sk));
       
-      toast.success('Recomendação executada com sucesso!');
+      await apiClient.post('/api/recommendations/execute', {
+        recommendationId: recommendation.sk,
+      });
+
+      // Atualizar lista
       await loadRecommendations();
+      
+      alert('Recomendação executada com sucesso!');
     } catch (err: any) {
       console.error('Erro ao executar recomendação:', err);
-      toast.error(err.message || 'Erro ao executar recomendação');
+      alert(`Erro ao executar: ${err.message}`);
     } finally {
-      setExecuting(null);
+      setExecutingIds(prev => {
+        const newSet = new Set(prev);
+        newSet.delete(recommendation.sk);
+        return newSet;
+      });
     }
+  };
+
+  const formatCurrency = (value: number) => {
+    return new Intl.NumberFormat('pt-BR', {
+      style: 'currency',
+      currency: 'USD',
+    }).format(value);
+  };
+
+  const getStatusBadge = (status: string) => {
+    const statusMap: Record<string, { variant: 'default' | 'success' | 'warning' | 'danger' | 'info'; label: string }> = {
+      RECOMMENDED: { variant: 'info', label: 'Recomendado' },
+      EXECUTING: { variant: 'warning', label: 'Executando' },
+      EXECUTED: { variant: 'success', label: 'Executado' },
+      FAILED: { variant: 'danger', label: 'Falhou' },
+      DISMISSED: { variant: 'default', label: 'Dispensado' },
+    };
+
+    const config = statusMap[status] || { variant: 'default', label: status };
+    return <Badge variant={config.variant}>{config.label}</Badge>;
   };
 
   const getTypeLabel = (type: string) => {
-    switch (type) {
-      case 'IDLE_INSTANCE':
-        return 'Instância Ociosa';
-      case 'UNUSED_EBS':
-        return 'Volume EBS Não Utilizado';
-      case 'IDLE_RDS':
-        return 'Instância RDS Ociosa';
-      default:
-        return type;
-    }
+    const typeMap: Record<string, string> = {
+      IDLE_INSTANCE: 'Instância Ociosa',
+      UNUSED_EBS: 'Volume EBS Não Utilizado',
+      IDLE_RDS: 'RDS Ocioso',
+      RESERVED_INSTANCE: 'Instância Reservada',
+    };
+    return typeMap[type] || type;
   };
 
-  const getStatusIcon = (status: string) => {
-    switch (status) {
-      case 'RECOMMENDED':
-        return <Clock className="w-5 h-5 text-yellow-500" />;
-      case 'EXECUTED':
-        return <CheckCircle className="w-5 h-5 text-green-500" />;
-      case 'IGNORED':
-        return <AlertCircle className="w-5 h-5 text-gray-500" />;
-      default:
-        return <AlertCircle className="w-5 h-5 text-blue-500" />;
-    }
-  };
+  const filteredRecommendations = recommendations.filter(rec => {
+    if (filter === 'all') return true;
+    if (filter === 'active') return rec.status === 'RECOMMENDED';
+    if (filter === 'executed') return rec.status === 'EXECUTED';
+    return true;
+  });
 
-  const totalSavings = recommendations
-    .filter(r => r.status === 'RECOMMENDED')
-    .reduce((sum, r) => sum + (r.potentialSavings || 0), 0);
+  if (loading) {
+    return <LoadingState message="Carregando recomendações..." />;
+  }
 
-  /**
-   * Define a animação para o *container* da lista.
-   * 'staggerChildren: 0.1' diz ao Framer Motion para animar cada filho
-   * com um atraso de 0.1s entre eles.
-   */
-  const containerVariants = {
-    hidden: { opacity: 0 },
-    visible: {
-      opacity: 1,
-      transition: {
-        staggerChildren: 0.1, // Este é o efeito "escalonado"
-      },
-    },
-  };
-
-  /**
-   * Define a animação para *cada item* da lista.
-   * Efeito sutil de "fade in" e "slide up".
-   */
-  const itemVariants = {
-    hidden: { opacity: 0, y: 20 },
-    visible: { opacity: 1, y: 0 },
-  };
+  if (error) {
+    return (
+      <div className="space-y-4">
+        <Alert variant="error">
+          <h4 className="font-semibold">Erro ao carregar recomendações</h4>
+          <p className="mt-1 text-sm">{error}</p>
+          <button
+            onClick={loadRecommendations}
+            className="mt-3 text-sm underline hover:no-underline"
+          >
+            Tentar novamente
+          </button>
+        </Alert>
+      </div>
+    );
+  }
 
   return (
-    <MainLayout title="Recomendações">
-      <div className="space-y-6">
+    <div className="space-y-6">
+      {/* Header */}
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-3xl font-bold text-gray-900">Recomendações</h1>
+          <p className="mt-2 text-gray-600">
+            Oportunidades de economia identificadas pela nossa IA
+          </p>
+        </div>
+        <Button onClick={loadRecommendations} variant="secondary">
+          <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+          </svg>
+          Atualizar
+        </Button>
+      </div>
+
+      {/* Filtros */}
+      <div className="flex gap-2">
+        <button
+          onClick={() => setFilter('all')}
+          className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
+            filter === 'all'
+              ? 'bg-blue-600 text-white'
+              : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+          }`}
+        >
+          Todas ({recommendations.length})
+        </button>
+        <button
+          onClick={() => setFilter('active')}
+          className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
+            filter === 'active'
+              ? 'bg-blue-600 text-white'
+              : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+          }`}
+        >
+          Ativas ({recommendations.filter(r => r.status === 'RECOMMENDED').length})
+        </button>
+        <button
+          onClick={() => setFilter('executed')}
+          className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
+            filter === 'executed'
+              ? 'bg-blue-600 text-white'
+              : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+          }`}
+        >
+          Executadas ({recommendations.filter(r => r.status === 'EXECUTED').length})
+        </button>
+      </div>
+
+      {/* Lista de Recomendações */}
+      {filteredRecommendations.length === 0 ? (
         <Card>
-          <CardHeader>
-            <CardTitle>Economia Potencial</CardTitle>
-            <CardDescription>
-              Total de economia se todas as recomendações forem aplicadas
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="flex items-center gap-2">
-              <DollarSign className="w-8 h-8 text-green-500" />
-              <span className="text-3xl font-bold">
-                ${totalSavings.toFixed(2)}
-              </span>
-              <span className="text-muted-foreground">/mês</span>
+          <CardContent className="py-12">
+            <div className="text-center">
+              <svg className="mx-auto h-12 w-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+              </svg>
+              <h3 className="mt-2 text-sm font-medium text-gray-900">
+                Nenhuma recomendação encontrada
+              </h3>
+              <p className="mt-1 text-sm text-gray-500">
+                Conecte sua conta AWS para receber recomendações personalizadas.
+              </p>
             </div>
           </CardContent>
         </Card>
-
-        {accountType === 'TRIAL' && (
-          <Card className="border-orange-200 bg-orange-50">
-            <CardContent className="pt-6">
-              <div className="text-center">
-                <h3 className="text-lg font-semibold text-orange-800 mb-2">
-                  Faça upgrade para executar recomendações
-                </h3>
-                <p className="text-orange-700 mb-4">
-                  Você está no modo Trial. Ative sua conta para começar a economizar automaticamente.
-                </p>
-                <Button onClick={() => router.push('/billing')}>
-                  Ativar Agora
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
-        )}
-
-        <Card>
-          <CardHeader>
-            <CardTitle>Recomendações de Otimização</CardTitle>
-            <CardDescription>
-              Ações sugeridas para reduzir custos AWS
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            {loading ? (
-              <div className="flex justify-center py-8">
-                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
-              </div>
-            ) : recommendations.length === 0 ? (
-              <div className="text-center py-8">
-                <AlertCircle className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
-                <p className="text-muted-foreground">
-                  Nenhuma recomendação disponível no momento
-                </p>
-                <p className="text-sm text-muted-foreground mt-2">
-                  Conecte uma conta AWS para começar a receber recomendações
-                </p>
-              </div>
-            ) : (
-              <motion.div
-                className="space-y-4"
-                variants={containerVariants}
-                initial="hidden"
-                animate="visible"
-              >
-                {recommendations.map((rec) => (
-                  <motion.div
-                    key={rec.id}
-                    variants={itemVariants}
-                    className="border rounded-lg p-4 hover:bg-accent transition-colors"
-                  >
-                    <div className="flex items-start justify-between">
-                      <div className="flex gap-3 flex-1">
-                        {getStatusIcon(rec.status)}
-                        <div className="flex-1">
-                          <div className="flex items-center gap-2 mb-1">
-                            <h3 className="font-medium">{getTypeLabel(rec.type)}</h3>
-                            <span className={`px-2 py-0.5 rounded text-xs ${
-                              rec.status === 'RECOMMENDED' ? 'bg-yellow-100 text-yellow-800' :
-                              rec.status === 'EXECUTED' ? 'bg-green-100 text-green-800' :
-                              'bg-gray-100 text-gray-800'
-                            }`}>
-                              {rec.status}
-                            </span>
-                          </div>
-                          
-                          {rec.details && (
-                            <div className="text-sm text-muted-foreground space-y-1">
-                              {rec.details.instanceId && (
-                                <p>Instância: {rec.details.instanceId} ({rec.details.instanceType})</p>
-                              )}
-                              {rec.details.dbInstanceId && (
-                                <p>RDS: {rec.details.dbInstanceId} ({rec.details.dbInstanceClass})</p>
-                              )}
-                              {rec.details.volumeId && (
-                                <p>Volume: {rec.details.volumeId} ({rec.details.sizeGb}GB, {rec.details.volumeType})</p>
-                              )}
-                              {rec.details.cpuAvg !== undefined && (
-                                <p>CPU média (7d): {rec.details.cpuAvg.toFixed(2)}%</p>
-                              )}
-                              {rec.details.daysUnused !== undefined && (
-                                <p>Dias não utilizado: {rec.details.daysUnused}</p>
-                              )}
-                              {(rec.details.tags || rec.details.TagList) && (rec.details.tags || rec.details.TagList).length > 0 && (
-                                <div className="flex gap-1 flex-wrap mt-2">
-                                  {(rec.details.tags || rec.details.TagList).slice(0, 3).map((tag: any, idx: number) => (
-                                    <span key={idx} className="px-2 py-0.5 bg-secondary rounded text-xs">
-                                      {tag.Key}: {tag.Value}
-                                    </span>
-                                  ))}
-                                </div>
-                              )}
-                            </div>
-                          )}
-                          
-                          <p className="text-xs text-muted-foreground mt-2">
-                            {new Date(rec.createdAt).toLocaleString()}
-                          </p>
-                        </div>
+      ) : (
+        <div className="space-y-4">
+          {filteredRecommendations.map((rec) => (
+            <Card key={rec.sk}>
+              <CardContent className="p-6">
+                <div className="flex items-start justify-between">
+                  <div className="flex-1">
+                    <div className="flex items-center gap-3">
+                      <h3 className="text-lg font-semibold text-gray-900">
+                        {getTypeLabel(rec.type)}
+                      </h3>
+                      {getStatusBadge(rec.status)}
+                    </div>
+                    
+                    <div className="mt-3 space-y-2">
+                      <div className="flex items-center gap-2 text-sm text-gray-600">
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 3v2m6-2v2M9 19v2m6-2v2M5 9H3m2 6H3m18-6h-2m2 6h-2M7 19h10a2 2 0 002-2V7a2 2 0 00-2-2H7a2 2 0 00-2 2v10a2 2 0 002 2zM9 9h6v6H9V9z" />
+                        </svg>
+                        <span className="font-medium">Recurso:</span>
+                        <span>{rec.resourceId}</span>
                       </div>
                       
-                      <div className="text-right">
-                        <div className="text-lg font-bold text-green-600">
-                          ${rec.potentialSavings.toFixed(2)}
-                        </div>
-                        <div className="text-xs text-muted-foreground">economia/mês</div>
-                        
-                        {rec.status === 'RECOMMENDED' && (
-                          <Button
-                            size="sm"
-                            className="mt-2"
-                            onClick={() => handleExecute(rec.id)}
-                            disabled={executing === rec.id || accountType !== 'ACTIVE'}
-                          >
-                            {executing === rec.id ? (
-                              <>
-                                <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-white mr-2" />
-                                Executando...
-                              </>
-                            ) : accountType !== 'ACTIVE' ? (
-                              'Upgrade Necessário'
-                            ) : (
-                              'Executar'
-                            )}
-                          </Button>
-                        )}
-                        {rec.status === 'EXECUTING' && (
-                          <div className="mt-2 text-xs text-yellow-600 flex items-center gap-1">
-                            <Clock className="w-3 h-3" />
-                            Em execução...
-                          </div>
+                      <div className="flex items-center gap-2 text-sm text-gray-600">
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+                        </svg>
+                        <span className="font-medium">Região:</span>
+                        <span>{rec.region}</span>
+                      </div>
+                      
+                      <div className="flex items-center gap-2 text-sm">
+                        <svg className="w-4 h-4 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                        </svg>
+                        <span className="font-medium text-green-700">Economia Potencial:</span>
+                        <span className="text-green-700 font-bold">{formatCurrency(rec.potentialSavings)}</span>
+                      </div>
+                      
+                      <div className="mt-3 p-3 bg-gray-50 rounded-md">
+                        <p className="text-sm text-gray-700">
+                          <span className="font-medium">Motivo:</span> {rec.reason}
+                        </p>
+                      </div>
+                      
+                      <div className="flex items-center gap-4 text-xs text-gray-500 mt-2">
+                        <span>Criado em: {new Date(rec.createdAt).toLocaleString('pt-BR')}</span>
+                        {rec.executedAt && (
+                          <span>Executado em: {new Date(rec.executedAt).toLocaleString('pt-BR')}</span>
                         )}
                       </div>
                     </div>
-                  </motion.div>
-                ))}
-              </motion.div>
-            )}
-          </CardContent>
-        </Card>
-      </div>
-    </MainLayout>
-  );
-}
-
-export default function RecommendationsPage() {
-  return (
-    <ProtectedRoute>
-      <RecommendationsContent />
-    </ProtectedRoute>
+                  </div>
+                  
+                  <div className="ml-6">
+                    {rec.status === 'RECOMMENDED' && (
+                      <Button
+                        onClick={() => handleExecute(rec)}
+                        variant="primary"
+                        isLoading={executingIds.has(rec.sk)}
+                      >
+                        Executar
+                      </Button>
+                    )}
+                    {rec.status === 'EXECUTED' && (
+                      <Badge variant="success">Concluído</Badge>
+                    )}
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+      )}
+    </div>
   );
 }

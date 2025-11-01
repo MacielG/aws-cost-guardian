@@ -3,9 +3,8 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "validate-env": "ts-node ./lib/validate-env.ts",
     "dev": "npm run validate-env && next dev",
-    "build": "npm run validate-env && next build",
+    "validate-env": "ts-node ./lib/validate-env.cli.ts",
     "start": "next start",
     "lint": "next lint",
     "test": "jest",

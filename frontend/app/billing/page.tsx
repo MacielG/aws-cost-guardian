@@ -1,65 +1,152 @@
 'use client';
-import { useTranslation } from 'react-i18next';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
-import { useEffect, useState } from 'react';
 
-interface BillingItem {
-  id: string;
-  type: 'SAVING' | 'CLAIM';
-  amount: number;
-  meteredAt: string;
+import { useEffect, useState } from 'react';
+import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/Card';
+import { LoadingState } from '@/components/ui/LoadingSpinner';
+import { Alert } from '@/components/ui/Alert';
+import { apiClient } from '@/lib/api';
+
+interface BillingData {
+  summary: {
+    totalSavingsRealized: number;
+    totalCreditsRecovered: number;
+    totalValue: number;
+    ourCommission: number;
+    yourSavings: number;
+  };
+  recommendations: {
+    executed: number;
+    totalSavings: number;
+  };
+  sla: {
+    refunded: number;
+    totalCredits: number;
+  };
 }
 
-export default function Billing() {
-  const { t } = useTranslation();
-  const [billingHistory, setBillingHistory] = useState<BillingItem[]>([]);
+export default function BillingPage() {
+  const [billingData, setBillingData] = useState<BillingData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    setLoading(true);
-    fetch('/api/billing')
-      .then(res => res.ok ? res.json() : Promise.reject('Erro ao buscar histórico de cobrança'))
-      .then(data => setBillingHistory(data.billingHistory))
-      .catch(err => setError(String(err)))
-      .finally(() => setLoading(false));
+    loadBillingData();
   }, []);
 
+  const loadBillingData = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      const response = await apiClient.get('/api/billing/summary');
+      setBillingData(response.data);
+    } catch (err: any) {
+      console.error('Erro ao carregar billing:', err);
+      setError(err.message || 'Erro ao carregar dados de billing');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const formatCurrency = (value: number) => {
+    return new Intl.NumberFormat('pt-BR', {
+      style: 'currency',
+      currency: 'USD',
+    }).format(value);
+  };
+
+  if (loading) return <LoadingState message="Carregando billing..." />;
+
+  if (error) {
+    return (
+      <Alert variant="error">
+        <h4 className="font-semibold">Erro ao carregar billing</h4>
+        <p className="mt-1 text-sm">{error}</p>
+        <button onClick={loadBillingData} className="mt-3 text-sm underline">
+          Tentar novamente
+        </button>
+      </Alert>
+    );
+  }
+
   return (
-    <div className="max-w-3xl mx-auto py-8">
-      <h1 className="heading-2 mb-6">Histórico de Cobrança</h1>
+    <div className="space-y-6">
+      <div>
+        <h1 className="text-3xl font-bold text-gray-900">Billing</h1>
+        <p className="mt-2 text-gray-600">
+          Transparência total sobre suas economias e nossa comissão
+        </p>
+      </div>
+
+      {/* Resumo */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <Card>
+          <CardContent className="pt-6">
+            <h3 className="text-sm font-medium text-gray-600">Total Economizado</h3>
+            <p className="mt-2 text-3xl font-bold text-green-600">
+              {formatCurrency(billingData?.summary.totalValue || 0)}
+            </p>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardContent className="pt-6">
+            <h3 className="text-sm font-medium text-gray-600">Nossa Comissão (30%)</h3>
+            <p className="mt-2 text-3xl font-bold text-gray-900">
+              {formatCurrency(billingData?.summary.ourCommission || 0)}
+            </p>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardContent className="pt-6">
+            <h3 className="text-sm font-medium text-gray-600">Suas Economias (70%)</h3>
+            <p className="mt-2 text-3xl font-bold text-blue-600">
+              {formatCurrency(billingData?.summary.yourSavings || 0)}
+            </p>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Breakdown */}
       <Card>
         <CardHeader>
-          <CardTitle>Itens Cobrados</CardTitle>
-          <CardDescription>
-            Histórico dos valores realizados e metrificados para cobrança.
-          </CardDescription>
+          <CardTitle>Detalhamento</CardTitle>
         </CardHeader>
         <CardContent>
-          {loading && <div className="w-full h-24"><span className="muted">Carregando...</span></div>}
-          {error && <p className="text-destructive">Erro: {error}</p>}
-          {!loading && !error && billingHistory.length === 0 && (
-            <p className="muted">Nenhum item de cobrança encontrado.</p>
-          )}
-          {!loading && !error && billingHistory.length > 0 && (
-            <div className="space-y-4">
-              {billingHistory.map(item => (
-                <Card key={item.id} className="shadow-md">
-                  <CardContent className="p-4">
-                    <div className="flex items-center justify-between">
-                      <h3 className="text-lg font-semibold">{item.id.replace('SAVING#', '').replace('CLAIM#', '')}</h3>
-                      <Badge variant={item.type === 'SAVING' ? 'default' : 'success'}>{item.type}</Badge>
-                    </div>
-                    <p>Valor: <span className="font-medium">${item.amount?.toFixed(2) || '0.00'}</span></p>
-                    <p className="text-sm text-muted">Metrificado em: {new Date(item.meteredAt).toLocaleString()}</p>
-                  </CardContent>
-                </Card>
-              ))}
+          <div className="space-y-4">
+            <div className="flex justify-between items-center py-3 border-b">
+              <div>
+                <h4 className="font-medium">Recomendações Executadas</h4>
+                <p className="text-sm text-gray-600">{billingData?.recommendations.executed} recomendações</p>
+              </div>
+              <p className="text-lg font-semibold">
+                {formatCurrency(billingData?.recommendations.totalSavings || 0)}
+              </p>
             </div>
-          )}
+
+            <div className="flex justify-between items-center py-3">
+              <div>
+                <h4 className="font-medium">Créditos SLA Recuperados</h4>
+                <p className="text-sm text-gray-600">{billingData?.sla.refunded} claims</p>
+              </div>
+              <p className="text-lg font-semibold">
+                {formatCurrency(billingData?.sla.totalCredits || 0)}
+              </p>
+            </div>
+          </div>
         </CardContent>
       </Card>
+
+      {/* Explicação */}
+      <Alert variant="info">
+        <h4 className="font-semibold">Como Funciona</h4>
+        <div className="mt-2 text-sm space-y-2">
+          <p>• Você só paga pelo que economiza (modelo baseado em sucesso)</p>
+          <p>• Nossa comissão é de 30% sobre as economias realizadas</p>
+          <p>• Você fica com 70% de todas as economias</p>
+          <p>• Sem custos fixos ou mensalidades</p>
+        </div>
+      </Alert>
     </div>
   );
 }

@@ -1,302 +1,353 @@
 'use client';
-import React from 'react';
-import { useTranslation } from 'react-i18next';
+
 import { useEffect, useState } from 'react';
-import { useRouter } from 'next/navigation';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { motion } from 'framer-motion';
-import { MainLayout } from '@/components/layouts/main-layout';
-import { AlertCircle, DollarSign, TrendingUp, TrendingDown } from 'lucide-react';
-import { apiFetch } from '@/lib/api';
-import { ProtectedRoute } from '@/components/auth/ProtectedRoute';
-import { formatCurrency, formatDate, sanitizeHtml } from '@/lib/utils';
+import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/Card';
+import { LoadingState } from '@/components/ui/LoadingSpinner';
+import { Alert } from '@/components/ui/Alert';
+import { Badge } from '@/components/ui/Badge';
+import Link from 'next/link';
+import { apiClient } from '@/lib/api';
+import { SavingsChart } from '@/components/charts/SavingsChart';
+import { RecommendationsChart } from '@/components/charts/RecommendationsChart';
 
-import { SavingsWidget } from '@/components/dashboard/SavingsWidget';
-import { useSavings } from '@/hooks/useSavings';
-
-interface Incident {
-  id: string;
-  service: string;
-  impact: number;
-  confidence: number;
-  status: 'detected' | 'submitted' | 'refunded';
-  timestamp: string;
+interface BillingSummary {
+  summary: {
+    totalSavingsRealized: number;
+    totalCreditsRecovered: number;
+    totalValue: number;
+    ourCommission: number;
+    yourSavings: number;
+  };
+  recommendations: {
+    executed: number;
+    totalSavings: number;
+  };
+  sla: {
+    refunded: number;
+    totalCredits: number;
+  };
 }
 
-function DashboardContent() {
-  const { t, i18n } = useTranslation();
-  const router = useRouter();
-  const [incidents, setIncidents] = useState<Incident[]>([]);
-  const [costs, setCosts] = useState<any[]>([]);
-  const [loadingCosts, setLoadingCosts] = useState(true);
-  const [accountType, setAccountType] = useState<string>('TRIAL');
-  const [incidentError, setIncidentError] = useState<string | null>(null);
-  const [costError, setCostError] = useState<string | null>(null);
-  const [authError, setAuthError] = useState<string | null>(null);
-  const error = authError || incidentError || costError;
-  const currentLang = i18n.language || 'en-US';
-  
-  const { data: savingsData, loading: savingsLoading } = useSavings();
+interface Recommendation {
+  sk: string;
+  type: string;
+  status: string;
+  potentialSavings: number;
+  createdAt: string;
+}
 
-  const isValidIncident = (inc: any): inc is Incident => {
-    return (
-      typeof inc === 'object' &&
-      inc !== null &&
-      typeof inc.id === 'string' &&
-      typeof inc.service === 'string' &&
-      typeof inc.impact === 'number' &&
-      typeof inc.confidence === 'number' &&
-      ['detected', 'submitted', 'refunded'].includes(inc.status) &&
-      typeof inc.region === 'string' &&
-      typeof inc.timestamp === 'string'
-    );
-  };
+export default function DashboardPage() {
+  const [billingSummary, setBillingSummary] = useState<BillingSummary | null>(null);
+  const [recentRecommendations, setRecentRecommendations] = useState<Recommendation[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-  const validIncidents = incidents.filter(isValidIncident);
+  useEffect(() => {
+    loadDashboardData();
+  }, []);
 
-  const loadUserStatus = async () => {
+  const loadDashboardData = async () => {
     try {
-      const data = await apiFetch('/api/user/status');
-      setAccountType(data.accountType);
-      if (data.accountType === 'TRIAL') {
-        router.push('/trial');
-      }
-      setAuthError(null); // Clear only auth error on success
+      setLoading(true);
+      setError(null);
+
+      // Carregar dados em paralelo
+      const [summaryRes, recsRes] = await Promise.all([
+        apiClient.get('/api/billing/summary'),
+        apiClient.get('/api/recommendations?limit=5'),
+      ]);
+
+      setBillingSummary(summaryRes.data);
+      setRecentRecommendations(recsRes.data || []);
     } catch (err: any) {
-      console.error('Erro ao carregar status do usuário:', err);
-      setAuthError(t('dashboard.error.auth')); // Set only auth error
+      console.error('Erro ao carregar dashboard:', err);
+      setError(err.message || 'Erro ao carregar dados do dashboard');
+    } finally {
+      setLoading(false);
     }
   };
 
+  if (loading) {
+    return <LoadingState message="Carregando dashboard..." />;
+  }
 
-  // NOTE: call order matters for tests that mock `apiFetch` with sequential
-  // mockImplementationOnce calls. Ensure incidents are requested first so
-  // tests that expect incidents as the first apiFetch call continue to work.
-  useEffect(() => {
-    apiFetch('/api/incidents')
-      .then((d) => {
-        // Defensive: ensure incidents is an array before storing. Tests may
-        // mock apiFetch and return an object or error; normalize to [] so
-        // downstream callers (filter, slice, map) are safe.
-        setIncidents(Array.isArray(d) ? d : []);
-        setIncidentError(null); // Clear only incident error
-      })
-      .catch(err => {
-        console.error('Erro ao buscar incidentes:', err);
-        setIncidents([]);
-        if (err.message === 'Request timeout') {
-          setIncidentError(t('dashboard.error.timeout')); // Set only incident error
-        } else {
-          setIncidentError(t('dashboard.error.network')); // Set only incident error
-        }
-      });
-  }, []);
+  if (error) {
+    return (
+      <div className="space-y-4">
+        <Alert variant="error">
+          <h4 className="font-semibold">Erro ao carregar dashboard</h4>
+          <p className="mt-1 text-sm">{error}</p>
+          <button
+            onClick={loadDashboardData}
+            className="mt-3 text-sm underline hover:no-underline"
+          >
+            Tentar novamente
+          </button>
+        </Alert>
+      </div>
+    );
+  }
 
-  useEffect(() => {
-    apiFetch('/api/dashboard/costs')
-      .then((d) => {
-        // Normaliza resposta: se o mock/endpoint retornar um único objeto
-        // com grupos (caso de testes), converte para um array de um dia.
-        if (Array.isArray(d)) {
-          setCosts(d);
-        } else if (d && typeof d === 'object') {
-          setCosts([d]);
-        } else {
-          setCosts([]);
-        }
-        setCostError(null); // Clear only cost error
-      })
-      .catch((err) => {
-        console.error('Erro ao buscar custos:', err);
-        setCosts([]);
-        if (err.message === 'Request timeout') {
-          setCostError(t('dashboard.error.timeout')); // Set only cost error
-        } else {
-          setCostError(t('dashboard.error.network')); // Set only cost error
-        }
-      })
-      .finally(() => setLoadingCosts(false));
-  }, []);
+  const formatCurrency = (value: number) => {
+    return new Intl.NumberFormat('pt-BR', {
+      style: 'currency',
+      currency: 'USD',
+    }).format(value);
+  };
 
-  // NOTE: load user status is intentionally fetched after incidents and costs in
-  // test runs that mock `apiFetch` by call order. Keeping the request order
-  // stable prevents test mocks from being misaligned.
-  useEffect(() => {
-    loadUserStatus();
-  }, [router]);
+  const getStatusBadge = (status: string) => {
+    const statusMap: Record<string, { variant: 'default' | 'success' | 'warning' | 'danger' | 'info'; label: string }> = {
+      RECOMMENDED: { variant: 'info', label: 'Recomendado' },
+      EXECUTING: { variant: 'warning', label: 'Executando' },
+      EXECUTED: { variant: 'success', label: 'Executado' },
+      FAILED: { variant: 'danger', label: 'Falhou' },
+      DISMISSED: { variant: 'default', label: 'Dispensado' },
+    };
 
-  // Defensive: ensure incidents is an array before calling reduce. Some tests
-  // or mocks may accidentally return an object; fall back to 0 in that case.
-  const totalEarnings = Array.isArray(validIncidents)
-    ? validIncidents.reduce((sum, inc) => sum + (inc.status === 'refunded' ? inc.impact * 0.7 : 0), 0)
-    : 0;
-  const totalCost = costs.reduce((sum, day) => {
-    if (day && day.Groups) {
-      return sum + day.Groups.reduce((daySum: number, g: any) => {
-        return daySum + parseFloat(g.Metrics?.UnblendedCost?.Amount || 0);
-      }, 0);
-    }
-    return sum;
-  }, 0);
+    const config = statusMap[status] || { variant: 'default', label: status };
+    return <Badge variant={config.variant}>{config.label}</Badge>;
+  };
+
+  const getTypeLabel = (type: string) => {
+    const typeMap: Record<string, string> = {
+      IDLE_INSTANCE: 'Instância Ociosa',
+      UNUSED_EBS: 'Volume EBS Não Utilizado',
+      IDLE_RDS: 'RDS Ocioso',
+      RESERVED_INSTANCE: 'Instância Reservada',
+    };
+    return typeMap[type] || type;
+  };
 
   return (
-    <MainLayout title={t('dashboard')}>
-      {error && (
-        <Alert variant="destructive" className="mb-4">
-          <AlertCircle className="h-4 w-4" />
-          <AlertTitle>{t('common.error')}</AlertTitle>
-          <AlertDescription>{error}</AlertDescription>
-        </Alert>
-      )}
-      <div data-testid="dashboard-content">
-        {/* Savings Widget - NOVO */}
-        <div className="mb-8">
-          <SavingsWidget data={savingsData} loading={savingsLoading} />
-        </div>
+    <div className="space-y-6">
+      {/* Header */}
+      <div>
+        <h1 className="text-3xl font-bold text-gray-900">Dashboard</h1>
+        <p className="mt-2 text-gray-600">
+          Visão geral das suas economias e recomendações AWS
+        </p>
+      </div>
 
-        <motion.div
-          className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8"
-          initial="hidden"
-          animate="visible"
-          variants={{
-            hidden: { opacity: 0 },
-            visible: {
-              opacity: 1,
-              transition: {
-                staggerChildren: 0.1
-              }
-            }
-          }}
-        >
-          <motion.div variants={{ hidden: { y: 20, opacity: 0 }, visible: { y: 0, opacity: 1 } }}>
-            <Card>
-        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-        <CardTitle className="text-sm font-medium">{t('dashboard.totalEarnings')}</CardTitle>
-        <DollarSign className="h-4 w-4 text-secondary-green" />
-        </CardHeader>
-        <CardContent>
-        <div className="heading-2 text-text-light">${totalEarnings.toFixed(2)}</div>
-        <p className="text-xs text-secondary-green flex items-center">
-        <TrendingUp className="w-3 h-3 mr-1" />
-        +12% {t('dashboard.fromLastMonth')}
-        </p>
-        </CardContent>
-        </Card>
-          </motion.div>
-          <motion.div variants={{ hidden: { y: 20, opacity: 0 }, visible: { y: 0, opacity: 1 } }}>
-            <Card>
-        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-        <CardTitle className="text-sm font-medium">{t('dashboard.totalCost')}</CardTitle>
-        <DollarSign className="h-4 w-4 text-secondary-red" />
-        </CardHeader>
-        <CardContent>
-        <div data-testid="total-cost" className="heading-2 text-text-light">{formatCurrency(totalCost, currentLang)}</div>
-        <p className="text-xs text-secondary-red flex items-center">
-        <TrendingDown className="w-3 h-3 mr-1" />
-        +8% {t('dashboard.fromLastMonth')}
-        </p>
-        </CardContent>
-        </Card>
-          </motion.div>
-          <motion.div variants={{ hidden: { y: 20, opacity: 0 }, visible: { y: 0, opacity: 1 } }}>
-            <Card>
-        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-        <CardTitle className="text-sm font-medium">{t('dashboard.activeIncidents')}</CardTitle>
-        <AlertCircle className="h-4 w-4 text-secondary-orange" />
-        </CardHeader>
-        <CardContent>
-        <div className="heading-2 text-text-light">{validIncidents.filter(inc => inc.status !== 'refunded').length}</div>
-        <p className="text-xs text-text-medium">
-        {validIncidents.filter(inc => inc.status === 'detected').length} {t('dashboard.detected')}
-        </p>
-        </CardContent>
-        </Card>
-            </motion.div>
-        </motion.div>
-
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      {/* Métricas Principais */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        {/* Total de Economias */}
         <Card>
-        <CardHeader>
-        <CardTitle>{t('dashboard.recentIncidents')}</CardTitle>
-        </CardHeader>
-        <CardContent>
-        {validIncidents.length === 0 ? (
-        <p className="text-muted">{t('dashboard.noIncidents')}</p>
-        ) : (
-        <div className="space-y-4">
-        {validIncidents.sort((a, b) => b.impact - a.impact).slice(0, 5).map(inc => (
-        <div key={inc.id} data-testid="incident-item" className="flex items-center justify-between">
-        <div className="flex items-center space-x-3">
-        <AlertCircle className="w-5 h-5 text-secondary-red" />
-        <div>
-        <p className="text-sm font-medium text-text-light" dangerouslySetInnerHTML={{ __html: sanitizeHtml(inc.service) }}></p>
-        <p data-testid="impact-value" className="text-xs text-text-medium">{t('dashboard.impact')}: {formatCurrency(inc.impact, currentLang)}</p>
-        <p data-testid="incident-date" className="text-xs text-text-medium">{formatDate(inc.timestamp, currentLang)}</p>
-        </div>
-        </div>
-        <div className={`px-2 py-1 rounded-full text-xs font-medium ${
-        inc.status === 'refunded' ? 'bg-secondary-green text-text-light' :
-        inc.status === 'submitted' ? 'bg-secondary-orange text-text-light' :
-        'bg-secondary-red text-text-light'
-        }`}>
-        {t(`dashboard.status.${inc.status}`)}
-        </div>
-        </div>
-        ))}
-        </div>
-        )}
-        </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <CardTitle>{t('dashboard.topCostServices')}</CardTitle>
-          </CardHeader>
-        <CardContent>
-          {loadingCosts ? (
-            <p className="text-muted">{t('dashboard.loadingCostData')}</p>
-          ) : costs.length === 0 ? (
-            <p className="text-muted">{t('dashboard.noCostData')}</p>
-          ) : (
-            <div className="space-y-4">
-              {(() => {
-                const serviceCosts: { [key: string]: number } = {};
-                try {
-                  for (const day of costs) {
-                    if (day && day.Groups) {
-                      for (const g of day.Groups) {
-                        const service = g.Keys?.[0] || 'Unknown';
-                        const amount = parseFloat(g.Metrics?.UnblendedCost?.Amount || 0);
-                        serviceCosts[service] = (serviceCosts[service] || 0) + amount;
-                      }
-                    }
-                  }
-                } catch (e) {}
-                return Object.entries(serviceCosts)
-                  .sort(([, a], [, b]) => b - a)
-                  .slice(0, 5)
-                  .map(([service, amount]) => (
-                    <div key={service} className="flex items-center justify-between">
-                      <span className="text-sm font-medium text-text-light">{service}</span>
-                      <span className="text-sm text-text-medium">${amount.toFixed(2)}</span>
-                    </div>
-                  ));
-              })()}
+          <CardContent className="pt-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-gray-600">
+                  Economias Totais
+                </p>
+                <p className="mt-2 text-3xl font-bold text-gray-900">
+                  {formatCurrency(billingSummary?.summary.totalValue || 0)}
+                </p>
+              </div>
+              <div className="p-3 bg-green-100 rounded-full">
+                <svg className="w-6 h-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+              </div>
             </div>
-          )}
+            <p className="mt-2 text-xs text-gray-500">
+              Recomendações + SLA Credits
+            </p>
           </CardContent>
         </Card>
-        </div>
+
+        {/* Suas Economias */}
+        <Card>
+          <CardContent className="pt-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-gray-600">
+                  Suas Economias
+                </p>
+                <p className="mt-2 text-3xl font-bold text-blue-600">
+                  {formatCurrency(billingSummary?.summary.yourSavings || 0)}
+                </p>
+              </div>
+              <div className="p-3 bg-blue-100 rounded-full">
+                <svg className="w-6 h-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" />
+                </svg>
+              </div>
+            </div>
+            <p className="mt-2 text-xs text-gray-500">
+              Após nossa comissão de 30%
+            </p>
+          </CardContent>
+        </Card>
+
+        {/* Recomendações Executadas */}
+        <Card>
+          <CardContent className="pt-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-gray-600">
+                  Recomendações
+                </p>
+                <p className="mt-2 text-3xl font-bold text-gray-900">
+                  {billingSummary?.recommendations.executed || 0}
+                </p>
+              </div>
+              <div className="p-3 bg-purple-100 rounded-full">
+                <svg className="w-6 h-6 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+              </div>
+            </div>
+            <p className="mt-2 text-xs text-gray-500">
+              Executadas com sucesso
+            </p>
+          </CardContent>
+        </Card>
+
+        {/* SLA Credits */}
+        <Card>
+          <CardContent className="pt-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-gray-600">
+                  Créditos SLA
+                </p>
+                <p className="mt-2 text-3xl font-bold text-gray-900">
+                  {formatCurrency(billingSummary?.sla.totalCredits || 0)}
+                </p>
+              </div>
+              <div className="p-3 bg-yellow-100 rounded-full">
+                <svg className="w-6 h-6 text-yellow-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v13m0-13V6a2 2 0 112 2h-2zm0 0V5.5A2.5 2.5 0 109.5 8H12zm-7 4h14M5 12a2 2 0 110-4h14a2 2 0 110 4M5 12v7a2 2 0 002 2h10a2 2 0 002-2v-7" />
+                </svg>
+              </div>
+            </div>
+            <p className="mt-2 text-xs text-gray-500">
+              {billingSummary?.sla.refunded || 0} claims recuperados
+            </p>
+          </CardContent>
+        </Card>
       </div>
-    </MainLayout>
+
+      {/* Recomendações Recentes */}
+      <Card>
+        <CardHeader>
+          <div className="flex items-center justify-between">
+            <CardTitle>Recomendações Recentes</CardTitle>
+            <Link
+              href="/recommendations"
+              className="text-sm text-blue-600 hover:text-blue-700 font-medium"
+            >
+              Ver todas →
+            </Link>
+          </div>
+        </CardHeader>
+        <CardContent>
+          {recentRecommendations.length === 0 ? (
+            <div className="text-center py-8">
+              <svg className="mx-auto h-12 w-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+              </svg>
+              <h3 className="mt-2 text-sm font-medium text-gray-900">
+                Nenhuma recomendação ainda
+              </h3>
+              <p className="mt-1 text-sm text-gray-500">
+                Conecte sua conta AWS para receber recomendações de economia.
+              </p>
+              <div className="mt-6">
+                <Link href="/onboard">
+                  <button className="inline-flex items-center px-4 py-2 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700">
+                    Conectar AWS
+                  </button>
+                </Link>
+              </div>
+            </div>
+          ) : (
+            <div className="divide-y divide-gray-200">
+              {recentRecommendations.map((rec) => (
+                <div key={rec.sk} className="py-4 flex items-center justify-between">
+                  <div className="flex-1">
+                    <div className="flex items-center gap-3">
+                      <h4 className="text-sm font-medium text-gray-900">
+                        {getTypeLabel(rec.type)}
+                      </h4>
+                      {getStatusBadge(rec.status)}
+                    </div>
+                    <p className="mt-1 text-sm text-gray-600">
+                      Economia potencial: {formatCurrency(rec.potentialSavings)}
+                    </p>
+                    <p className="mt-1 text-xs text-gray-500">
+                      {new Date(rec.createdAt).toLocaleDateString('pt-BR')}
+                    </p>
+                  </div>
+                  <Link href="/recommendations">
+                    <button className="ml-4 text-sm text-blue-600 hover:text-blue-700 font-medium">
+                      Ver detalhes
+                    </button>
+                  </Link>
+                </div>
+              ))}
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Gráficos */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {/* Gráfico de Economias ao Longo do Tempo */}
+        <Card>
+          <CardHeader>
+            <CardTitle>Economias ao Longo do Tempo</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <SavingsChart data={generateMockSavingsData()} />
+          </CardContent>
+        </Card>
+
+        {/* Gráfico de Recomendações por Tipo */}
+        <Card>
+          <CardHeader>
+            <CardTitle>Economias por Tipo de Recomendação</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <RecommendationsChart data={generateMockRecommendationsData()} />
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Call to Action */}
+      {(billingSummary?.recommendations.executed || 0) === 0 && (
+        <Alert variant="info">
+          <h4 className="font-semibold">Comece a economizar agora!</h4>
+          <p className="mt-1 text-sm">
+            Conecte sua conta AWS e receba recomendações automáticas de economia.
+            Nossa IA analisa continuamente seus recursos e identifica oportunidades.
+          </p>
+          <Link href="/onboard" className="mt-3 inline-block">
+            <button className="text-sm px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700">
+              Conectar Conta AWS
+            </button>
+          </Link>
+        </Alert>
+      )}
+    </div>
   );
 }
 
-export default function Dashboard() {
-  return (
-    <ProtectedRoute>
-      <DashboardContent />
-    </ProtectedRoute>
-  );
+// Funções auxiliares para gerar dados mock dos gráficos
+// TODO: Substituir por dados reais da API quando disponível
+function generateMockSavingsData() {
+  const months = ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun'];
+  return months.map((month, i) => ({
+    month,
+    savings: Math.floor(Math.random() * 500) + 100 * (i + 1),
+    slaCredits: Math.floor(Math.random() * 200) + 50 * (i + 1),
+  }));
+}
+
+function generateMockRecommendationsData() {
+  return [
+    { type: 'Instâncias Ociosas', count: 12, savings: 1200 },
+    { type: 'Volumes EBS', count: 8, savings: 450 },
+    { type: 'RDS Ocioso', count: 3, savings: 800 },
+    { type: 'Instâncias Reservadas', count: 5, savings: 2100 },
+  ];
 }

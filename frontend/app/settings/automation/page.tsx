@@ -1,334 +1,350 @@
-"use client";
+'use client';
 
-import { useState, useEffect } from 'react';
-import { PageAnimator } from '@/components/ui/PageAnimator';
-import { Settings, Loader2, Save, Plus, X } from 'lucide-react';
-import { toast } from 'sonner';
-
-interface TagFilter {
-  Key: string;
-  Values: string[];
-}
-
-interface AutomationConfig {
-  enabled: boolean;
-  regions: string[];
-  filters: {
-    tags: TagFilter[];
-    instanceStates?: string[];
-    volumeStates?: string[];
-  };
-  thresholds: {
-    cpuUtilization?: number;
-    evaluationPeriodHours?: number;
-    daysUnused?: number;
-  };
-  exclusionTags: string[];
-}
+import { useEffect, useState } from 'react';
+import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/Card';
+import { Button } from '@/components/ui/Button';
+import { LoadingState } from '@/components/ui/LoadingSpinner';
+import { Alert } from '@/components/ui/Alert';
+import { Badge } from '@/components/ui/Badge';
+import { apiClient } from '@/lib/api';
 
 interface AutomationSettings {
-  stopIdleInstances: AutomationConfig;
-  deleteUnusedEbs: AutomationConfig;
-  stopIdleRds?: AutomationConfig;
+  enabled: boolean;
+  settings: {
+    autoExecuteThreshold?: number;
+    excludedTypes?: string[];
+    approvalRequired?: boolean;
+    maxDailySavings?: number;
+    notifyBeforeExecution?: boolean;
+  };
 }
 
 export default function AutomationSettingsPage() {
+  const [settings, setSettings] = useState<AutomationSettings>({
+    enabled: false,
+    settings: {},
+  });
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-  const [settings, setSettings] = useState<AutomationSettings | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [success, setSuccess] = useState(false);
+  const [hasProPlan, setHasProPlan] = useState(false);
 
   useEffect(() => {
-    fetchSettings();
+    loadSettings();
+    checkProPlan();
   }, []);
 
-  const fetchSettings = async () => {
+  const checkProPlan = async () => {
     try {
-      const response = await fetch('/api/settings/automation');
-      if (!response.ok) throw new Error('Failed to fetch settings');
-      const data = await response.json();
-      setSettings(data.settings || getDefaultSettings());
-    } catch (error) {
-      console.error('Error fetching settings:', error);
-      toast.error('Erro ao carregar configurações');
-      setSettings(getDefaultSettings());
+      const response = await apiClient.get('/api/billing/subscription');
+      setHasProPlan(response.data.status === 'active');
+    } catch (err) {
+      console.error('Erro ao verificar plano:', err);
+    }
+  };
+
+  const loadSettings = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      const response = await apiClient.get('/api/settings/automation');
+      setSettings(response.data);
+    } catch (err: any) {
+      console.error('Erro ao carregar configurações:', err);
+      setError(err.message || 'Erro ao carregar configurações de automação');
     } finally {
       setLoading(false);
     }
   };
 
-  const getDefaultSettings = (): AutomationSettings => ({
-    stopIdleInstances: {
-      enabled: false,
-      regions: ['us-east-1'],
-      filters: {
-        tags: [{ Key: 'Environment', Values: ['dev', 'staging'] }],
-        instanceStates: ['running']
-      },
-      thresholds: {
-        cpuUtilization: 5,
-        evaluationPeriodHours: 24
-      },
-      exclusionTags: []
-    },
-    deleteUnusedEbs: {
-      enabled: false,
-      regions: ['us-east-1'],
-      filters: {
-        tags: [],
-        volumeStates: ['available']
-      },
-      thresholds: {
-        daysUnused: 7
-      },
-      exclusionTags: []
-    }
-  });
-
-  const saveSettings = async () => {
-    setSaving(true);
+  const handleSave = async () => {
     try {
-      const response = await fetch('/api/settings/automation', {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ enabled: true, settings })
-      });
-
-      if (!response.ok) throw new Error('Failed to save settings');
-      toast.success('Configurações salvas com sucesso');
-    } catch (error) {
-      console.error('Error saving settings:', error);
-      toast.error('Erro ao salvar configurações');
+      setSaving(true);
+      setError(null);
+      setSuccess(false);
+      
+      await apiClient.put('/api/settings/automation', settings);
+      
+      setSuccess(true);
+      setTimeout(() => setSuccess(false), 3000);
+    } catch (err: any) {
+      console.error('Erro ao salvar configurações:', err);
+      setError(err.message || 'Erro ao salvar configurações');
     } finally {
       setSaving(false);
     }
   };
 
-  if (loading || !settings) {
+  const handleToggleAutomation = async () => {
+    const newSettings = {
+      ...settings,
+      enabled: !settings.enabled,
+    };
+    setSettings(newSettings);
+  };
+
+  const updateSetting = (key: string, value: any) => {
+    setSettings({
+      ...settings,
+      settings: {
+        ...settings.settings,
+        [key]: value,
+      },
+    });
+  };
+
+  if (loading) {
+    return <LoadingState message="Carregando configurações..." />;
+  }
+
+  if (!hasProPlan) {
     return (
-      <div className="flex h-screen items-center justify-center">
-        <Loader2 className="h-8 w-8 animate-spin text-blue-600" />
+      <div className="max-w-4xl mx-auto space-y-6">
+        <div>
+          <h1 className="text-3xl font-bold text-gray-900">Automação</h1>
+          <p className="mt-2 text-gray-600">
+            Configure a execução automática de recomendações
+          </p>
+        </div>
+
+        <Card>
+          <CardContent className="py-12">
+            <div className="text-center">
+              <div className="mx-auto flex items-center justify-center h-16 w-16 rounded-full bg-blue-100">
+                <svg className="h-8 w-8 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+                </svg>
+              </div>
+              <h3 className="mt-4 text-lg font-medium text-gray-900">
+                Recurso Exclusivo do Plano Pro
+              </h3>
+              <p className="mt-2 text-sm text-gray-600">
+                A automação de recomendações está disponível apenas para assinantes do plano Pro.
+              </p>
+              <div className="mt-6">
+                <Button onClick={() => window.location.href = '/billing'}>
+                  Fazer Upgrade para Pro
+                </Button>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
       </div>
     );
   }
 
   return (
-    <PageAnimator>
-      <div className="container mx-auto max-w-4xl p-6">
-        <div className="mb-8 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <Settings className="h-8 w-8 text-blue-600" />
-            <div>
-              <h1 className="text-3xl font-bold text-gray-900">Automação</h1>
-              <p className="text-sm text-gray-500">Configure as regras de otimização automática</p>
-            </div>
-          </div>
-          <button
-            onClick={saveSettings}
-            disabled={saving}
-            className="flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2 text-white transition-all duration-150 hover:bg-blue-700 active:scale-[0.98] disabled:opacity-50"
-          >
-            {saving ? (
-              <Loader2 className="h-4 w-4 animate-spin" />
-            ) : (
-              <Save className="h-4 w-4" />
-            )}
-            Salvar
-          </button>
-        </div>
-
-        {/* Stop Idle Instances */}
-        <AutomationSection
-          title="Parar Instâncias Ociosas"
-          description="Identifica e recomenda parar instâncias EC2 com baixa utilização de CPU"
-          config={settings.stopIdleInstances}
-          onChange={(config) => setSettings({ ...settings, stopIdleInstances: config })}
-          showCpuThreshold
-        />
-
-        {/* Delete Unused EBS */}
-        <AutomationSection
-          title="Deletar Volumes EBS Não Utilizados"
-          description="Identifica volumes EBS disponíveis (não anexados) há muito tempo"
-          config={settings.deleteUnusedEbs}
-          onChange={(config) => setSettings({ ...settings, deleteUnusedEbs: config })}
-          showDaysThreshold
-        />
-      </div>
-    </PageAnimator>
-  );
-}
-
-interface AutomationSectionProps {
-  title: string;
-  description: string;
-  config: AutomationConfig;
-  onChange: (config: AutomationConfig) => void;
-  showCpuThreshold?: boolean;
-  showDaysThreshold?: boolean;
-}
-
-function AutomationSection({ 
-  title, 
-  description, 
-  config, 
-  onChange,
-  showCpuThreshold,
-  showDaysThreshold
-}: AutomationSectionProps) {
-  const [newRegion, setNewRegion] = useState('');
-  const [newExclusionTag, setNewExclusionTag] = useState('');
-
-  const addRegion = () => {
-    if (newRegion && !config.regions.includes(newRegion)) {
-      onChange({ ...config, regions: [...config.regions, newRegion] });
-      setNewRegion('');
-    }
-  };
-
-  const removeRegion = (region: string) => {
-    onChange({ ...config, regions: config.regions.filter(r => r !== region) });
-  };
-
-  const addExclusionTag = () => {
-    if (newExclusionTag && !config.exclusionTags.includes(newExclusionTag)) {
-      onChange({ ...config, exclusionTags: [...config.exclusionTags, newExclusionTag] });
-      setNewExclusionTag('');
-    }
-  };
-
-  const removeExclusionTag = (tag: string) => {
-    onChange({ ...config, exclusionTags: config.exclusionTags.filter(t => t !== tag) });
-  };
-
-  return (
-    <div className="mb-6 rounded-lg border border-gray-200 bg-white p-6 shadow-sm transition-all duration-300 hover:shadow-md">
-      <div className="mb-4 flex items-start justify-between">
+    <div className="max-w-4xl mx-auto space-y-6">
+      <div className="flex items-center justify-between">
         <div>
-          <h3 className="text-lg font-semibold text-gray-900">{title}</h3>
-          <p className="text-sm text-gray-500">{description}</p>
+          <h1 className="text-3xl font-bold text-gray-900">Automação</h1>
+          <p className="mt-2 text-gray-600">
+            Configure a execução automática de recomendações
+          </p>
         </div>
-        <label className="relative inline-flex cursor-pointer items-center">
-          <input
-            type="checkbox"
-            checked={config.enabled}
-            onChange={(e) => onChange({ ...config, enabled: e.target.checked })}
-            className="peer sr-only"
-          />
-          <div className="peer h-6 w-11 rounded-full bg-gray-200 after:absolute after:left-[2px] after:top-[2px] after:h-5 after:w-5 after:rounded-full after:border after:border-gray-300 after:bg-white after:transition-all after:content-[''] peer-checked:bg-blue-600 peer-checked:after:translate-x-full peer-checked:after:border-white peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-blue-300"></div>
-        </label>
+        <Badge variant="success">Plano Pro</Badge>
       </div>
 
-      {config.enabled && (
-        <div className="space-y-4 border-t border-gray-100 pt-4">
-          {/* Regions */}
-          <div>
-            <label className="mb-2 block text-sm font-medium text-gray-700">Regiões AWS</label>
-            <div className="flex gap-2">
-              <input
-                type="text"
-                value={newRegion}
-                onChange={(e) => setNewRegion(e.target.value)}
-                placeholder="us-west-2"
-                className="flex-1 rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
-                onKeyPress={(e) => e.key === 'Enter' && addRegion()}
-              />
-              <button
-                onClick={addRegion}
-                className="rounded-md bg-blue-100 px-3 py-2 text-blue-600 transition-colors hover:bg-blue-200"
-              >
-                <Plus className="h-4 w-4" />
-              </button>
-            </div>
-            <div className="mt-2 flex flex-wrap gap-2">
-              {config.regions.map((region) => (
-                <span
-                  key={region}
-                  className="flex items-center gap-1 rounded-full bg-blue-100 px-3 py-1 text-sm text-blue-700"
-                >
-                  {region}
-                  <button onClick={() => removeRegion(region)} className="hover:text-blue-900">
-                    <X className="h-3 w-3" />
-                  </button>
-                </span>
-              ))}
-            </div>
-          </div>
-
-          {/* Thresholds */}
-          {showCpuThreshold && (
-            <div>
-              <label className="mb-2 block text-sm font-medium text-gray-700">
-                CPU Utilization Threshold (%)
-              </label>
-              <input
-                type="number"
-                value={config.thresholds.cpuUtilization || 5}
-                onChange={(e) => onChange({
-                  ...config,
-                  thresholds: { ...config.thresholds, cpuUtilization: Number(e.target.value) }
-                })}
-                className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
-                min="0"
-                max="100"
-              />
-            </div>
-          )}
-
-          {showDaysThreshold && (
-            <div>
-              <label className="mb-2 block text-sm font-medium text-gray-700">
-                Dias Não Utilizado
-              </label>
-              <input
-                type="number"
-                value={config.thresholds.daysUnused || 7}
-                onChange={(e) => onChange({
-                  ...config,
-                  thresholds: { ...config.thresholds, daysUnused: Number(e.target.value) }
-                })}
-                className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
-                min="1"
-              />
-            </div>
-          )}
-
-          {/* Exclusion Tags */}
-          <div>
-            <label className="mb-2 block text-sm font-medium text-gray-700">
-              Tags de Exclusão (Botão de Emergência)
-            </label>
-            <div className="flex gap-2">
-              <input
-                type="text"
-                value={newExclusionTag}
-                onChange={(e) => setNewExclusionTag(e.target.value)}
-                placeholder="CostGuardian:Exclude"
-                className="flex-1 rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
-                onKeyPress={(e) => e.key === 'Enter' && addExclusionTag()}
-              />
-              <button
-                onClick={addExclusionTag}
-                className="rounded-md bg-blue-100 px-3 py-2 text-blue-600 transition-colors hover:bg-blue-200"
-              >
-                <Plus className="h-4 w-4" />
-              </button>
-            </div>
-            <div className="mt-2 flex flex-wrap gap-2">
-              {config.exclusionTags.map((tag) => (
-                <span
-                  key={tag}
-                  className="flex items-center gap-1 rounded-full bg-red-100 px-3 py-1 text-sm text-red-700"
-                >
-                  {tag}
-                  <button onClick={() => removeExclusionTag(tag)} className="hover:text-red-900">
-                    <X className="h-3 w-3" />
-                  </button>
-                </span>
-              ))}
-            </div>
-          </div>
-        </div>
+      {error && (
+        <Alert variant="error">
+          <h4 className="font-semibold">Erro</h4>
+          <p className="mt-1 text-sm">{error}</p>
+        </Alert>
       )}
+
+      {success && (
+        <Alert variant="success">
+          <h4 className="font-semibold">Configurações salvas!</h4>
+          <p className="mt-1 text-sm">Suas preferências foram atualizadas com sucesso.</p>
+        </Alert>
+      )}
+
+      {/* Status da Automação */}
+      <Card>
+        <CardHeader>
+          <div className="flex items-center justify-between">
+            <CardTitle>Status da Automação</CardTitle>
+            <Badge variant={settings.enabled ? 'success' : 'default'}>
+              {settings.enabled ? 'Ativada' : 'Desativada'}
+            </Badge>
+          </div>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
+            <div className="flex-1">
+              <h4 className="font-medium text-gray-900">Execução Automática de Recomendações</h4>
+              <p className="mt-1 text-sm text-gray-600">
+                Quando ativado, recomendações aprovadas serão executadas automaticamente
+              </p>
+            </div>
+            <label className="relative inline-flex items-center cursor-pointer ml-4">
+              <input 
+                type="checkbox" 
+                checked={settings.enabled}
+                onChange={handleToggleAutomation}
+                className="sr-only peer" 
+              />
+              <div className="w-14 h-7 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-6 after:w-6 after:transition-all peer-checked:bg-blue-600"></div>
+            </label>
+          </div>
+
+          {settings.enabled && (
+            <Alert variant="warning">
+              <h4 className="font-semibold">Atenção</h4>
+              <p className="mt-1 text-sm">
+                Com a automação ativada, recomendações que atendam aos critérios abaixo 
+                serão executadas automaticamente. Certifique-se de que os limites estão configurados corretamente.
+              </p>
+            </Alert>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Configurações de Threshold */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Limites de Execução</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-6">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Economia Mínima para Auto-Execução (USD)
+            </label>
+            <input
+              type="number"
+              value={settings.settings.autoExecuteThreshold || 0}
+              onChange={(e) => updateSetting('autoExecuteThreshold', parseFloat(e.target.value))}
+              className="w-full md:w-64 px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              placeholder="100"
+              min="0"
+              step="10"
+              disabled={!settings.enabled}
+            />
+            <p className="mt-1 text-xs text-gray-500">
+              Apenas recomendações que economizem pelo menos este valor serão executadas automaticamente
+            </p>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Limite Diário de Economias (USD)
+            </label>
+            <input
+              type="number"
+              value={settings.settings.maxDailySavings || 0}
+              onChange={(e) => updateSetting('maxDailySavings', parseFloat(e.target.value))}
+              className="w-full md:w-64 px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              placeholder="1000"
+              min="0"
+              step="50"
+              disabled={!settings.enabled}
+            />
+            <p className="mt-1 text-xs text-gray-500">
+              Parar execução automática se o total de economias diárias exceder este valor
+            </p>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Tipos de Recomendação */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Tipos de Recomendação</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <p className="text-sm text-gray-600 mb-4">
+            Selecione quais tipos de recomendação podem ser executados automaticamente
+          </p>
+          
+          <div className="space-y-3">
+            {[
+              { id: 'IDLE_INSTANCE', label: 'Instâncias Ociosas', description: 'Parar instâncias EC2 com baixo uso' },
+              { id: 'UNUSED_EBS', label: 'Volumes EBS Não Utilizados', description: 'Remover volumes não anexados' },
+              { id: 'IDLE_RDS', label: 'RDS Ocioso', description: 'Parar bancos de dados com baixo uso' },
+              { id: 'RESERVED_INSTANCE', label: 'Instâncias Reservadas', description: 'Comprar RIs para economia' },
+            ].map((type) => (
+              <label key={type.id} className="flex items-start gap-3 p-3 border border-gray-200 rounded-lg hover:bg-gray-50 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={!settings.settings.excludedTypes?.includes(type.id)}
+                  onChange={(e) => {
+                    const excluded = settings.settings.excludedTypes || [];
+                    if (e.target.checked) {
+                      updateSetting('excludedTypes', excluded.filter(t => t !== type.id));
+                    } else {
+                      updateSetting('excludedTypes', [...excluded, type.id]);
+                    }
+                  }}
+                  className="mt-1 w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                  disabled={!settings.enabled}
+                />
+                <div className="flex-1">
+                  <h4 className="font-medium text-gray-900">{type.label}</h4>
+                  <p className="text-sm text-gray-600">{type.description}</p>
+                </div>
+              </label>
+            ))}
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Notificações */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Notificações</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <label className="flex items-start gap-3 p-3 border border-gray-200 rounded-lg hover:bg-gray-50 cursor-pointer">
+            <input
+              type="checkbox"
+              checked={settings.settings.approvalRequired || false}
+              onChange={(e) => updateSetting('approvalRequired', e.target.checked)}
+              className="mt-1 w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+              disabled={!settings.enabled}
+            />
+            <div className="flex-1">
+              <h4 className="font-medium text-gray-900">Requerer Aprovação Manual</h4>
+              <p className="text-sm text-gray-600">
+                Enviar notificação para aprovação antes de executar (modo semi-automático)
+              </p>
+            </div>
+          </label>
+
+          <label className="flex items-start gap-3 p-3 border border-gray-200 rounded-lg hover:bg-gray-50 cursor-pointer">
+            <input
+              type="checkbox"
+              checked={settings.settings.notifyBeforeExecution || false}
+              onChange={(e) => updateSetting('notifyBeforeExecution', e.target.checked)}
+              className="mt-1 w-4 h-4 text-blue-600 border-gray-300 rounded-lg focus:ring-blue-500"
+              disabled={!settings.enabled}
+            />
+            <div className="flex-1">
+              <h4 className="font-medium text-gray-900">Notificar Antes da Execução</h4>
+              <p className="text-sm text-gray-600">
+                Enviar email 5 minutos antes de executar uma recomendação
+              </p>
+            </div>
+          </label>
+        </CardContent>
+      </Card>
+
+      {/* Ações */}
+      <div className="flex items-center gap-4">
+        <Button 
+          onClick={handleSave} 
+          isLoading={saving}
+          disabled={!settings.enabled}
+        >
+          Salvar Configurações
+        </Button>
+        <Button 
+          variant="ghost" 
+          onClick={loadSettings}
+        >
+          Cancelar
+        </Button>
+      </div>
     </div>
   );
 }

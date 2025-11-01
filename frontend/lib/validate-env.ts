@@ -27,9 +27,21 @@ export function validateEnvironment(): EnvValidationResult {
     const errors: string[] = [];
     const warnings: string[] = [];
 
+    // Helper para obter variáveis de ambiente tanto no servidor quanto no cliente
+    const getEnvVar = (key: string): string | undefined => {
+        // No cliente (browser), as variáveis NEXT_PUBLIC_ são injetadas em tempo de build
+        // No servidor, elas estão em process.env
+        if (typeof window !== 'undefined') {
+            // Cliente: acessa diretamente as variáveis que foram injetadas no bundle
+            return (process.env as any)[key];
+        }
+        // Servidor: acessa process.env normalmente
+        return process.env[key];
+    };
+
     // Verificar variáveis obrigatórias
     for (const envVar of REQUIRED_ENV_VARS) {
-        const value = process.env[envVar];
+        const value = getEnvVar(envVar);
 
         if (!value) {
             errors.push(`Variável obrigatória ausente: ${envVar}`);
@@ -40,7 +52,7 @@ export function validateEnvironment(): EnvValidationResult {
 
     // Verificar variáveis opcionais
     for (const envVar of OPTIONAL_ENV_VARS) {
-        const value = process.env[envVar];
+        const value = getEnvVar(envVar);
 
         if (!value) {
             warnings.push(`Variável opcional ausente: ${envVar}`);
@@ -48,17 +60,17 @@ export function validateEnvironment(): EnvValidationResult {
     }
 
     // Validações específicas
-    const apiUrl = process.env.NEXT_PUBLIC_API_URL;
+    const apiUrl = getEnvVar('NEXT_PUBLIC_API_URL');
     if (apiUrl && !apiUrl.startsWith('http')) {
         errors.push('NEXT_PUBLIC_API_URL deve começar com http:// ou https://');
     }
 
-    const region = process.env.NEXT_PUBLIC_AMPLIFY_REGION;
+    const region = getEnvVar('NEXT_PUBLIC_AMPLIFY_REGION');
     if (region && !region.match(/^[a-z]{2}-[a-z]+-\d+$/)) {
         warnings.push('NEXT_PUBLIC_AMPLIFY_REGION pode estar em formato inválido (esperado: us-east-1)');
     }
 
-    const userPoolId = process.env.NEXT_PUBLIC_COGNITO_USER_POOL_ID;
+    const userPoolId = getEnvVar('NEXT_PUBLIC_COGNITO_USER_POOL_ID');
     if (userPoolId && !userPoolId.match(/^[a-z]{2}-[a-z]+-\d+_[a-zA-Z0-9]+$/)) {
         warnings.push('NEXT_PUBLIC_COGNITO_USER_POOL_ID pode estar em formato inválido');
     }
@@ -86,29 +98,4 @@ export function logValidationResults(): void {
     if (result.isValid && result.warnings.length === 0) {
         console.log('✅ Todas as variáveis de ambiente estão configuradas corretamente');
     }
-}
-
-/**
- * Função para ser executada via CLI (Node.js) que encerra o processo em caso de erro.
- * Isso impede que o build ou o servidor de desenvolvimento prossigam com uma configuração inválida.
- */
-function runCliValidation() {
-    // Carrega as variáveis de .env.local para o process.env
-    require('dotenv').config({ path: '.env.local' });
-
-    const result = validateEnvironment();
-
-    if (!result.isValid) {
-        console.error('❌ ERRO: Configuração de ambiente inválida. O processo será encerrado.');
-        result.errors.forEach(error => console.error(`  - ${error}`));
-        console.log("\n👉 Ação necessária: Execute 'npm run export-outputs' na pasta 'infra' após um deploy bem-sucedido do CDK.");
-        process.exit(1); // Encerra o processo com código de erro
-    }
-
-    console.log('✅ Configuração de ambiente validada com sucesso.');
-}
-
-// Verifica se o script está sendo executado diretamente pelo Node.js
-if (require.main === module) {
-    runCliValidation();
 }

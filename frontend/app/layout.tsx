@@ -6,6 +6,7 @@ import ConfigureAmplifyClientSide from '../components/ConfigureAmplifyClientSide
 import { ToasterProvider } from '../components/ui/toaster';
 import { I18nClientProvider } from '@/components/I18nClientProvider';
 import { AuthProvider } from '@/components/auth/AuthProvider';
+import AppLayout from '@/components/layout/AppLayout';
 
 const inter = Inter({ subsets: ['latin'] });
 
@@ -21,7 +22,9 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <ToasterProvider>
           <ConfigureAmplifyClientSide />
           <AuthProvider>
-            <I18nClientProvider>{children}</I18nClientProvider>
+            <I18nClientProvider>
+              <AppLayout>{children}</AppLayout>
+            </I18nClientProvider>
           </AuthProvider>
         </ToasterProvider>
       </body>
