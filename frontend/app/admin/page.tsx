@@ -2,7 +2,8 @@
 
 import { useEffect, useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { MainLayout } from '@/components/layouts/main-layout';
+import { PageHeader } from '@/components/layout/PageHeader';
+import { PageAnimator } from '@/components/layout/PageAnimator';
 import { ProtectedRoute } from '@/components/auth/ProtectedRoute';
 import { apiFetch } from '@/lib/api';
 import { Users, TrendingUp, DollarSign, Activity, AlertCircle } from 'lucide-react';
@@ -60,17 +61,20 @@ function AdminContent() {
 
   if (loading) {
     return (
-      <MainLayout title="Admin Dashboard">
-        <div className="flex justify-center py-12">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
-        </div>
-      </MainLayout>
+      <ProtectedRoute>
+        <PageAnimator>
+          <div className="flex justify-center py-12">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
+          </div>
+        </PageAnimator>
+      </ProtectedRoute>
     );
   }
 
   return (
-    <MainLayout title="Admin Dashboard">
-      <div className="space-y-6">
+    <ProtectedRoute>
+      <PageAnimator>
+        <div className="space-y-6">
         {/* KPIs Principais */}
         <div className="grid md:grid-cols-4 gap-4">
           <Card>
@@ -226,7 +230,8 @@ function AdminContent() {
           </Card>
         )}
       </div>
-    </MainLayout>
+      </PageAnimator>
+    </ProtectedRoute>
   );
 }
 

@@ -1,354 +1,243 @@
+// frontend/app/dashboard/page.tsx
 'use client';
 
-import { useEffect, useState } from 'react';
-import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
-import { LoadingState } from '@/components/ui/loadingspinner';
-import { Alert } from '@/components/ui/alert';
+import React, { useState, useEffect } from 'react';
+import { motion } from 'framer-motion';
+import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from 'recharts';
+import { DollarSign, Zap, ShieldCheck, TrendingUp, AlertCircle, ArrowRight, FileText } from 'lucide-react';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import { AnimatedCounter } from '@/components/ui/animatedcounter';
+import { PageAnimator } from '@/components/layout/PageAnimator';
+import { PageHeader } from '@/components/layout/PageHeader';
+import { EmptyState } from '@/components/ui/emptystate';
+import { Skeleton } from '@/components/ui/skeleton';
 import Link from 'next/link';
-import { apiClient } from '@/lib/api';
-import { SavingsChart } from '@/components/charts/SavingsChart';
-import { RecommendationsChart } from '@/components/charts/RecommendationsChart';
-import PageShell from '@/components/layout/PageShell';
 
-interface BillingSummary {
-  summary: {
-    totalSavingsRealized: number;
-    totalCreditsRecovered: number;
-    totalValue: number;
-    ourCommission: number;
-    yourSavings: number;
-  };
-  recommendations: {
-    executed: number;
-    totalSavings: number;
-  };
-  sla: {
-    refunded: number;
-    totalCredits: number;
-  };
-}
+// Mock de dados da API para desenvolvimento
+const mockSummary = {
+  totalSavings: 12540.50,
+  realizedSavings: 8778.35,
+  recommendationsExecuted: 42,
+  slaCreditsRecovered: 3762.15,
+  monthlySavings: [
+    { month: 'Jan', savings: 1200 },
+    { month: 'Fev', savings: 1800 },
+    { month: 'Mar', savings: 1500 },
+    { month: 'Abr', savings: 2500 },
+    { month: 'Mai', savings: 2200 },
+    { month: 'Jun', savings: 3340.50 },
+  ],
+};
 
-interface Recommendation {
-  sk: string;
-  type: string;
-  status: string;
-  potentialSavings: number;
-  createdAt: string;
-}
+const mockRecommendations = [
+  { id: 'rec-001', type: 'IDLE_INSTANCE', resourceId: 'i-1234567890abcdef0', potentialSaving: 120.50, status: 'EXECUTED' },
+  { id: 'rec-002', type: 'UNUSED_EBS', resourceId: 'vol-0abcdef1234567890', potentialSaving: 25.00, status: 'ACTIVE' },
+  { id: 'rec-003', type: 'IDLE_INSTANCE', resourceId: 'i-abcdef12345678901', potentialSaving: 88.75, status: 'ACTIVE' },
+  { id: 'rec-004', type: 'OPTIMIZE_RDS', resourceId: 'db-instance-01', potentialSaving: 210.00, status: 'EXECUTED' },
+  { id: 'rec-005', type: 'UNUSED_EIP', resourceId: '54.123.45.67', potentialSaving: 3.60, status: 'ACTIVE' },
+];
+
+const StatCard = ({ title, value, icon: Icon, color, prefix = "", suffix = "" }: any) => (
+  <Card>
+    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+      <CardTitle className="text-sm font-medium text-muted-foreground">{title}</CardTitle>
+      <Icon className={`w-5 h-5 ${color}`} />
+    </CardHeader>
+    <CardContent>
+      <div className="text-2xl font-bold">
+        <AnimatedCounter value={value} prefix={prefix} suffix={suffix} />
+      </div>
+    </CardContent>
+  </Card>
+);
+
+const DashboardSkeleton = () => (
+  <div className="space-y-8">
+    <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+      {[...Array(4)].map((_, i) => (
+        <Card key={i}>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <Skeleton className="h-4 w-2/3" />
+            <Skeleton className="h-5 w-5 rounded-full" />
+          </CardHeader>
+          <CardContent>
+            <Skeleton className="h-8 w-1/2" />
+          </CardContent>
+        </Card>
+      ))}
+    </div>
+    <div className="grid gap-8 md:grid-cols-2">
+      <Card>
+        <CardHeader><CardTitle><Skeleton className="h-6 w-1/3" /></CardTitle></CardHeader>
+        <CardContent><Skeleton className="h-64 w-full" /></CardContent>
+      </Card>
+      <Card>
+        <CardHeader><CardTitle><Skeleton className="h-6 w-1/3" /></CardTitle></CardHeader>
+        <CardContent className="space-y-4">
+          {[...Array(5)].map((_, i) => <Skeleton key={i} className="h-10 w-full" />)}
+        </CardContent>
+      </Card>
+    </div>
+  </div>
+);
 
 export default function DashboardPage() {
-  const [billingSummary, setBillingSummary] = useState<BillingSummary | null>(null);
-  const [recentRecommendations, setRecentRecommendations] = useState<Recommendation[]>([]);
+  const [summary, setSummary] = useState<any>(null);
+  const [recommendations, setRecommendations] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    loadDashboardData();
+    const fetchData = async () => {
+      try {
+        // Simulação de chamada de API
+        // const summaryRes = await fetch('/api/billing/summary');
+        // const recsRes = await fetch('/api/recommendations?limit=5');
+        // if (!summaryRes.ok || !recsRes.ok) throw new Error('Falha ao carregar dados do dashboard');
+        // const summaryData = await summaryRes.json();
+        // const recsData = await recsRes.json();
+        
+        // Usando dados mockados
+        await new Promise(resolve => setTimeout(resolve, 1500)); // Simula delay de rede
+        setSummary(mockSummary);
+        setRecommendations(mockRecommendations);
+
+      } catch (e: any) {
+        setError(e.message);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchData();
   }, []);
 
-  const loadDashboardData = async () => {
-    try {
-      setLoading(true);
-      setError(null);
-
-      // Carregar dados em paralelo
-      const [summaryRes, recsRes] = await Promise.all([
-        apiClient.get('/api/billing/summary'),
-        apiClient.get('/api/recommendations?limit=5'),
-      ]);
-
-      setBillingSummary(summaryRes.data);
-      setRecentRecommendations(recsRes.data || []);
-    } catch (err: any) {
-      console.error('Erro ao carregar dashboard:', err);
-      setError(err.message || 'Erro ao carregar dados do dashboard');
-    } finally {
-      setLoading(false);
-    }
-  };
-
   if (loading) {
-    return <LoadingState message="Carregando dashboard..." />;
+    return (
+      <PageAnimator>
+        <PageHeader title="Dashboard" description="Carregando suas métricas de economia..." />
+        <DashboardSkeleton />
+      </PageAnimator>
+    );
   }
 
   if (error) {
     return (
-      <PageShell title="Dashboard" subtitle="Visão geral das suas economias e recomendações AWS">
-        <Alert variant="error">
-          <h4 className="font-semibold">Erro ao carregar dashboard</h4>
-          <p className="mt-1 text-sm">{error}</p>
-          <button
-            onClick={loadDashboardData}
-            className="mt-3 text-sm underline hover:no-underline"
-          >
-            Tentar novamente
-          </button>
-        </Alert>
-      </PageShell>
+      <PageAnimator>
+        <EmptyState
+          icon={AlertCircle}
+          title="Erro ao Carregar Dashboard"
+          description={error}
+        />
+      </PageAnimator>
     );
   }
 
-  const formatCurrency = (value: number) => {
-    return new Intl.NumberFormat('pt-BR', {
-      style: 'currency',
-      currency: 'USD',
-    }).format(value);
-  };
+  if (!summary) {
+    return (
+       <PageAnimator>
+        <EmptyState
+          icon={FileText}
+          title="Bem-vindo ao seu Dashboard!"
+          description="Ainda não temos dados para exibir. Conecte sua conta AWS para começar a ver suas economias."
+          action={{ label: 'Conectar Conta AWS', onClick: () => window.location.href = '/onboard' }}
+        />
+      </PageAnimator>
+    )
+  }
 
-  const getStatusBadge = (status: string) => {
-    const statusMap: Record<string, { variant: 'default' | 'success' | 'warning' | 'danger' | 'info'; label: string }> = {
-      RECOMMENDED: { variant: 'info', label: 'Recomendado' },
-      EXECUTING: { variant: 'warning', label: 'Executando' },
-      EXECUTED: { variant: 'success', label: 'Executado' },
-      FAILED: { variant: 'danger', label: 'Falhou' },
-      DISMISSED: { variant: 'default', label: 'Dispensado' },
-    };
-
-    const config = statusMap[status] || { variant: 'default', label: status };
-    return <Badge variant={config.variant}>{config.label}</Badge>;
-  };
-
-  const getTypeLabel = (type: string) => {
-    const typeMap: Record<string, string> = {
-      IDLE_INSTANCE: 'Instância Ociosa',
-      UNUSED_EBS: 'Volume EBS Não Utilizado',
-      IDLE_RDS: 'RDS Ocioso',
-      RESERVED_INSTANCE: 'Instância Reservada',
-    };
-    return typeMap[type] || type;
+  const recommendationStatusVariant: { [key: string]: "success" | "warning" | "default" } = {
+    'ACTIVE': 'warning',
+    'EXECUTED': 'success',
   };
 
   return (
-    <PageShell title="Dashboard" subtitle="Visão geral das suas economias e recomendações AWS">
-      {/* Header */}
-      <div>
-        <h1 className="text-3xl font-bold text-gray-900">Dashboard</h1>
-        <p className="mt-2 text-gray-600">
-          Visão geral das suas economias e recomendações AWS
-        </p>
-      </div>
+    <PageAnimator>
+      <PageHeader title="Dashboard" description="Sua visão geral de otimização de custos na AWS." />
 
-      {/* Métricas Principais */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        {/* Total de Economias */}
-        <Card>
-          <CardContent className="pt-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-gray-600">
-                  Economias Totais
-                </p>
-                <p className="mt-2 text-3xl font-bold text-gray-900">
-                  {formatCurrency(billingSummary?.summary.totalValue || 0)}
-                </p>
-              </div>
-              <div className="p-3 bg-green-100 rounded-full">
-                <svg className="w-6 h-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                </svg>
-              </div>
-            </div>
-            <p className="mt-2 text-xs text-gray-500">
-              Recomendações + SLA Credits
-            </p>
-          </CardContent>
-        </Card>
-
-        {/* Suas Economias */}
-        <Card>
-          <CardContent className="pt-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-gray-600">
-                  Suas Economias
-                </p>
-                <p className="mt-2 text-3xl font-bold text-blue-600">
-                  {formatCurrency(billingSummary?.summary.yourSavings || 0)}
-                </p>
-              </div>
-              <div className="p-3 bg-blue-100 rounded-full">
-                <svg className="w-6 h-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" />
-                </svg>
-              </div>
-            </div>
-            <p className="mt-2 text-xs text-gray-500">
-              Após nossa comissão de 30%
-            </p>
-          </CardContent>
-        </Card>
-
-        {/* Recomendações Executadas */}
-        <Card>
-          <CardContent className="pt-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-gray-600">
-                  Recomendações
-                </p>
-                <p className="mt-2 text-3xl font-bold text-gray-900">
-                  {billingSummary?.recommendations.executed || 0}
-                </p>
-              </div>
-              <div className="p-3 bg-purple-100 rounded-full">
-                <svg className="w-6 h-6 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                </svg>
-              </div>
-            </div>
-            <p className="mt-2 text-xs text-gray-500">
-              Executadas com sucesso
-            </p>
-          </CardContent>
-        </Card>
-
-        {/* SLA Credits */}
-        <Card>
-          <CardContent className="pt-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-gray-600">
-                  Créditos SLA
-                </p>
-                <p className="mt-2 text-3xl font-bold text-gray-900">
-                  {formatCurrency(billingSummary?.sla.totalCredits || 0)}
-                </p>
-              </div>
-              <div className="p-3 bg-yellow-100 rounded-full">
-                <svg className="w-6 h-6 text-yellow-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v13m0-13V6a2 2 0 112 2h-2zm0 0V5.5A2.5 2.5 0 109.5 8H12zm-7 4h14M5 12a2 2 0 110-4h14a2 2 0 110 4M5 12v7a2 2 0 002 2h10a2 2 0 002-2v-7" />
-                </svg>
-              </div>
-            </div>
-            <p className="mt-2 text-xs text-gray-500">
-              {billingSummary?.sla.refunded || 0} claims recuperados
-            </p>
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* Recomendações Recentes */}
-      <Card>
-        <CardHeader>
-          <div className="flex items-center justify-between">
-            <CardTitle>Recomendações Recentes</CardTitle>
-            <Link
-              href="/recommendations"
-              className="text-sm text-blue-600 hover:text-blue-700 font-medium"
-            >
-              Ver todas →
-            </Link>
-          </div>
-        </CardHeader>
-        <CardContent>
-          {recentRecommendations.length === 0 ? (
-            <div className="text-center py-8">
-              <svg className="mx-auto h-12 w-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-              </svg>
-              <h3 className="mt-2 text-sm font-medium text-gray-900">
-                Nenhuma recomendação ainda
-              </h3>
-              <p className="mt-1 text-sm text-gray-500">
-                Conecte sua conta AWS para receber recomendações de economia.
-              </p>
-              <div className="mt-6">
-                <Link href="/onboard">
-                  <button className="inline-flex items-center px-4 py-2 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700">
-                    Conectar AWS
-                  </button>
-                </Link>
-              </div>
-            </div>
-          ) : (
-            <div className="divide-y divide-gray-200">
-              {recentRecommendations.map((rec) => (
-                <div key={rec.sk} className="py-4 flex items-center justify-between">
-                  <div className="flex-1">
-                    <div className="flex items-center gap-3">
-                      <h4 className="text-sm font-medium text-gray-900">
-                        {getTypeLabel(rec.type)}
-                      </h4>
-                      {getStatusBadge(rec.status)}
-                    </div>
-                    <p className="mt-1 text-sm text-gray-600">
-                      Economia potencial: {formatCurrency(rec.potentialSavings)}
-                    </p>
-                    <p className="mt-1 text-xs text-gray-500">
-                      {new Date(rec.createdAt).toLocaleDateString('pt-BR')}
-                    </p>
-                  </div>
-                  <Link href="/recommendations">
-                    <button className="ml-4 text-sm text-blue-600 hover:text-blue-700 font-medium">
-                      Ver detalhes
-                    </button>
-                  </Link>
-                </div>
-              ))}
-            </div>
-          )}
-        </CardContent>
-      </Card>
-
-      {/* Gráficos */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Gráfico de Economias ao Longo do Tempo */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Economias ao Longo do Tempo</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <SavingsChart data={generateMockSavingsData()} />
-          </CardContent>
-        </Card>
-
-        {/* Gráfico de Recomendações por Tipo */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Economias por Tipo de Recomendação</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <RecommendationsChart data={generateMockRecommendationsData()} />
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* Call to Action */}
-      {(billingSummary?.recommendations.executed || 0) === 0 && (
-        <Alert variant="info">
-          <h4 className="font-semibold">Comece a economizar agora!</h4>
-          <p className="mt-1 text-sm">
-            Conecte sua conta AWS e receba recomendações automáticas de economia.
-            Nossa IA analisa continuamente seus recursos e identifica oportunidades.
-          </p>
-          <Link href="/onboard" className="mt-3 inline-block">
-            <button className="text-sm px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700">
-              Conectar Conta AWS
-            </button>
+      <motion.div
+        className="grid gap-4 md:grid-cols-2 lg:grid-cols-4"
+        initial="hidden"
+        animate="visible"
+        variants={{
+          hidden: {},
+          visible: { transition: { staggerChildren: 0.1 } }
+        }}
+      >
+        <motion.div variants={{ hidden: { opacity: 0, y: 20 }, visible: { opacity: 1, y: 0 } }} className="cursor-pointer">
+          <Link href="/billing">
+            <StatCard title="Economia Total Potencial" value={summary.totalSavings} prefix="R$ " icon={DollarSign} color="text-green-500" />
           </Link>
-        </Alert>
-      )}
-    </PageShell>
+        </motion.div>
+        <motion.div variants={{ hidden: { opacity: 0, y: 20 }, visible: { opacity: 1, y: 0 } }} className="cursor-pointer">
+          <Link href="/billing">
+            <StatCard title="Suas Economias (70%)" value={summary.realizedSavings} prefix="R$ " icon={TrendingUp} color="text-blue-500" />
+          </Link>
+        </motion.div>
+        <motion.div variants={{ hidden: { opacity: 0, y: 20 }, visible: { opacity: 1, y: 0 } }} className="cursor-pointer">
+          <Link href="/recommendations">
+            <StatCard title="Recomendações Executadas" value={summary.recommendationsExecuted} icon={Zap} color="text-orange-500" decimals={0} />
+          </Link>
+        </motion.div>
+        <motion.div variants={{ hidden: { opacity: 0, y: 20 }, visible: { opacity: 1, y: 0 } }} className="cursor-pointer">
+          <Link href="/sla-claims">
+            <StatCard title="Créditos SLA Recuperados" value={summary.slaCreditsRecovered} prefix="R$ " icon={ShieldCheck} color="text-purple-500" />
+          </Link>
+        </motion.div>
+      </motion.div>
+
+      <div className="mt-8 grid grid-cols-1 gap-8 lg:grid-cols-5">
+        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.4 }} className="lg:col-span-3">
+          <Card>
+            <CardHeader>
+              <CardTitle>Economia Mensal (Últimos 6 Meses)</CardTitle>
+            </CardHeader>
+            <CardContent className="h-80">
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart data={summary.monthlySavings}>
+                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="hsl(var(--border))" />
+                  <XAxis dataKey="month" stroke="hsl(var(--muted-foreground))" fontSize={12} tickLine={false} axisLine={false} />
+                  <YAxis stroke="hsl(var(--muted-foreground))" fontSize={12} tickLine={false} axisLine={false} tickFormatter={(value) => `R$${value}`} />
+                  <Tooltip
+                    cursor={{ fill: 'hsl(var(--muted))' }}
+                    contentStyle={{
+                      background: 'hsl(var(--background))',
+                      border: '1px solid hsl(var(--border))',
+                      borderRadius: 'var(--radius)',
+                    }}
+                  />
+                  <Bar dataKey="savings" fill="hsl(var(--primary))" radius={[4, 4, 0, 0]} />
+                </BarChart>
+              </ResponsiveContainer>
+            </CardContent>
+          </Card>
+        </motion.div>
+
+        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.5 }} className="lg:col-span-2">
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between">
+              <CardTitle>Recomendações Recentes</CardTitle>
+              <Link href="/recommendations">
+                <Button variant="ghost" size="sm">Ver todas <ArrowRight className="ml-2 h-4 w-4" /></Button>
+              </Link>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-4">
+                {recommendations.map((rec) => (
+                  <div key={rec.id} className="flex items-center justify-between p-2 rounded-lg hover:bg-muted">
+                    <div>
+                      <p className="font-medium">{rec.type.replace(/_/g, ' ')}</p>
+                      <p className="text-sm text-muted-foreground">{rec.resourceId}</p>
+                    </div>
+                    <Badge variant={recommendationStatusVariant[rec.status]}>{rec.status}</Badge>
+                  </div>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+        </motion.div>
+      </div>
+    </PageAnimator>
   );
-}
-
-// Funções auxiliares para gerar dados mock dos gráficos
-// TODO: Substituir por dados reais da API quando disponível
-function generateMockSavingsData() {
-  const months = ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun'];
-  return months.map((month, i) => ({
-    month,
-    savings: Math.floor(Math.random() * 500) + 100 * (i + 1),
-    slaCredits: Math.floor(Math.random() * 200) + 50 * (i + 1),
-  }));
-}
-
-function generateMockRecommendationsData() {
-  return [
-    { type: 'Instâncias Ociosas', count: 12, savings: 1200 },
-    { type: 'Volumes EBS', count: 8, savings: 450 },
-    { type: 'RDS Ocioso', count: 3, savings: 800 },
-    { type: 'Instâncias Reservadas', count: 5, savings: 2100 },
-  ];
 }

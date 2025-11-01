@@ -155,9 +155,9 @@ export default function OnboardPage() {
             <div className="space-y-3">
               <h4 className="font-medium">Enquanto aguarda:</h4>
               <ol className="text-sm text-gray-700 space-y-2 list-decimal list-inside">
-                <li>Verifique se a stack está com status "CREATE_COMPLETE" no console da AWS</li>
+                <li>Verifique se a stack está com status &quot;CREATE_COMPLETE&quot; no console da AWS</li>
                 <li>Aguarde o callback automático (pode levar até 30 segundos após a criação)</li>
-                <li>Clique em "Verificar Status" abaixo para conferir se a conexão foi estabelecida</li>
+                <li>Clique em &quot;Verificar Status&quot; abaixo para conferir se a conexão foi estabelecida</li>
               </ol>
             </div>
 

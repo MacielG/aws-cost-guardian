@@ -1,0 +1,401 @@
+<!doctype html>
+<html lang="pt-BR" class="h-full">
+ <head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AWS Cost Guardian - Plataforma FinOps SaaS</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="/_sdk/element_sdk.js"></script>
+  <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        aws: {
+                            orange: '#FF9900',
+                            blue: '#232F3E',
+                            light: '#F2F3F3'
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+  <style>
+        body {
+            box-sizing: border-box;
+        }
+        
+        .gradient-bg {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        }
+        
+        .card-hover {
+            transition: all 0.3s ease;
+        }
+        
+        .card-hover:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+        }
+        
+        .pulse-animation {
+            animation: pulse 2s infinite;
+        }
+        
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.7; }
+        }
+        
+        .slide-in {
+            animation: slideIn 0.6s ease-out;
+        }
+        
+        @keyframes slideIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        
+        .chart-bar {
+            transition: height 0.8s ease-in-out;
+        }
+    </style>
+  <style>@view-transition { navigation: auto; }</style>
+  <script src="/_sdk/data_sdk.js" type="text/javascript"></script>
+ </head>
+ <body class="h-full bg-gray-50"><!-- Header -->
+  <header class="bg-white shadow-sm border-b">
+   <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+    <div class="flex justify-between items-center h-16">
+     <div class="flex items-center space-x-3">
+      <div class="w-10 h-10 bg-gradient-to-r from-blue-600 to-purple-600 rounded-lg flex items-center justify-center">
+       <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewbox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"></path>
+       </svg>
+      </div>
+      <div>
+       <h1 id="platform-title" class="text-xl font-bold text-gray-900">AWS Cost Guardian</h1>
+       <p id="tagline" class="text-sm text-gray-500">Automated AWS Cost Optimization</p>
+      </div>
+     </div>
+     <div class="flex items-center space-x-4"><button class="text-gray-500 hover:text-gray-700 px-3 py-2 rounded-md text-sm font-medium"> Documentação </button> <button class="text-gray-500 hover:text-gray-700 px-3 py-2 rounded-md text-sm font-medium"> Suporte </button> <button id="trial-cta" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors"> Start Free Trial </button>
+     </div>
+    </div>
+   </div>
+  </header>
+  <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8"><!-- Hero Stats -->
+   <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+    <div class="bg-white rounded-xl shadow-sm p-6 card-hover">
+     <div class="flex items-center">
+      <div class="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center">
+       <svg class="w-6 h-6 text-green-600" fill="none" stroke="currentColor" viewbox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1"></path>
+       </svg>
+      </div>
+      <div class="ml-4">
+       <p class="text-sm font-medium text-gray-500">Economia Mensal</p>
+       <p id="savings-amount" class="text-2xl font-bold text-gray-900">$47,832</p>
+       <p class="text-sm text-green-600">+23% vs mês anterior</p>
+      </div>
+     </div>
+    </div>
+    <div class="bg-white rounded-xl shadow-sm p-6 card-hover">
+     <div class="flex items-center">
+      <div class="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center">
+       <svg class="w-6 h-6 text-blue-600" fill="none" stroke="currentColor" viewbox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path>
+       </svg>
+      </div>
+      <div class="ml-4">
+       <p class="text-sm font-medium text-gray-500">Créditos SLA Recuperados</p>
+       <p id="credits-recovered" class="text-2xl font-bold text-gray-900">$12,450</p>
+       <p class="text-sm text-blue-600">92% taxa de sucesso</p>
+      </div>
+     </div>
+    </div>
+    <div class="bg-white rounded-xl shadow-sm p-6 card-hover">
+     <div class="flex items-center">
+      <div class="w-12 h-12 bg-purple-100 rounded-lg flex items-center justify-center">
+       <svg class="w-6 h-6 text-purple-600" fill="none" stroke="currentColor" viewbox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"></path>
+       </svg>
+      </div>
+      <div class="ml-4">
+       <p class="text-sm font-medium text-gray-500">Contas Gerenciadas</p>
+       <p id="accounts-managed" class="text-2xl font-bold text-gray-900">247</p>
+       <p class="text-sm text-purple-600">Crescimento de 15%</p>
+      </div>
+     </div>
+    </div>
+   </div><!-- Main Dashboard Grid -->
+   <div class="grid grid-cols-1 lg:grid-cols-3 gap-8"><!-- Left Column - Cost Analysis -->
+    <div class="lg:col-span-2 space-y-6"><!-- Cost Trends Chart -->
+     <div class="bg-white rounded-xl shadow-sm p-6">
+      <div class="flex items-center justify-between mb-6">
+       <h3 class="text-lg font-semibold text-gray-900">Análise de Custos AWS</h3>
+       <div class="flex space-x-2"><button class="px-3 py-1 text-sm bg-blue-100 text-blue-700 rounded-md">7d</button> <button class="px-3 py-1 text-sm text-gray-500 hover:bg-gray-100 rounded-md">30d</button> <button class="px-3 py-1 text-sm text-gray-500 hover:bg-gray-100 rounded-md">90d</button>
+       </div>
+      </div><!-- Simple Chart -->
+      <div class="h-64 flex items-end space-x-2">
+       <div class="flex-1 bg-gray-100 rounded-t-md chart-bar" style="height: 40%"></div>
+       <div class="flex-1 bg-blue-200 rounded-t-md chart-bar" style="height: 60%"></div>
+       <div class="flex-1 bg-blue-300 rounded-t-md chart-bar" style="height: 80%"></div>
+       <div class="flex-1 bg-blue-400 rounded-t-md chart-bar" style="height: 45%"></div>
+       <div class="flex-1 bg-blue-500 rounded-t-md chart-bar" style="height: 70%"></div>
+       <div class="flex-1 bg-green-400 rounded-t-md chart-bar" style="height: 30%"></div>
+       <div class="flex-1 bg-green-500 rounded-t-md chart-bar" style="height: 25%"></div>
+      </div>
+      <div class="flex justify-between text-sm text-gray-500 mt-2"><span>Seg</span> <span>Ter</span> <span>Qua</span> <span>Qui</span> <span>Sex</span> <span>Sáb</span> <span>Dom</span>
+      </div>
+     </div><!-- Recommendations -->
+     <div class="bg-white rounded-xl shadow-sm p-6">
+      <h3 class="text-lg font-semibold text-gray-900 mb-4">Recomendações Automatizadas</h3>
+      <div class="space-y-4">
+       <div class="flex items-center justify-between p-4 bg-yellow-50 rounded-lg border border-yellow-200">
+        <div class="flex items-center space-x-3">
+         <div class="w-8 h-8 bg-yellow-100 rounded-full flex items-center justify-center">
+          <svg class="w-4 h-4 text-yellow-600" fill="none" stroke="currentColor" viewbox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L4.082 15.5c-.77.833.192 2.5 1.732 2.5z"></path>
+          </svg>
+         </div>
+         <div>
+          <p class="font-medium text-gray-900">15 instâncias EC2 ociosas detectadas</p>
+          <p class="text-sm text-gray-600">Economia potencial: $2,340/mês</p>
+         </div>
+        </div><button class="bg-yellow-600 hover:bg-yellow-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors"> Implementar </button>
+       </div>
+       <div class="flex items-center justify-between p-4 bg-green-50 rounded-lg border border-green-200">
+        <div class="flex items-center space-x-3">
+         <div class="w-8 h-8 bg-green-100 rounded-full flex items-center justify-center">
+          <svg class="w-4 h-4 text-green-600" fill="none" stroke="currentColor" viewbox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+          </svg>
+         </div>
+         <div>
+          <p class="font-medium text-gray-900">Savings Plans otimizados</p>
+          <p class="text-sm text-gray-600">Economia adicional: $1,890/mês</p>
+         </div>
+        </div><button class="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors"> Aplicado </button>
+       </div>
+       <div class="flex items-center justify-between p-4 bg-blue-50 rounded-lg border border-blue-200">
+        <div class="flex items-center space-x-3">
+         <div class="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center">
+          <svg class="w-4 h-4 text-blue-600" fill="none" stroke="currentColor" viewbox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path>
+          </svg>
+         </div>
+         <div>
+          <p class="font-medium text-gray-900">Crédito SLA disponível</p>
+          <p class="text-sm text-gray-600">Evento Health detectado: $450 elegível</p>
+         </div>
+        </div><button class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors"> Reclamar </button>
+       </div>
+      </div>
+     </div>
+    </div><!-- Right Column - Features & Status -->
+    <div class="space-y-6"><!-- AWS Marketplace Integration -->
+     <div class="bg-white rounded-xl shadow-sm p-6">
+      <h3 class="text-lg font-semibold text-gray-900 mb-4">AWS Marketplace</h3>
+      <div class="space-y-4">
+       <div class="flex items-center justify-between"><span class="text-sm text-gray-600">Status da Integração</span> <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800"> Ativo </span>
+       </div>
+       <div class="flex items-center justify-between"><span class="text-sm text-gray-600">Billing Automático</span> <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800"> Configurado </span>
+       </div>
+       <div class="flex items-center justify-between"><span class="text-sm text-gray-600">Comissão</span> <span class="text-sm font-medium text-gray-900">30% sobre economias</span>
+       </div>
+      </div>
+     </div><!-- Security & Compliance -->
+     <div class="bg-white rounded-xl shadow-sm p-6">
+      <h3 class="text-lg font-semibold text-gray-900 mb-4">Segurança Cross-Account</h3>
+      <div class="space-y-3">
+       <div class="flex items-center space-x-2">
+        <svg class="w-4 h-4 text-green-500" fill="none" stroke="currentColor" viewbox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+        </svg><span class="text-sm text-gray-700">IAM Role com ExternalId</span>
+       </div>
+       <div class="flex items-center space-x-2">
+        <svg class="w-4 h-4 text-green-500" fill="none" stroke="currentColor" viewbox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+        </svg><span class="text-sm text-gray-700">CloudFormation Deploy</span>
+       </div>
+       <div class="flex items-center space-x-2">
+        <svg class="w-4 h-4 text-green-500" fill="none" stroke="currentColor" viewbox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+        </svg><span class="text-sm text-gray-700">Acesso Read-Only</span>
+       </div>
+       <div class="flex items-center space-x-2">
+        <svg class="w-4 h-4 text-green-500" fill="none" stroke="currentColor" viewbox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+        </svg><span class="text-sm text-gray-700">Criptografia em Trânsito</span>
+       </div>
+      </div>
+     </div><!-- Quick Actions -->
+     <div class="bg-white rounded-xl shadow-sm p-6">
+      <h3 class="text-lg font-semibold text-gray-900 mb-4">Ações Rápidas</h3>
+      <div class="space-y-3"><button class="w-full bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors"> Conectar Nova Conta AWS </button> <button class="w-full bg-gray-100 hover:bg-gray-200 text-gray-700 px-4 py-2 rounded-lg text-sm font-medium transition-colors"> Gerar Relatório Mensal </button> <button class="w-full bg-gray-100 hover:bg-gray-200 text-gray-700 px-4 py-2 rounded-lg text-sm font-medium transition-colors"> Configurar Alertas </button>
+      </div>
+     </div><!-- Trial Status -->
+     <div class="bg-gradient-to-r from-purple-500 to-blue-600 rounded-xl shadow-sm p-6 text-white">
+      <h3 class="text-lg font-semibold mb-2">Trial Gratuito</h3>
+      <p class="text-sm opacity-90 mb-4">14 dias restantes para análise completa</p>
+      <div class="w-full bg-white bg-opacity-20 rounded-full h-2 mb-4">
+       <div class="bg-white h-2 rounded-full" style="width: 65%"></div>
+      </div><button class="w-full bg-white text-purple-600 hover:bg-gray-100 px-4 py-2 rounded-lg text-sm font-medium transition-colors"> Upgrade para Pro </button>
+     </div>
+    </div>
+   </div><!-- Bottom Section - Recent Activity -->
+   <div class="mt-8 bg-white rounded-xl shadow-sm p-6">
+    <h3 class="text-lg font-semibold text-gray-900 mb-4">Atividade Recente</h3>
+    <div class="space-y-4">
+     <div class="flex items-center space-x-4 p-3 hover:bg-gray-50 rounded-lg transition-colors">
+      <div class="w-2 h-2 bg-green-400 rounded-full pulse-animation"></div>
+      <div class="flex-1">
+       <p class="text-sm font-medium text-gray-900">Crédito SLA de $450 recuperado com sucesso</p>
+       <p class="text-xs text-gray-500">há 2 horas • us-east-1</p>
+      </div>
+     </div>
+     <div class="flex items-center space-x-4 p-3 hover:bg-gray-50 rounded-lg transition-colors">
+      <div class="w-2 h-2 bg-blue-400 rounded-full"></div>
+      <div class="flex-1">
+       <p class="text-sm font-medium text-gray-900">8 instâncias EC2 desligadas automaticamente</p>
+       <p class="text-xs text-gray-500">há 4 horas • Economia: $180/dia</p>
+      </div>
+     </div>
+     <div class="flex items-center space-x-4 p-3 hover:bg-gray-50 rounded-lg transition-colors">
+      <div class="w-2 h-2 bg-yellow-400 rounded-full"></div>
+      <div class="flex-1">
+       <p class="text-sm font-medium text-gray-900">Nova anomalia de custo detectada</p>
+       <p class="text-xs text-gray-500">há 6 horas • RDS: +45% vs baseline</p>
+      </div>
+     </div>
+    </div>
+   </div>
+  </main>
+  <script>
+        // Configuration object for Element SDK
+        const defaultConfig = {
+            platform_title: "AWS Cost Guardian",
+            tagline: "Automated AWS Cost Optimization", 
+            trial_cta: "Start Free Trial",
+            savings_amount: "$47,832",
+            credits_recovered: "$12,450",
+            accounts_managed: "247"
+        };
+
+        // Initialize Element SDK
+        if (window.elementSdk) {
+            window.elementSdk.init({
+                defaultConfig: defaultConfig,
+                onConfigChange: async (config) => {
+                    // Update platform title
+                    const titleElement = document.getElementById('platform-title');
+                    if (titleElement) {
+                        titleElement.textContent = config.platform_title || defaultConfig.platform_title;
+                    }
+
+                    // Update tagline
+                    const taglineElement = document.getElementById('tagline');
+                    if (taglineElement) {
+                        taglineElement.textContent = config.tagline || defaultConfig.tagline;
+                    }
+
+                    // Update trial CTA
+                    const trialCtaElement = document.getElementById('trial-cta');
+                    if (trialCtaElement) {
+                        trialCtaElement.textContent = config.trial_cta || defaultConfig.trial_cta;
+                    }
+
+                    // Update savings amount
+                    const savingsElement = document.getElementById('savings-amount');
+                    if (savingsElement) {
+                        savingsElement.textContent = config.savings_amount || defaultConfig.savings_amount;
+                    }
+
+                    // Update credits recovered
+                    const creditsElement = document.getElementById('credits-recovered');
+                    if (creditsElement) {
+                        creditsElement.textContent = config.credits_recovered || defaultConfig.credits_recovered;
+                    }
+
+                    // Update accounts managed
+                    const accountsElement = document.getElementById('accounts-managed');
+                    if (accountsElement) {
+                        accountsElement.textContent = config.accounts_managed || defaultConfig.accounts_managed;
+                    }
+                },
+                mapToCapabilities: (config) => ({
+                    recolorables: [],
+                    borderables: [],
+                    fontEditable: undefined,
+                    fontSizeable: undefined
+                }),
+                mapToEditPanelValues: (config) => new Map([
+                    ["platform_title", config.platform_title || defaultConfig.platform_title],
+                    ["tagline", config.tagline || defaultConfig.tagline],
+                    ["trial_cta", config.trial_cta || defaultConfig.trial_cta],
+                    ["savings_amount", config.savings_amount || defaultConfig.savings_amount],
+                    ["credits_recovered", config.credits_recovered || defaultConfig.credits_recovered],
+                    ["accounts_managed", config.accounts_managed || defaultConfig.accounts_managed]
+                ])
+            });
+        }
+
+        // Interactive functionality
+        document.addEventListener('DOMContentLoaded', function() {
+            // Animate chart bars on load
+            setTimeout(() => {
+                const bars = document.querySelectorAll('.chart-bar');
+                bars.forEach((bar, index) => {
+                    setTimeout(() => {
+                        bar.style.opacity = '1';
+                    }, index * 100);
+                });
+            }, 500);
+
+            // Add click handlers for buttons
+            const buttons = document.querySelectorAll('button');
+            buttons.forEach(button => {
+                button.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    
+                    // Add click animation
+                    this.style.transform = 'scale(0.95)';
+                    setTimeout(() => {
+                        this.style.transform = 'scale(1)';
+                    }, 150);
+
+                    // Show toast message for demo
+                    showToast(`Ação "${this.textContent.trim()}" executada com sucesso!`);
+                });
+            });
+
+            // Simulate real-time updates
+            setInterval(() => {
+                updateRandomMetric();
+            }, 5000);
+        });
+
+        function showToast(message) {
+            const toast = document.createElement('div');
+            toast.className = 'fixed top-4 right-4 bg-green-500 text-white px-6 py-3 rounded-lg shadow-lg z-50 slide-in';
+            toast.textContent = message;
+            
+            document.body.appendChild(toast);
+            
+            setTimeout(() => {
+                toast.style.opacity = '0';
+                toast.style.transform = 'translateY(-20px)';
+                setTimeout(() => {
+                    document.body.removeChild(toast);
+                }, 300);
+            }, 3000);
+        }
+
+        function updateRandomMetric() {
+            const metrics = ['savings-amount', 'credits-recovered', 'accounts-managed'];
+            const randomMetric = metrics[Math.floor(Math.random() * metrics.length)];
+            const element = document.getElementById(randomMetric);
+            
+            if (element) {
+                element.style.transform = 'scale(1.05)';
+                element.style.color = '#10B981';
+                
+                setTimeout(() => {
+                    element.style.transform = 'scale(1)';
+                    element.style.color = '';
+                }, 500);
+            }
+        }
+    </script>
+ <script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'997ad7e2f2eb7e12',t:'MTc2MTk5NDM1My4wMDAwMDA='};var a=document.createElement('script');a.nonce='';a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
+</html>

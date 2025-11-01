@@ -1,106 +1,82 @@
+// frontend/tailwind.config.js
 /** @type {import('tailwindcss').Config} */
 module.exports = {
+  darkMode: ["class"],
   content: [
-    './pages/**/*.{js,ts,jsx,tsx,mdx}',
-    './components/**/*.{js,ts,jsx,tsx,mdx}',
-    './app/**/*.{js,ts,jsx,tsx,mdx}',
+    './pages/**/*.{ts,tsx}',
+    './components/**/*.{ts,tsx}',
+    './app/**/*.{ts,tsx}',
+    './src/**/*.{ts,tsx}',
   ],
+  future: {
+    hoverOnlyWhenSupported: true,
+  },
+  prefix: "",
   theme: {
+    container: {
+      center: true,
+      padding: "2rem",
+      screens: {
+        "2xl": "1400px",
+      },
+    },
     extend: {
+      // 1. Paleta de Cores Profissional
       colors: {
-        // Design System Colors using CSS variables
+        border: "hsl(var(--border))",
+        input: "hsl(var(--input))",
+        ring: "hsl(var(--ring))",
+        background: "hsl(var(--background))",
+        foreground: "hsl(var(--foreground))",
         primary: {
-          blue: 'var(--primary-blue)',
-          'blue-light': 'var(--primary-blue-light)',
-          'blue-dark': 'var(--primary-blue-dark)',
+          DEFAULT: "hsl(var(--primary))",
+          foreground: "hsl(var(--primary-foreground))",
         },
         secondary: {
-          green: 'var(--secondary-green)',
-          red: 'var(--secondary-red)',
-          orange: 'var(--secondary-orange)',
-        },
-        background: {
-          dark: 'var(--background-dark)',
-          light: 'var(--background-light)',
-        },
-        text: {
-          light: 'var(--text-light)',
-          medium: 'var(--text-medium)',
-          dark: 'var(--text-dark)',
-        },
-        border: {
-          color: 'var(--border-color)',
-        },
-        // Shadcn/ui compatible colors
-        card: {
-          DEFAULT: 'var(--background-light)',
-          foreground: 'var(--text-light)',
-        },
-        popover: {
-          DEFAULT: 'var(--background-light)',
-          foreground: 'var(--text-light)',
-        },
-        primary: {
-          DEFAULT: 'var(--primary-blue)',
-          foreground: 'var(--text-light)',
-        },
-        secondary: {
-          DEFAULT: 'var(--background-light)',
-          foreground: 'var(--text-medium)',
-        },
-        muted: {
-          DEFAULT: 'var(--text-medium)',
-          foreground: 'var(--text-dark)',
-        },
-        accent: {
-          DEFAULT: 'var(--primary-blue)',
-          foreground: 'var(--text-light)',
+          DEFAULT: "hsl(var(--secondary))",
+          foreground: "hsl(var(--secondary-foreground))",
         },
         destructive: {
-          DEFAULT: 'var(--secondary-red)',
-          foreground: 'var(--text-light)',
+          DEFAULT: "hsl(var(--destructive))",
+          foreground: "hsl(var(--destructive-foreground))",
         },
-        input: {
-          DEFAULT: 'var(--background-light)',
+        muted: {
+          DEFAULT: "hsl(var(--muted))",
+          foreground: "hsl(var(--muted-foreground))",
         },
-        ring: {
-          DEFAULT: 'var(--primary-blue)',
+        accent: {
+          DEFAULT: "hsl(var(--accent))",
+          foreground: "hsl(var(--accent-foreground))",
+        },
+        popover: {
+          DEFAULT: "hsl(var(--popover))",
+          foreground: "hsl(var(--popover-foreground))",
+        },
+        card: {
+          DEFAULT: "hsl(var(--card))",
+          foreground: "hsl(var(--card-foreground))",
         },
       },
+      // 2. Fontes
       fontFamily: {
         sans: ['Inter', 'sans-serif'],
       },
-      fontSize: {
-        h1: ['2.5rem', { lineHeight: '2.5rem', fontWeight: '700' }],
-        h2: ['1.8rem', { lineHeight: '2rem', fontWeight: '600' }],
-        h3: ['1.4rem', { lineHeight: '1.75rem', fontWeight: '500' }],
-        h4: ['1rem', { lineHeight: '1.5rem', fontWeight: '500' }],
-        paragraph: ['1rem', { lineHeight: '1.75rem', fontWeight: '400' }],
-        muted: ['0.875rem', { lineHeight: '1.25rem', fontWeight: '400' }],
-      },
-      boxShadow: {
-        sm: 'var(--shadow-sm)',
-        md: 'var(--shadow-md)',
-      },
-      backdropBlur: {
-        'xs': '2px',
-      },
+      // 3. Animações (para a Fase 4)
       keyframes: {
-        shimmer: {
-          '0%': { backgroundPosition: '-1000px 0' },
-          '100%': { backgroundPosition: '1000px 0' },
+        "accordion-down": {
+          from: { height: "0" },
+          to: { height: "var(--radix-accordion-content-height)" },
         },
-        shake: {
-          '0%, 100%': { transform: 'translateX(0)' },
-          '10%, 30%, 50%, 70%, 90%': { transform: 'translateX(-3px)' },
-          '20%, 40%, 60%, 80%': { transform: 'translateX(3px)' },
+        "accordion-up": {
+          from: { height: "var(--radix-accordion-content-height)" },
+          to: { height: "0" },
         },
       },
       animation: {
-        shimmer: 'shimmer 2s infinite linear',
-        shake: 'shake 0.4s ease-in-out',
+        "accordion-down": "accordion-down 0.2s ease-out",
+        "accordion-up": "accordion-up 0.2s ease-out",
       },
     },
   },
-  plugins: [],
+  plugins: [require("tailwindcss-animate")],
 }

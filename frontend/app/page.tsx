@@ -4,13 +4,60 @@ import { Button } from '@/components/ui/button';
 import Link from 'next/link';
 import { BarChart3, Shield, TrendingDown, DollarSign, Zap, Award } from 'lucide-react';
 import { motion } from 'framer-motion';
-// Corrigido para usar o import correto, mantendo consistência de casing
-import { PageAnimator } from '@/components/ui/pageanimator';
+import { toast } from 'sonner';
+import { PageAnimator } from '@/components/layout/PageAnimator';
+import { PageHeader } from '@/components/layout/PageHeader';
 
 export default function Home() {
 return (
-<PageAnimator>
-    <main className="min-h-screen bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50">
+  <PageAnimator>
+    <main className="min-h-screen bg-background dark:bg-background transition-colors">
+      <div className="container mx-auto px-6 py-8">
+        <PageHeader
+          title="AWS Cost Guardian"
+          description="Economize automaticamente na sua conta AWS. Detectamos recursos ociosos, recuperamos créditos SLA e otimizamos seus custos de nuvem."
+        />
+      </div>
+      {/* Quick Stats */}
+      <div className="container mx-auto px-6 py-4">
+        <motion.div
+          initial={{ opacity: 0, y: 50 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.8 }}
+          className="grid grid-cols-1 md:grid-cols-3 gap-6"
+        >
+          <div className="bg-card dark:bg-card/80 backdrop-blur-sm p-6 rounded-xl shadow-lg border border-border card-hover transition-colors">
+            <div className="flex items-center">
+              <DollarSign className="w-8 h-8 text-green-500 dark:text-green-400 mr-4" />
+              <div>
+                <p className="text-sm font-medium text-muted-foreground">Economia Mensal</p>
+                <p className="text-2xl font-bold text-foreground">$47,832</p>
+                <p className="text-sm text-green-600 dark:text-green-400">+23% vs mês anterior</p>
+              </div>
+            </div>
+          </div>
+          <div className="bg-card dark:bg-card/80 backdrop-blur-sm p-6 rounded-xl shadow-lg border border-border card-hover transition-colors">
+            <div className="flex items-center">
+              <Award className="w-8 h-8 text-blue-500 dark:text-blue-400 mr-4" />
+              <div>
+                <p className="text-sm font-medium text-muted-foreground">Créditos SLA Recuperados</p>
+                <p className="text-2xl font-bold text-foreground">$12,450</p>
+                <p className="text-sm text-blue-600 dark:text-blue-400">92% taxa de sucesso</p>
+              </div>
+            </div>
+          </div>
+          <div className="bg-card dark:bg-card/80 backdrop-blur-sm p-6 rounded-xl shadow-lg border border-border card-hover transition-colors">
+            <div className="flex items-center">
+              <Shield className="w-8 h-8 text-purple-500 dark:text-purple-400 mr-4" />
+              <div>
+                <p className="text-sm font-medium text-muted-foreground">Contas Gerenciadas</p>
+                <p className="text-2xl font-bold text-foreground">247</p>
+                <p className="text-sm text-purple-600 dark:text-purple-400">Crescimento de 15%</p>
+              </div>
+            </div>
+          </div>
+        </motion.div>
+      </div>
       {/* Hero Section */}
       <div className="container mx-auto px-6 py-16">
         <div className="max-w-4xl mx-auto text-center">
@@ -18,7 +65,7 @@ return (
             initial={{ opacity: 0, y: -50 }}
               animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.8, ease: 'easeOut' }}
-            className="text-4xl md:text-6xl font-bold text-gray-900 mb-6"
+            className="text-4xl md:text-6xl font-bold text-foreground mb-6"
           >
         AWS Cost Guardian
       </motion.h1>
@@ -26,7 +73,7 @@ return (
             initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           transition={{ delay: 0.3, duration: 0.8 }}
-          className="text-xl text-gray-600 mb-8 max-w-2xl mx-auto"
+          className="text-xl text-muted-foreground mb-8 max-w-2xl mx-auto"
         >
       Economize automaticamente na sua conta AWS. Detectamos recursos ociosos, recuperamos créditos SLA e otimizamos seus custos de nuvem.
 </motion.p>
@@ -38,7 +85,7 @@ return (
   className="flex flex-col sm:flex-row gap-4 justify-center mb-12"
 >
 <Link href="/login?mode=trial">
-<Button className="px-8 py-3 text-lg">
+<Button className="px-8 py-3 text-lg bg-primary text-primary-foreground hover:bg-primary/90" onClick={() => toast.success('Análise gratuita iniciada!')}>
 Iniciar Análise Gratuita →
 </Button>
 </Link>
@@ -47,7 +94,7 @@ Iniciar Análise Gratuita →
 
 {/* Benefits Section */}
 <div className="max-w-6xl mx-auto mt-16">
-  <h2 className="text-3xl font-bold text-center text-gray-900 mb-12">
+  <h2 className="text-3xl font-bold text-center text-foreground mb-12">
   Por que escolher o AWS Cost Guardian?
 </h2>
 
@@ -66,40 +113,40 @@ className="grid md:grid-cols-3 gap-8 mb-16"
   }}
 >
   <motion.div
-    variants={{ hidden: { y: 50, opacity: 0 }, visible: { y: 0, opacity: 1 } }}
-    whileHover={{ y: -10, scale: 1.05 }}
+    variants={{ hidden: { y: 20, opacity: 0 }, visible: { y: 0, opacity: 1 } }}
+    whileHover={{ y: -5, scale: 1.02 }}
     transition={{ duration: 0.3 }}
-    className="bg-white/80 backdrop-blur-sm p-8 rounded-2xl shadow-xl border border-white/20 text-center hover:shadow-2xl transition-shadow"
+    className="bg-card/80 backdrop-blur-sm p-8 rounded-2xl shadow-lg border border-border text-center card-hover"
   >
     <DollarSign className="w-12 h-12 text-green-500 mx-auto mb-4" />
   <h3 className="text-xl font-semibold mb-4">Economia Garantida</h3>
-<p className="text-gray-600">
+<p className="text-muted-foreground">
     Identificamos e desligamos instâncias EC2 ociosas, reduzindo sua fatura mensal em até 30%.
     </p>
     </motion.div>
 
     <motion.div
-    variants={{ hidden: { y: 50, opacity: 0 }, visible: { y: 0, opacity: 1 } }}
-    whileHover={{ y: -10, scale: 1.05 }}
+    variants={{ hidden: { y: 20, opacity: 0 }, visible: { y: 0, opacity: 1 } }}
+    whileHover={{ y: -5, scale: 1.02 }}
     transition={{ duration: 0.3 }}
-    className="bg-white/80 backdrop-blur-sm p-8 rounded-2xl shadow-xl border border-white/20 text-center hover:shadow-2xl transition-shadow"
+    className="bg-card/80 backdrop-blur-sm p-8 rounded-2xl shadow-lg border border-border text-center card-hover"
   >
             <Award className="w-12 h-12 text-blue-500 mx-auto mb-4" />
               <h3 className="text-xl font-semibold mb-4">Créditos SLA Automáticos</h3>
-              <p className="text-gray-600">
+              <p className="text-muted-foreground">
               Monitoramos interrupções de serviço e automaticamente reivindicamos créditos SLA da AWS por você.
               </p>
               </motion.div>
 
               <motion.div
-    variants={{ hidden: { y: 50, opacity: 0 }, visible: { y: 0, opacity: 1 } }}
-    whileHover={{ y: -10, scale: 1.05 }}
+    variants={{ hidden: { y: 20, opacity: 0 }, visible: { y: 0, opacity: 1 } }}
+    whileHover={{ y: -5, scale: 1.02 }}
     transition={{ duration: 0.3 }}
-    className="bg-white/80 backdrop-blur-sm p-8 rounded-2xl shadow-xl border border-white/20 text-center hover:shadow-2xl transition-shadow"
+    className="bg-card/80 backdrop-blur-sm p-8 rounded-2xl shadow-lg border border-border text-center card-hover"
   >
               <Zap className="w-12 h-12 text-orange-500 mx-auto mb-4" />
               <h3 className="text-xl font-semibold mb-4">Sem Esforço</h3>
-              <p className="text-gray-600">
+              <p className="text-muted-foreground">
               Uma vez configurado, tudo funciona automaticamente. Você apenas vê os resultados.
               </p>
               </motion.div>
@@ -111,13 +158,13 @@ className="grid md:grid-cols-3 gap-8 mb-16"
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true }}
             transition={{ duration: 0.6 }}
-            className="bg-white/90 backdrop-blur-sm p-8 rounded-2xl shadow-xl border border-white/20 mb-16 hover:shadow-2xl transition-shadow"
+            className="bg-card/90 backdrop-blur-sm p-8 rounded-2xl shadow-xl border border-border mb-16 card-hover"
           >
             <h2 className="text-2xl font-bold text-center mb-6">
               Como Funciona Nosso Modelo
             </h2>
             <div className="max-w-3xl mx-auto text-center">
-              <p className="text-lg text-gray-600 mb-6">
+              <p className="text-lg text-muted-foreground mb-6">
                 Cobramos apenas quando você economiza. Nossa comissão é justa e transparente:
               </p>
               <div className="bg-green-50 border-2 border-green-200 rounded-lg p-6">
@@ -129,7 +176,7 @@ className="grid md:grid-cols-3 gap-8 mb-16"
                   Você fica com 70% de todo o valor recuperado.
                 </p>
               </div>
-              <p className="text-sm text-gray-500 mt-4">
+              <p className="text-sm text-muted-foreground mt-4">
               Sem taxas mensais, sem custos ocultos. Pague apenas pelo valor real que recuperamos para você.
               </p>
               </div>
@@ -141,7 +188,7 @@ className="grid md:grid-cols-3 gap-8 mb-16"
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true }}
           transition={{ duration: 0.6 }}
-            className="bg-white/90 backdrop-blur-sm p-8 rounded-2xl shadow-xl border border-white/20 mb-16 hover:shadow-2xl transition-shadow"
+            className="bg-card/90 backdrop-blur-sm p-8 rounded-2xl shadow-xl border border-border mb-16 card-hover"
           >
             <h2 className="text-2xl font-bold text-center mb-8">
               Recursos Principais
@@ -163,25 +210,25 @@ className="grid md:grid-cols-3 gap-8 mb-16"
             >
             <motion.div
             variants={{ hidden: { x: -50, opacity: 0 }, visible: { x: 0, opacity: 1 } }}
-                className="flex items-start space-x-4 p-4 rounded-lg hover:bg-gray-50 transition-colors"
+                className="flex items-start space-x-4 p-4 rounded-lg hover:bg-muted/50 transition-colors"
               >
                 <BarChart3 className="w-8 h-8 text-blue-500 mt-1" />
                 <div>
                   <h3 className="text-lg font-semibold mb-2">Monitoramento em Tempo Real</h3>
-                  <p className="text-gray-600">
+                  <p className="text-muted-foreground">
                   Analisamos continuamente sua conta AWS para identificar oportunidades de economia.
                   </p>
                   </div>
                   </motion.div>
 
                   <motion.div
-                variants={{ hidden: { x: -50, opacity: 0 }, visible: { x: 0, opacity: 1 } }}
-                className="flex items-start space-x-4 p-4 rounded-lg hover:bg-gray-50 transition-colors"
+                variants={{ hidden: { x: 50, opacity: 0 }, visible: { x: 0, opacity: 1 } }}
+                className="flex items-start space-x-4 p-4 rounded-lg hover:bg-muted/50 transition-colors"
               >
                 <Shield className="w-8 h-8 text-green-500 mt-1" />
                 <div>
                   <h3 className="text-lg font-semibold mb-2">Execução Segura</h3>
-                  <p className="text-gray-600">
+                  <p className="text-muted-foreground">
                   Todas as ações são executadas com permissões mínimas e reversíveis.
                   </p>
                   </div>
@@ -189,20 +236,20 @@ className="grid md:grid-cols-3 gap-8 mb-16"
 
                   <motion.div
                 variants={{ hidden: { x: -50, opacity: 0 }, visible: { x: 0, opacity: 1 } }}
-                className="flex items-start space-x-4 p-4 rounded-lg hover:bg-gray-50 transition-colors"
+                className="flex items-start space-x-4 p-4 rounded-lg hover:bg-muted/50 transition-colors"
               >
                 <TrendingDown className="w-8 h-8 text-orange-500 mt-1" />
                 <div>
                   <h3 className="text-lg font-semibold mb-2">Otimização Contínua</h3>
-                  <p className="text-gray-600">
+                  <p className="text-muted-foreground">
                   Identificamos padrões de uso e sugerimos melhorias para reduzir custos futuros.
                   </p>
                   </div>
                   </motion.div>
 
                   <motion.div
-                variants={{ hidden: { x: -50, opacity: 0 }, visible: { x: 0, opacity: 1 } }}
-                className="flex items-start space-x-4 p-4 rounded-lg hover:bg-gray-50 transition-colors"
+                variants={{ hidden: { x: 50, opacity: 0 }, visible: { x: 0, opacity: 1 } }}
+                className="flex items-start space-x-4 p-4 rounded-lg hover:bg-muted/50 transition-colors"
               >
                 <Award className="w-8 h-8 text-purple-500 mt-1" />
                 <div>
@@ -223,17 +270,17 @@ className="grid md:grid-cols-3 gap-8 mb-16"
             transition={{ duration: 0.8 }}
             className="text-center"
           >
-            <h2 className="text-3xl font-bold text-gray-900 mb-4">
+            <h2 className="text-3xl font-bold text-foreground mb-4">
               Pronto para começar a economizar?
             </h2>
-            <p className="text-lg text-gray-600 mb-8">
+            <p className="text-lg text-muted-foreground mb-8">
               Cadastre-se gratuitamente e veja quanto você pode economizar na sua conta AWS.
             </p>
             <Link href="/login?mode=trial">
-              <Button className="px-10 py-4 text-lg bg-green-600 hover:bg-green-700">
-              Iniciar Análise Gratuita →
-              </Button>
-              </Link>
+            <Button className="px-10 py-4 text-lg bg-green-600 hover:bg-green-700" onClick={() => toast.success('Pronto para economizar!')}>
+            Iniciar Análise Gratuita →
+            </Button>
+            </Link>
               </motion.div>
         </div>
         </div>

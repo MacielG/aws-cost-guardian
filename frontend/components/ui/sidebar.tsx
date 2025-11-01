@@ -34,9 +34,9 @@ export function Sidebar({ className }: SidebarProps) {
                   href={item.href}
                   className={cn(
                     'flex items-center px-4 py-3 rounded-md text-sm font-medium transition-all duration-200',
-                    isActive
-                      ? 'bg-primary-blue/20 text-primary-blue border-l-4 border-primary-blue'
-                      : 'text-text-medium hover:bg-primary-blue/10 hover:text-primary-blue'
+                    isActive ?
+                      'bg-primary/10 text-primary font-semibold' :
+                      'text-muted-foreground hover:bg-muted hover:text-foreground'
                   )}
                 >
                   <Icon className="w-5 h-5 mr-3" />

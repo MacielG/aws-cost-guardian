@@ -1,137 +1,234 @@
+@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&display=swap');
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
 @layer base {
-  /* Definição da paleta de cores principal (Modo Claro).
-    Use um gerador de paletas (ex: https://color.adobe.com ou https://tweakcn.com/)
-    para escolher cores profissionais.
-  */
   :root {
-    --background: 0 0% 100%; /* Branco */
-    --foreground: 224 71.4% 4.1%; /* Preto suave */
-
+    /* Tema Claro */
+    --background: 0 0% 100%; /* Branco puro */
+    --foreground: 222 47% 11%; /* Texto muito escuro */
     --card: 0 0% 100%;
-    --card-foreground: 224 71.4% 4.1%;
-
+    --card-foreground: 222 47% 11%;
     --popover: 0 0% 100%;
-    --popover-foreground: 224 71.4% 4.1%;
-
-    /* Cor Primária (ex: Azul) */
-    --primary: 221.2 83.2% 53.3%;
-    --primary-foreground: 210 20% 98%;
-
-    /* Cor Secundária (ex: Cinza) */
-    --secondary: 220 14.3% 95.9%;
-    --secondary-foreground: 220.9 39.3% 11%;
-
-    --muted: 220 14.3% 95.9%;
-    --muted-foreground: 220 8.9% 46.1%;
-
-    --accent: 220 14.3% 95.9%;
-    --accent-foreground: 220.9 39.3% 11%;
-
-    --destructive: 0 84.2% 60.2%;
-    --destructive-foreground: 210 20% 98%;
-
-    --border: 220 13% 91%;
-    --input: 220 13% 91%;
-    --ring: 221.2 83.2% 53.3%; /* Cor do foco */
-
-    --radius: 0.5rem; /* Arredondamento dos cantos */
+    --popover-foreground: 222 47% 11%;
+    --primary: 222 47% 35%; /* Azul mais escuro */
+    --primary-foreground: 0 0% 100%;
+    --secondary: 217 91% 60%; /* Azul médio */
+    --secondary-foreground: 0 0% 100%;
+    --muted: 210 40% 96%; /* Cinza muito claro */
+    --muted-foreground: 215.4 16.3% 46.9%; /* Cinza médio */
+    --accent: 210 40% 96%;
+    --accent-foreground: 222 47% 11%;
+    --destructive: 0 84% 60%;
+    --destructive-foreground: 210 40% 98%;
+    --border: 214.3 31.8% 91.4%; /* Borda clara */
+    --input: 214.3 31.8% 91.4%;
+    --ring: 222 47% 35%;
+    --radius: 0.5rem;
   }
 
-  /* Definição da paleta de cores (Modo Escuro).
-  */
   .dark {
-    --background: 224 71.4% 4.1%; /* Preto suave */
-    --foreground: 210 20% 98%; /* Branco */
-
-    --card: 224 71.4% 4.1%;
-    --card-foreground: 210 20% 98%;
-
-    --popover: 224 71.4% 4.1%;
-    --popover-foreground: 210 20% 98%;
-
-    /* Cor Primária (ex: Azul) */
-    --primary: 217.2 91.2% 59.8%;
-    --primary-foreground: 210 20% 98%;
-
-    /* Cor Secundária (ex: Cinza escuro) */
-    --secondary: 215 27.9% 16.9%;
-    --secondary-foreground: 210 20% 98%;
-
-    --muted: 215 27.9% 16.9%;
-    --muted-foreground: 217.9 10.6% 64.9%;
-
-    --accent: 215 27.9% 16.9%;
-    --accent-foreground: 210 20% 98%;
-
+    /* Tema Escuro */
+    --background: 222 47% 11%; /* Fundo escuro */
+    --foreground: 210 40% 98%; /* Texto claro */
+    --card: 222 47% 11%;
+    --card-foreground: 210 40% 98%;
+    --popover: 222 47% 11%;
+    --popover-foreground: 210 40% 98%;
+    --primary: 217 91% 60%; /* Azul vibrante */
+    --primary-foreground: 222 47% 11%;
+    --secondary: 199 89% 48%; /* Azul claro */
+    --secondary-foreground: 222 47% 11%;
+    --muted: 217 33% 17%; /* Cinza escuro */
+    --muted-foreground: 215 20.2% 65.1%; /* Cinza claro */
+    --accent: 217 33% 17%;
+    --accent-foreground: 210 40% 98%;
     --destructive: 0 62.8% 30.6%;
-    --destructive-foreground: 210 20% 98%;
-
-    --border: 215 27.9% 16.9%;
-    --input: 215 27.9% 16.9%;
-    --ring: 217.2 91.2% 59.8%;
+    --destructive-foreground: 210 40% 98%;
+    --border: 217 33% 17%; /* Borda escura */
+    --input: 217 33% 17%;
+    --ring: 224.3 76.3% 48%;
   }
-
-  /* Legacy variables for backward compatibility */
-  --primary-blue: hsl(221.2 83.2% 53.3%);
-  --primary-blue-light: hsl(217.2 91.2% 59.8%);
-  --primary-blue-dark: hsl(224 71.4% 4.1%);
-
-  --secondary-green: hsl(142.1 76.2% 36.3%);
-  --secondary-red: hsl(0 84.2% 60.2%);
-  --secondary-orange: hsl(38.2 92.1% 50.0%);
-
-  --background-dark: hsl(224 71.4% 4.1%);
-  --background-light: hsl(220 14.3% 95.9%);
-  --text-light: hsl(210 20% 98%);
-  --text-medium: hsl(217.9 10.6% 64.9%);
-  --text-dark: hsl(220.9 39.3% 11%);
-  --border-color: hsl(215 27.9% 16.9%);
-
-  --shadow-sm: 0 2px 5px rgba(0, 0, 0, 0.2);
-  --shadow-md: 0 5px 15px rgba(0, 0, 0, 0.3);
-  --glass-effect: rgba(255, 255, 255, 0.05);
 
   body {
-    font-family: Inter, sans-serif;
-    background-color: var(--background-dark);
-    color: var(--text-light);
+    background-color: hsl(var(--background));
+    color: hsl(var(--foreground));
+    font-family: 'JetBrains Mono', monospace;
+  }
+
+  /* Custom Scrollbar - Adaptativo para tema claro/escuro */
+  ::-webkit-scrollbar {
+    width: 8px;
+  }
+  
+  ::-webkit-scrollbar-track {
+    background: hsl(var(--background));
+  }
+  
+  :root ::-webkit-scrollbar-thumb {
+    background: linear-gradient(180deg,
+      hsl(var(--primary) / 0.8),
+      hsl(var(--secondary) / 0.8)
+    );
+    border-radius: 4px;
+  }
+  
+  .dark ::-webkit-scrollbar-thumb {
+    background: linear-gradient(180deg,
+      hsl(var(--primary)),
+      hsl(var(--secondary))
+    );
+    border-radius: 4px;
+  }
+  
+  ::-webkit-scrollbar-thumb:hover {
+    background: linear-gradient(180deg,
+      hsl(var(--primary)),
+      hsl(var(--secondary))
+    );
   }
 }
 
-@layer components {
-  .heading-1 {
-    font-size: 2.5rem;
-    font-weight: 700;
-    color: var(--text-light);
+@layer utilities {
+  /* Animações */
+  .pulse-animation {
+    animation: pulse 2s infinite;
   }
-  .heading-2 {
-    font-size: 1.8rem;
-    font-weight: 600;
-    color: var(--text-light);
+  
+  @keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.7; }
   }
-  .heading-3 {
-    font-size: 1.4rem;
-    font-weight: 500;
-    color: var(--text-light);
+  
+  .slide-in {
+    animation: slideIn 0.6s ease-out;
   }
-  .heading-4 {
-    font-size: 1rem;
-    font-weight: 500;
-    color: var(--text-light);
+  
+  @keyframes slideIn {
+    from { opacity: 0; transform: translateY(20px); }
+    to { opacity: 1; transform: translateY(0); }
   }
-  .paragraph {
-    font-size: 1rem;
-    font-weight: 400;
-    color: var(--text-light);
+  
+  .chart-bar {
+    transition: height 0.8s ease-in-out;
   }
-  .muted {
-    font-size: 0.875rem;
-    font-weight: 400;
-    color: var(--text-medium);
+
+  /* Efeitos de Hover */
+  .card-hover {
+    transition: all 300ms ease-in-out;
+  }
+  
+  .card-hover:hover {
+    transform: translateY(-4px);
+  }
+  
+  /* Card hover adaptativo para tema claro/escuro */
+  :root .card-hover:hover {
+    box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+  }
+  
+  .dark .card-hover:hover {
+    box-shadow: 0 20px 25px -5px rgba(255, 255, 255, 0.05), 0 10px 10px -5px rgba(255, 255, 255, 0.02);
+  }
+  
+  /* Gradientes */
+  .gradient-bg {
+    background: linear-gradient(135deg, hsl(var(--primary)) 0%, hsl(var(--secondary)) 100%);
+  }
+  
+  .card-hover {
+    transition: all 300ms ease-in-out;
+  }
+
+  .card-hover:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+  }
+
+  .pulse-animation {
+    animation: pulse 2s infinite;
+  }
+
+  .slide-in {
+    animation: slideIn 0.6s ease-out;
+  }
+
+  .chart-bar {
+    transition: height 0.8s ease-in-out;
+  }
+
+  @keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.7; }
+  }
+
+  @keyframes slideIn {
+    from { opacity: 0; transform: translateY(20px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  /* Efeitos Neon - Adaptados para tema claro/escuro */
+  :root .neon-glow-primary {
+    box-shadow: 0 0 20px hsla(var(--primary), 0.2), 0 0 40px hsla(var(--primary), 0.1);
+    border: 1px solid hsla(var(--primary), 0.2);
+  }
+  
+  .dark .neon-glow-primary {
+    box-shadow: 0 0 20px hsla(var(--primary), 0.4), 0 0 40px hsla(var(--primary), 0.2);
+    border: 1px solid hsla(var(--primary), 0.3);
+  }
+  
+  :root .neon-text-primary {
+    text-shadow: 0 0 8px hsla(var(--primary), 0.4), 0 0 16px hsla(var(--primary), 0.2);
+  }
+  
+  .dark .neon-text-primary {
+    text-shadow: 0 0 8px hsla(var(--primary), 0.8), 0 0 16px hsla(var(--primary), 0.4);
+  }
+  
+  :root .neon-text-secondary {
+    text-shadow: 0 0 8px hsla(var(--secondary), 0.4), 0 0 16px hsla(var(--secondary), 0.2);
+  }
+  
+  .dark .neon-text-secondary {
+    text-shadow: 0 0 8px hsla(var(--secondary), 0.8), 0 0 16px hsla(var(--secondary), 0.4);
+  }
+
+  /* Animação de shimmer adaptativa para hover de card */
+  .holo-card {
+    position: relative;
+    overflow: hidden;
+  }
+  
+  .holo-card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    transition: all 500ms ease-in-out;
+    left: -100%;
+  }
+  
+  :root .holo-card::before {
+    background: linear-gradient(90deg, 
+      transparent,
+      hsla(var(--primary), 0.05),
+      transparent
+    );
+  }
+  
+  .dark .holo-card::before {
+    background: linear-gradient(90deg,
+      transparent,
+      hsla(var(--primary), 0.1),
+      transparent
+    );
+  }
+  
+  .holo-card:hover::before {
+    left: 100%;
   }
 }
- 

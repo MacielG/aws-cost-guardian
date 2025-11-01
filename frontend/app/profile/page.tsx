@@ -6,7 +6,10 @@ import { Button } from '@/components/ui/button';
 import { Alert } from '@/components/ui/alert';
 import { useAuth } from '@/components/auth/AuthProvider';
 import { updatePassword } from 'aws-amplify/auth';
-import PageShell from '@/components/layout/PageShell';
+import { PageHeader } from '@/components/layout/PageHeader';
+import { PageAnimator } from '@/components/layout/PageAnimator';
+import { UnfoldAnimator } from '@/components/layout/UnfoldAnimator';
+import { Input } from '@/components/ui/input';
 
 export default function ProfilePage() {
   const { user } = useAuth();
@@ -58,172 +61,171 @@ export default function ProfilePage() {
   };
 
   return (
-    <PageShell title="Meu Perfil" subtitle="Gerencie suas informações pessoais e configurações de conta">
-      <div>
-        <h1 className="text-3xl font-bold text-gray-900">Meu Perfil</h1>
-        <p className="mt-2 text-gray-600">
-          Gerencie suas informações pessoais e configurações de conta
-        </p>
-      </div>
+    <PageAnimator>
+      <div className="space-y-6">
+        <PageHeader title="PERFIL_USUARIO" description="Configurações e preferências da conta" />
 
       {/* Informações da Conta */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Informações da Conta</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Email
-              </label>
-              <div className="flex items-center gap-3">
-                <div className="flex-1 px-4 py-2 bg-gray-50 rounded-md border border-gray-200">
-                  <p className="text-gray-900">{user?.email || user?.username}</p>
+      <UnfoldAnimator>
+        <Card>
+          <CardHeader>
+            <CardTitle className="neon-text-primary">INFORMACOES_CONTA</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div>
+                <label className="block text-xs font-mono text-muted-foreground mb-1">
+                  EMAIL
+                </label>
+                <div className="flex items-center gap-3">
+                  <div className="flex-1 px-4 py-2 bg-background/50 rounded-md border border-border">
+                    <p className="text-foreground">{user?.email || user?.username}</p>
+                  </div>
+                  <div className="flex items-center justify-center w-8 h-8 rounded-full bg-primary/20">
+                    <svg className="w-5 h-5 text-primary" fill="currentColor" viewBox="0 0 20 20">
+                      <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                    </svg>
+                  </div>
                 </div>
-                <div className="flex items-center justify-center w-8 h-8 rounded-full bg-green-100">
-                  <svg className="w-5 h-5 text-green-600" fill="currentColor" viewBox="0 0 20 20">
-                    <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
-                  </svg>
-                </div>
+                <p className="mt-1 text-xs text-muted-foreground">Email verificado</p>
               </div>
-              <p className="mt-1 text-xs text-gray-500">Email verificado</p>
+
+              <div>
+                <label className="block text-xs font-mono text-muted-foreground mb-1">
+                  USER_ID
+                </label>
+                <div className="px-4 py-2 bg-background/50 rounded-md border border-border">
+                  <p className="text-foreground font-mono text-xs">{user?.userId}</p>
+                </div>
+                <p className="mt-1 text-xs text-muted-foreground">Identificador único</p>
+              </div>
             </div>
 
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                User ID
-              </label>
-              <div className="px-4 py-2 bg-gray-50 rounded-md border border-gray-200">
-                <p className="text-gray-900 font-mono text-xs">{user?.userId}</p>
-              </div>
-              <p className="mt-1 text-xs text-gray-500">Identificador único</p>
-            </div>
-          </div>
-
-          <Alert variant="info">
-            <h4 className="font-semibold">Informação</h4>
-            <p className="mt-1 text-sm">
-              O email não pode ser alterado após a criação da conta. Se precisar usar outro email, 
-              entre em contato com o suporte.
-            </p>
-          </Alert>
-        </CardContent>
-      </Card>
+            <Alert variant="info">
+              <h4 className="font-semibold">Informação</h4>
+              <p className="mt-1 text-sm">
+                O email não pode ser alterado após a criação da conta. Se precisar usar outro email, 
+                entre em contato com o suporte.
+              </p>
+            </Alert>
+          </CardContent>
+        </Card>
+      </UnfoldAnimator>
 
       {/* Segurança - Alterar Senha */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Segurança</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <form onSubmit={handlePasswordChange} className="space-y-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Senha Atual
-              </label>
-              <input
-                type="password"
-                value={passwordForm.currentPassword}
-                onChange={(e) => setPasswordForm({ ...passwordForm, currentPassword: e.target.value })}
-                className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                placeholder="Digite sua senha atual"
-                required
-              />
-            </div>
+      <UnfoldAnimator delay={0.1}>
+        <Card>
+          <CardHeader>
+            <CardTitle className="neon-text-secondary">SEGURANCA</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <form onSubmit={handlePasswordChange} className="space-y-4">
+              <div>
+                <label className="block text-xs font-mono text-muted-foreground mb-1">
+                  SENHA_ATUAL
+                </label>
+                <Input
+                  type="password"
+                  value={passwordForm.currentPassword}
+                  onChange={(e) => setPasswordForm({ ...passwordForm, currentPassword: e.target.value })}
+                  placeholder="> ********"
+                  required
+                />
+              </div>
 
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Nova Senha
-              </label>
-              <input
-                type="password"
-                value={passwordForm.newPassword}
-                onChange={(e) => setPasswordForm({ ...passwordForm, newPassword: e.target.value })}
-                className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                placeholder="Digite sua nova senha"
-                required
-                minLength={8}
-              />
-              <p className="mt-1 text-xs text-gray-500">
-                Mínimo 8 caracteres, incluindo maiúsculas, minúsculas, números e símbolos
-              </p>
-            </div>
+              <div>
+                <label className="block text-xs font-mono text-muted-foreground mb-1">
+                  NOVA_SENHA
+                </label>
+                <Input
+                  type="password"
+                  value={passwordForm.newPassword}
+                  onChange={(e) => setPasswordForm({ ...passwordForm, newPassword: e.target.value })}
+                  placeholder="> ********"
+                  required
+                  minLength={8}
+                />
+                <p className="mt-1 text-xs text-muted-foreground">
+                  Mínimo 8 caracteres, incluindo maiúsculas, minúsculas, números e símbolos
+                </p>
+              </div>
 
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Confirmar Nova Senha
-              </label>
-              <input
-                type="password"
-                value={passwordForm.confirmPassword}
-                onChange={(e) => setPasswordForm({ ...passwordForm, confirmPassword: e.target.value })}
-                className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                placeholder="Confirme sua nova senha"
-                required
-              />
-            </div>
+              <div>
+                <label className="block text-xs font-mono text-muted-foreground mb-1">
+                  CONFIRMAR_NOVA_SENHA
+                </label>
+                <Input
+                  type="password"
+                  value={passwordForm.confirmPassword}
+                  onChange={(e) => setPasswordForm({ ...passwordForm, confirmPassword: e.target.value })}
+                  placeholder="> ********"
+                  required
+                />
+              </div>
 
-            {passwordError && (
-              <Alert variant="error">
-                <p className="text-sm">{passwordError}</p>
-              </Alert>
-            )}
+              {passwordError && (
+                <Alert variant="error">
+                  <p className="text-sm">{passwordError}</p>
+                </Alert>
+              )}
 
-            {passwordSuccess && (
-              <Alert variant="success">
-                <h4 className="font-semibold">Senha alterada com sucesso!</h4>
-                <p className="mt-1 text-sm">Sua senha foi atualizada.</p>
-              </Alert>
-            )}
+              {passwordSuccess && (
+                <Alert variant="success">
+                  <h4 className="font-semibold">Senha alterada com sucesso!</h4>
+                  <p className="mt-1 text-sm">Sua senha foi atualizada.</p>
+                </Alert>
+              )}
 
-            <Button 
-              type="submit" 
-              isLoading={isChangingPassword}
-              className="w-full md:w-auto"
-            >
-              Alterar Senha
-            </Button>
-          </form>
-        </CardContent>
-      </Card>
+              <Button 
+                type="submit" 
+                isLoading={isChangingPassword}
+                className="w-full md:w-auto"
+                variant="secondary"
+              >
+                ALTERAR_SENHA
+              </Button>
+            </form>
+          </CardContent>
+        </Card>
+      </UnfoldAnimator>
 
       {/* Preferências */}
-      <Card>
+      <UnfoldAnimator delay={0.2}>
+        <Card>
         <CardHeader>
-          <CardTitle>Preferências</CardTitle>
+          <CardTitle>PREFERENCIAS</CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
-          <div className="flex items-center justify-between py-3 border-b border-gray-200">
+          <div className="flex items-center justify-between py-3 border-b border-border">
             <div>
-              <h4 className="font-medium text-gray-900">Notificações por Email</h4>
-              <p className="text-sm text-gray-600">Receber alertas de novas recomendações e SLA claims</p>
+              <h4 className="font-medium text-foreground">Notificações por Email</h4>
+              <p className="text-sm text-muted-foreground">Receber alertas de novas recomendações e SLA claims</p>
             </div>
             <label className="relative inline-flex items-center cursor-pointer">
               <input type="checkbox" defaultChecked className="sr-only peer" />
-              <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+              <div className="w-11 h-6 bg-accent peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-primary/50 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-background after:border-border after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary"></div>
             </label>
           </div>
 
-          <div className="flex items-center justify-between py-3 border-b border-gray-200">
+          <div className="flex items-center justify-between py-3 border-b border-border">
             <div>
-              <h4 className="font-medium text-gray-900">Relatórios Semanais</h4>
-              <p className="text-sm text-gray-600">Resumo semanal de economias e atividades</p>
+              <h4 className="font-medium text-foreground">Relatórios Semanais</h4>
+              <p className="text-sm text-muted-foreground">Resumo semanal de economias e atividades</p>
             </div>
             <label className="relative inline-flex items-center cursor-pointer">
               <input type="checkbox" defaultChecked className="sr-only peer" />
-              <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+              <div className="w-11 h-6 bg-accent peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-primary/50 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-background after:border-border after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary"></div>
             </label>
           </div>
 
           <div className="flex items-center justify-between py-3">
             <div>
-              <h4 className="font-medium text-gray-900">Alertas de Economia Alta</h4>
-              <p className="text-sm text-gray-600">Notificar quando uma recomendação pode economizar mais de $500</p>
+              <h4 className="font-medium text-foreground">Alertas de Economia Alta</h4>
+              <p className="text-sm text-muted-foreground">Notificar quando uma recomendação pode economizar mais de $500</p>
             </div>
             <label className="relative inline-flex items-center cursor-pointer">
               <input type="checkbox" defaultChecked className="sr-only peer" />
-              <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+              <div className="w-11 h-6 bg-accent peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-primary/50 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-background after:border-border after:border after:rounded-full after:h-5 after'w-5 after:transition-all peer-checked:bg-primary"></div>
             </label>
           </div>
 
@@ -234,30 +236,34 @@ export default function ProfilePage() {
             </p>
           </Alert>
         </CardContent>
-      </Card>
+        </Card>
+      </UnfoldAnimator>
 
-      {/* Zona de Perigo */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-red-600">Zona de Perigo</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="p-4 border border-red-200 rounded-lg bg-red-50">
-            <h4 className="font-medium text-red-900">Excluir Conta</h4>
-            <p className="mt-1 text-sm text-red-700">
-              Uma vez que você exclua sua conta, não há como voltar atrás. 
-              Todos os seus dados serão permanentemente removidos.
-            </p>
-            <Button 
-              variant="danger" 
-              className="mt-4"
-              onClick={() => alert('Funcionalidade de exclusão de conta será implementada em breve')}
-            >
-              Excluir Minha Conta
-            </Button>
-          </div>
-        </CardContent>
-      </Card>
-    </PageShell>
-  );
+        {/* Zona de Perigo */}
+      <UnfoldAnimator delay={0.3}>
+        <Card className="border-destructive/50 bg-destructive/10">
+          <CardHeader>
+            <CardTitle className="text-destructive">ZONA_DE_PERIGO</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="p-4 border border-destructive/30 rounded-lg bg-destructive/10">
+              <h4 className="font-medium text-destructive-foreground">Excluir Conta</h4>
+              <p className="mt-1 text-sm text-destructive-foreground/80">
+                Uma vez que você exclua sua conta, não há como voltar atrás. 
+                Todos os seus dados serão permanentemente removidos.
+              </p>
+              <Button 
+                variant="danger" 
+                className="mt-4"
+                onClick={() => alert('Funcionalidade de exclusão de conta será implementada em breve')}
+              >
+                Excluir Minha Conta
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      </UnfoldAnimator>
+      </div>
+    </PageAnimator>
+    );
 }

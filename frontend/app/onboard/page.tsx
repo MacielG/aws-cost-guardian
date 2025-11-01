@@ -1,29 +1,55 @@
 // frontend/app/onboard/page.tsx
 
 'use client';
-import React from 'react';
-import { useTranslation } from 'react-i18next';
+import React, { useState, useEffect, useCallback } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useNotify } from '@/hooks/useNotify';
-import { useState, useEffect, useCallback } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
+import { motion, AnimatePresence } from 'framer-motion';
+import { Cloud, Lock, Settings, CheckCircle, ArrowRight, FileText, ShieldCheck, BarChart2 } from 'lucide-react';
 // Assuma que existe um hook ou contexto para obter o token de autenticação
 // import { useAuth } from '@/context/AuthContext'; 
 
+const steps = [
+  {
+    id: 1,
+    title: 'Prepare sua conta AWS',
+    description: 'Inicie a conexão para configurar o acesso seguro e de somente leitura à sua conta AWS.',
+    icon: Cloud,
+  },
+  {
+    id: 2,
+    title: 'Análise de Recursos',
+    description: 'Nossos algoritmos analisam seus recursos em busca de otimizações de custo e segurança.',
+    icon: BarChart2,
+  },
+  {
+    id: 3,
+    title: 'Receba Recomendações',
+    description: 'Visualize um relatório detalhado com todas as economias potenciais encontradas.',
+    icon: FileText,
+  }
+];
+
 export default function Onboard() {
-    const { t } = useTranslation();
     const notify = useNotify();
     const [cfnLink, setCfnLink] = useState('');
     const [onboardingStatus, setOnboardingStatus] = useState('PENDING_CFN');
     const [isConnecting, setIsConnecting] = useState(false);
     const [loading, setLoading] = useState(true);
     const [step, setStep] = useState(1);
+    const [isAnimating, setIsAnimating] = useState(false);
     const router = useRouter();
     const searchParams = useSearchParams();
     const mode = searchParams.get('mode');
-    // const { getToken } = useAuth(); // Exemplo de como obter o token
+
+    const handleNext = () => {
+        setIsAnimating(true);
+        setStep((prev) => Math.min(prev + 1, steps.length + 1));
+        setTimeout(() => setIsAnimating(false), 500);
+    };
 
     const checkOnboardingStatus = useCallback(async () => {
         // const token = await getToken();
@@ -82,7 +108,7 @@ export default function Onboard() {
         if (cfnLink) {
             window.open(cfnLink, '_blank');
             setIsConnecting(true);
-            setStep(2);
+            handleNext();
             notify.info('Aguardando confirmação da stack no AWS...');
         } else {
             notify.info('Gerando link de conexão, por favor aguarde...');
@@ -90,80 +116,127 @@ export default function Onboard() {
     };
 
     return (
-    <div className="min-h-screen bg-background-dark flex items-center justify-center p-6">
-            <div className="max-w-2xl w-full">
-                <div className="text-center mb-8">
-                    <h1 className="heading-1 mb-2">Welcome to Cost Guardian</h1>
-                    <p className="paragraph">Start optimizing your AWS costs in just a few steps</p>
-                </div>
+        <motion.div className="min-h-screen bg-background dark:bg-background/95 flex items-center justify-center p-6">
+            <div className="max-w-4xl w-full">
+                <motion.div 
+                    initial={{ opacity: 0, y: -20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    className="text-center mb-12"
+                >
+                    <h1 className="text-4xl font-bold text-foreground mb-3">Bem-vindo ao AWS Cost Guardian</h1>
+                    <p className="text-xl text-muted-foreground">Otimize seus custos na nuvem de forma inteligente e automatizada.</p>
+                </motion.div>
 
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
-                    <div className={`flex flex-col items-center ${step >= 1 ? 'opacity-100' : 'opacity-50'}`}>
-                        <div className={`rounded-full ${step === 1 ? 'bg-primary-blue text-text-light' : 'bg-border-color text-text-medium'} w-12 h-12 flex items-center justify-center font-bold mb-3 text-lg transition-all duration-200`}>
-                            1
-                        </div>
-                        <div className="font-medium text-text-light">Connect AWS</div>
-                        <div className="text-xs text-text-medium text-center mt-1">Set up your AWS integration</div>
-                    </div>
-                    <div className={`flex flex-col items-center ${step >= 2 ? 'opacity-100' : 'opacity-50'}`}>
-                        <div className={`rounded-full ${step === 2 ? 'bg-primary-blue text-text-light' : 'bg-border-color text-text-medium'} w-12 h-12 flex items-center justify-center font-bold mb-3 text-lg transition-all duration-200`}>
-                            2
-                        </div>
-                        <div className="font-medium text-text-light">Review Permissions</div>
-                        <div className="text-xs text-text-medium text-center mt-1">Check required access</div>
-                    </div>
-                    <div className={`flex flex-col items-center ${step === 3 ? 'opacity-100' : 'opacity-50'}`}>
-                        <div className={`rounded-full ${step === 3 ? 'bg-primary-blue text-text-light' : 'bg-border-color text-text-medium'} w-12 h-12 flex items-center justify-center font-bold mb-3 text-lg transition-all duration-200`}>
-                            3
-                        </div>
-                        <div className="font-medium text-text-light">Deploy</div>
-                        <div className="text-xs text-text-medium text-center mt-1">Start monitoring costs</div>
-                    </div>
-                </div>
-
-                <Card className="mb-6">
-                    <CardHeader>
-                        <CardTitle>Why do we need this?</CardTitle>
-                        <CardDescription>
-                            To automate credit recovery and monitor costs, we need an AWS role with specific permissions. The <code className="bg-background-light px-2 py-1 rounded text-sm">ExternalId</code> ensures security and traceability.
-                        </CardDescription>
-                    </CardHeader>
-                    <CardContent>
-                        <a href="/docs/deploy" className="text-primary-blue hover:text-primary-blue-light underline transition-colors">View complete documentation</a>
-                    </CardContent>
-                </Card>
-
-                {loading ? (
-                    <Skeleton className="w-full h-12 mb-4" />
-                ) : onboardingStatus === 'COMPLETED' ? (
-                    <Card className="border-secondary-green">
-                        <CardContent className="pt-6">
-                            <div className="text-center">
-                                <div className="w-16 h-16 bg-secondary-green rounded-full flex items-center justify-center mx-auto mb-4">
-                                    <svg className="w-8 h-8 text-text-light" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                                    </svg>
-                                </div>
-                                <h3 className="heading-3 mb-2">AWS Connection Successful!</h3>
-                                <p className="text-muted">You will be redirected to the dashboard...</p>
+                <div className="relative grid grid-cols-1 md:grid-cols-3 gap-8 mb-16">
+                    {steps.map((s, index) => (
+                        <motion.div
+                            key={s.id}
+                            initial={{ opacity: 0, x: -20 }}
+                            animate={{ opacity: 1, x: 0 }}
+                            transition={{ delay: index * 0.1 }}
+                            className="flex items-start gap-4"
+                        >
+                            <div className={`flex-shrink-0 flex items-center justify-center w-12 h-12 rounded-full transition-colors duration-300 ${step >= s.id ? 'bg-primary text-primary-foreground' : 'bg-muted text-muted-foreground'}`}>
+                                {step > s.id ? <CheckCircle className="w-6 h-6" /> : <s.icon className="w-6 h-6" />}
                             </div>
-                        </CardContent>
-                    </Card>
+                            <div>
+                                <h3 className="text-lg font-semibold text-foreground mb-1">{s.title}</h3>
+                                <p className="text-sm text-muted-foreground">{s.description}</p>
+                            </div>
+                        </motion.div>
+                    ))}
+                    <motion.div className="absolute top-6 left-0 h-1 bg-muted rounded-full w-full -z-10" />
+                    <motion.div 
+                        className="absolute top-6 left-0 h-1 bg-primary rounded-full -z-10"
+                        animate={{ width: `${((step - 1) / (steps.length -1)) * 100}%` }}
+                    />
+                </div>
+
+                <AnimatePresence mode="wait">
+                {loading ? (
+                    <motion.div
+                        key="loading"
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        exit={{ opacity: 0 }}
+                    >
+                        <Card className="border-border">
+                            <CardContent className="p-8">
+                                <div className="flex flex-col items-center justify-center">
+                                    <Skeleton className="w-12 h-12 rounded-full mb-4" />
+                                    <Skeleton className="w-48 h-6 mb-2" />
+                                    <Skeleton className="w-64 h-4" />
+                                </div>
+                            </CardContent>
+                        </Card>
+                    </motion.div>
+                ) : onboardingStatus === 'COMPLETED' ? (
+                    <motion.div
+                        key="completed"
+                        initial={{ opacity: 0, scale: 0.95 }}
+                        animate={{ opacity: 1, scale: 1 }}
+                        exit={{ opacity: 0 }}
+                    >
+                        <Card className="border-green-500/30 bg-green-500/5 dark:bg-green-500/10">
+                            <CardContent className="p-8">
+                                <div className="flex flex-col items-center text-center">
+                                    <motion.div
+                                        initial={{ scale: 0 }}
+                                        animate={{ scale: 1 }}
+                                        transition={{ type: "spring", stiffness: 200 }}
+                                    >
+                                        <ShieldCheck className="w-16 h-16 text-green-500 mb-4" />
+                                    </motion.div>
+                                    <h3 className="text-2xl font-bold text-foreground mb-2">Configuração Concluída!</h3>
+                                    <p className="text-muted-foreground mb-6">Sua conta AWS está conectada e pronta para começar a economizar.</p>
+                                    <Button
+                                        size="lg"
+                                        onClick={() => router.push('/dashboard')}
+                                        className="bg-primary text-primary-foreground hover:bg-primary/90"
+                                    >
+                                        Ir para o Dashboard <ArrowRight className="ml-2 w-4 h-4" />
+                                    </Button>
+                                </div>
+                            </CardContent>
+                        </Card>
+                    </motion.div>
                 ) : (
-                    <Card>
-                        <CardContent className="pt-6">
-                            <Button onClick={handleConnect} className="w-full mb-4" disabled={!cfnLink || isConnecting}>
-                                {isConnecting ? 'Waiting for connection...' : '1. Connect AWS (Open CloudFormation)'}
-                            </Button>
-                            <p className="text-sm text-text-medium text-center">
-                                {isConnecting
-                                    ? 'After creating the stack in AWS console, you can close the tab and return here. We\'re waiting for automatic confirmation.'
-                                    : 'This will open the AWS console for you to create the access role. It\'s safe and transparent.'}
-                            </p>
-                        </CardContent>
-                    </Card>
+                    <motion.div
+                        key="connect"
+                        initial={{ opacity: 0, scale: 0.95 }}
+                        animate={{ opacity: 1, scale: 1 }}
+                        exit={{ opacity: 0 }}
+                    >
+                        <Card className="border-border overflow-hidden">
+                            <CardHeader>
+                                <CardTitle className="text-center">Passo 1: Conecte sua Conta AWS</CardTitle>
+                                <CardDescription className="text-center">
+                                    Para começar, clique no botão abaixo. Você será redirecionado para o console da AWS para implantar uma stack do CloudFormation.
+                                    <br />
+                                    Este processo é <strong>seguro</strong> e cria uma role com <strong>permissões mínimas e de somente leitura</strong>, seguindo as melhores práticas da AWS.
+                                    {mode === 'trial' && (
+                                        <span className="block mt-2 text-xs bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 p-2 rounded-md">
+                                            Você está no modo <strong>Trial</strong>. Apenas permissões de leitura serão concedidas. Nenhuma ação será executada.
+                                        </span>
+                                    )}
+                                </CardDescription>
+                            </CardHeader>
+                            <CardContent className="flex justify-center">
+                                <Button
+                                    size="lg"
+                                    onClick={handleConnect}
+                                    disabled={isConnecting}
+                                    className="bg-primary text-primary-foreground hover:bg-primary/90 shadow-lg shadow-primary/20"
+                                >
+                                    {isConnecting ? 'Aguardando Conexão...' : 'Conectar com AWS'}
+                                    {!isConnecting && <ArrowRight className="ml-2 w-4 h-4" />}
+                                </Button>
+                            </CardContent>
+                        </Card>
+                    </motion.div>
                 )}
+                </AnimatePresence>
             </div>
-        </div>
+        </motion.div>
     );
 }

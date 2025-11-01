@@ -62,39 +62,35 @@ export default function TrialPage() {
     <MainLayout title="AWS Cost Guardian - Trial">
       <div className="space-y-6">
         {/* Hero Message */}
-        <Card className="bg-gradient-to-r from-blue-500 to-purple-600 text-white">
+        <Card className="bg-gradient-to-r from-blue-200 to-purple-200 dark:from-blue-900 dark:to-purple-900 text-foreground shadow-lg transition-colors">
           <CardContent className="pt-6">
-            <h1 className="text-3xl font-bold mb-4">
-              Bem-vindo ao AWS Cost Guardian!
-            </h1>
-            <p className="text-xl mb-6">
-              Analisamos sua conta AWS e detectamos oportunidades incríveis de economia.
-            </p>
+            <h1 className="text-3xl font-bold mb-4">Bem-vindo ao AWS Cost Guardian!</h1>
+            <p className="text-xl mb-6">Analisamos sua conta AWS e detectamos oportunidades incríveis de economia.</p>
             <div className="grid md:grid-cols-3 gap-4 mb-6">
               <div className="text-center">
-                <DollarSign className="w-8 h-8 mx-auto mb-2" />
-                <div className="text-2xl font-bold">${totalSavingsPotential.toFixed(2)}</div>
-                <div className="text-sm">Economia mensal em recursos</div>
+                <DollarSign className="w-8 h-8 mx-auto mb-2 text-green-600 dark:text-green-400" />
+                <div className="text-2xl font-bold text-foreground">${totalSavingsPotential.toFixed(2)}</div>
+                <div className="text-sm text-muted-foreground">Economia mensal em recursos</div>
               </div>
               <div className="text-center">
-                <Award className="w-8 h-8 mx-auto mb-2" />
-                <div className="text-2xl font-bold">${totalCreditsPotential.toFixed(2)}</div>
-                <div className="text-sm">Créditos SLA recuperáveis</div>
+                <Award className="w-8 h-8 mx-auto mb-2 text-blue-600 dark:text-blue-400" />
+                <div className="text-2xl font-bold text-foreground">${totalCreditsPotential.toFixed(2)}</div>
+                <div className="text-sm text-muted-foreground">Créditos SLA recuperáveis</div>
               </div>
               <div className="text-center">
-                <TrendingUp className="w-8 h-8 mx-auto mb-2" />
-                <div className="text-2xl font-bold">${totalPotential.toFixed(2)}</div>
-                <div className="text-sm">Valor total potencial</div>
+                <TrendingUp className="w-8 h-8 mx-auto mb-2 text-purple-600 dark:text-purple-400" />
+                <div className="text-2xl font-bold text-foreground">${totalPotential.toFixed(2)}</div>
+                <div className="text-sm text-muted-foreground">Valor total potencial</div>
               </div>
             </div>
             <div className="text-center">
-              <p className="text-lg mb-4">
-                Detectamos <strong>${totalPotential.toFixed(2)}</strong> em economia mensal e créditos SLA recuperáveis na sua conta.
+              <p className="text-lg mb-4 text-foreground">
+                Detectamos <strong>{totalPotential.toFixed(2)}</strong> em economia mensal e créditos SLA recuperáveis na sua conta.
               </p>
-              <p className="mb-6">
+              <p className="mb-6 text-muted-foreground">
                 Ative a versão completa para começar a economizar automaticamente. Cobramos apenas <strong>30%</strong> do valor recuperado.
               </p>
-              <Button className="bg-white text-blue-600 hover:bg-gray-100 px-8 py-3 text-lg" onClick={() => router.push('/billing')}>
+              <Button className="bg-background text-blue-600 dark:text-blue-400 hover:bg-muted px-8 py-3 text-lg border border-blue-600 dark:border-blue-400 transition-colors" onClick={() => router.push('/billing')}>
                 Ativar Agora e Economizar →
               </Button>
             </div>

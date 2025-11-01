@@ -5,7 +5,8 @@ import { Button } from '@/components/ui/button';
 import { Download, ExternalLink, RefreshCw } from 'lucide-react';
 import { useEffect, useState, useCallback } from 'react';
 import { Badge } from '@/components/ui/badge';
-import PageShell from '@/components/layout/PageShell';
+import { PageHeader } from '@/components/layout/PageHeader';
+import { PageAnimator } from '@/components/layout/PageAnimator';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { toast } from 'sonner'; // Assuming you have sonner for toasts
@@ -128,8 +129,11 @@ export default function AdminClaims() {
   };
 
   return (
-    <PageShell title="Claims" subtitle="Gerenciamento de Reivindicações">
-      <Card>
+    <PageAnimator>
+      <div className="space-y-6">
+        <PageHeader title="Claims" description="Gerenciamento de Reivindicações">
+        </PageHeader>
+        <Card>
         <CardHeader>
           <CardTitle>{t('adminClaims.title', 'Gerenciamento de Reivindicações (Admin)')}</CardTitle>
           <CardDescription>{t('adminClaims.description', 'Visualize e gerencie todas as reivindicações de crédito SLA do sistema.')}</CardDescription>
@@ -231,9 +235,10 @@ export default function AdminClaims() {
             </div>
           )}
         </CardContent>
-      </Card>
-    </PageShell>
-  );
+        </Card>
+      </div>
+    </PageAnimator>
+    );
 }
 
 // Novo handler para marcar como reembolsado e gerar fatura

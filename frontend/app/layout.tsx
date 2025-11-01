@@ -1,32 +1,37 @@
 import type { Metadata } from 'next';
-import { Inter } from 'next/font/google';
 import './globals.css';
 import '@aws-amplify/ui-react/styles.css';
 import ConfigureAmplifyClientSide from '../components/ConfigureAmplifyClientSide';
 import { ToasterProvider } from '../components/ui/toaster';
+import { Toaster } from 'sonner';
 import { I18nClientProvider } from '@/components/I18nClientProvider';
 import { AuthProvider } from '@/components/auth/AuthProvider';
 import AuthLayoutClient from '@/components/layout/AuthLayoutClient';
+import { ThemeProvider } from '@/components/ThemeProvider';
 
-const inter = Inter({ subsets: ['latin'] });
+// A fonte JetBrains Mono será aplicada globalmente via globals.css
+// const inter = Inter({ subsets: ['latin'] });
 
 export const metadata: Metadata = {
   title: 'AWS Cost Guardian',
-  description: 'Automate AWS refunds',
+  description: 'Automated FinOps Platform',
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="pt-BR">
-      <body className={inter.className}>
-        <ToasterProvider>
-          <ConfigureAmplifyClientSide />
-          <AuthProvider>
-            <I18nClientProvider>
-              <AuthLayoutClient>{children}</AuthLayoutClient>
-            </I18nClientProvider>
-          </AuthProvider>
-        </ToasterProvider>
+    <html lang="pt-BR" suppressHydrationWarning>
+      <body>
+        <ThemeProvider>
+          <ToasterProvider>
+            <Toaster />
+            <ConfigureAmplifyClientSide />
+            <AuthProvider>
+              <I18nClientProvider>
+                <AuthLayoutClient>{children}</AuthLayoutClient>
+              </I18nClientProvider>
+            </AuthProvider>
+          </ToasterProvider>
+        </ThemeProvider>
       </body>
     </html>
   );

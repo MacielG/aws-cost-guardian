@@ -1,0 +1,935 @@
+<!doctype html>
+<html lang="pt-BR" class="h-full">
+ <head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AWS Cost Guardian - FinOps Platform</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="/_sdk/element_sdk.js"></script>
+  <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        cyber: {
+                            bg: '#0a0a0a',
+                            surface: '#111111',
+                            border: '#1a1a1a',
+                            accent: '#00ff88',
+                            blue: '#00d4ff',
+                            purple: '#8b5cf6',
+                            text: '#e5e5e5'
+                        }
+                    },
+                    fontFamily: {
+                        mono: ['JetBrains Mono', 'Fira Code', 'Monaco', 'Consolas', 'monospace']
+                    }
+                }
+            }
+        }
+    </script>
+  <style>
+        @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500;600;700&display=swap');
+        
+        body {
+            box-sizing: border-box;
+            font-family: 'JetBrains Mono', monospace;
+            background: #0a0a0a;
+            overflow-x: hidden;
+        }
+        
+        /* Loading Screen */
+        .loading-screen {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: #0a0a0a;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 9999;
+            transition: opacity 1s ease-out, visibility 1s ease-out;
+        }
+        
+        .loading-screen.hidden {
+            opacity: 0;
+            visibility: hidden;
+        }
+        
+        /* Animated Logo */
+        .logo-startup {
+            animation: logoStartup 3s ease-in-out;
+        }
+        
+        .logo-orbit {
+            animation: orbit 4s linear infinite;
+        }
+        
+        .logo-pulse {
+            animation: logoPulse 2s ease-in-out infinite;
+        }
+        
+        @keyframes logoStartup {
+            0% { 
+                transform: scale(0) rotate(0deg);
+                opacity: 0;
+            }
+            50% { 
+                transform: scale(1.2) rotate(180deg);
+                opacity: 1;
+            }
+            100% { 
+                transform: scale(1) rotate(360deg);
+                opacity: 1;
+            }
+        }
+        
+        @keyframes orbit {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        @keyframes logoPulse {
+            0%, 100% { opacity: 0.8; transform: scale(1); }
+            50% { opacity: 1; transform: scale(1.05); }
+        }
+        
+        /* Geometric Reveal Animations */
+        .reveal-element {
+            opacity: 0;
+            transform: translateY(50px) scale(0.8);
+            transition: all 0.8s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        
+        .reveal-element.revealed {
+            opacity: 1;
+            transform: translateY(0) scale(1);
+        }
+        
+        /* Geometric Shapes */
+        .geo-shape {
+            position: absolute;
+            pointer-events: none;
+            opacity: 0;
+            transition: all 1s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        
+        .geo-shape.active {
+            opacity: 0.1;
+        }
+        
+        .geo-triangle {
+            width: 0;
+            height: 0;
+            border-left: 50px solid transparent;
+            border-right: 50px solid transparent;
+            border-bottom: 87px solid #00ff88;
+            animation: triangleFloat 6s ease-in-out infinite;
+        }
+        
+        .geo-hexagon {
+            width: 60px;
+            height: 34px;
+            background: #00d4ff;
+            position: relative;
+            animation: hexagonSpin 8s linear infinite;
+        }
+        
+        .geo-hexagon:before,
+        .geo-hexagon:after {
+            content: "";
+            position: absolute;
+            width: 0;
+            border-left: 30px solid transparent;
+            border-right: 30px solid transparent;
+        }
+        
+        .geo-hexagon:before {
+            bottom: 100%;
+            border-bottom: 17px solid #00d4ff;
+        }
+        
+        .geo-hexagon:after {
+            top: 100%;
+            border-top: 17px solid #00d4ff;
+        }
+        
+        .geo-circle {
+            width: 40px;
+            height: 40px;
+            border: 2px solid #8b5cf6;
+            border-radius: 50%;
+            animation: circleExpand 4s ease-in-out infinite;
+        }
+        
+        @keyframes triangleFloat {
+            0%, 100% { transform: translateY(0) rotate(0deg); }
+            50% { transform: translateY(-20px) rotate(180deg); }
+        }
+        
+        @keyframes hexagonSpin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        @keyframes circleExpand {
+            0%, 100% { transform: scale(1); border-width: 2px; }
+            50% { transform: scale(1.3); border-width: 1px; }
+        }
+        
+        /* Card Unfold Animation */
+        .card-unfold {
+            transform: rotateY(-90deg);
+            transform-origin: left;
+            opacity: 0;
+            transition: all 0.8s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        
+        .card-unfold.unfolded {
+            transform: rotateY(0deg);
+            opacity: 1;
+        }
+        
+        /* Metric Counter Animation */
+        .metric-counter {
+            font-variant-numeric: tabular-nums;
+        }
+        
+        /* Neon Effects */
+        .neon-glow {
+            box-shadow: 0 0 20px rgba(0, 255, 136, 0.3), 0 0 40px rgba(0, 255, 136, 0.1);
+            border: 1px solid rgba(0, 255, 136, 0.3);
+        }
+        
+        .neon-text {
+            text-shadow: 0 0 10px rgba(0, 255, 136, 0.8), 0 0 20px rgba(0, 255, 136, 0.4);
+        }
+        
+        .neon-blue {
+            text-shadow: 0 0 10px rgba(0, 212, 255, 0.8), 0 0 20px rgba(0, 212, 255, 0.4);
+        }
+        
+        /* Holographic Cards */
+        .holo-card {
+            background: linear-gradient(135deg, rgba(17, 17, 17, 0.9) 0%, rgba(26, 26, 26, 0.9) 100%);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .holo-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 20px 40px rgba(0, 255, 136, 0.2);
+            border-color: rgba(0, 255, 136, 0.5);
+        }
+        
+        .holo-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(0, 255, 136, 0.1), transparent);
+            transition: left 0.5s ease;
+        }
+        
+        .holo-card:hover::before {
+            left: 100%;
+        }
+        
+        /* Progress Bars */
+        .progress-bar {
+            background: linear-gradient(90deg, #00ff88 0%, #00d4ff 100%);
+            animation: progressGlow 2s ease-in-out infinite alternate;
+        }
+        
+        @keyframes progressGlow {
+            0% { box-shadow: 0 0 5px rgba(0, 255, 136, 0.5); }
+            100% { box-shadow: 0 0 20px rgba(0, 255, 136, 0.8); }
+        }
+        
+        /* Navigation Smooth */
+        .nav-smooth {
+            scroll-behavior: smooth;
+        }
+        
+        /* Section Spacing */
+        .section-spacing {
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+        }
+        
+        /* Matrix Background */
+        .matrix-bg {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: -1;
+            opacity: 0.03;
+        }
+        
+        /* Terminal Window */
+        .terminal {
+            background: rgba(0, 0, 0, 0.95);
+            border: 1px solid #333;
+            border-radius: 8px;
+            font-family: 'JetBrains Mono', monospace;
+        }
+        
+        .terminal-header {
+            background: #1a1a1a;
+            padding: 8px 16px;
+            border-bottom: 1px solid #333;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .terminal-dot {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+        }
+        
+        .dot-red { background: #ff5f56; }
+        .dot-yellow { background: #ffbd2e; }
+        .dot-green { background: #27ca3f; }
+        
+        /* Typing Effect */
+        .typing-text {
+            overflow: hidden;
+            border-right: 2px solid #00ff88;
+            white-space: nowrap;
+            animation: typing 2s steps(30, end), blink-caret 0.75s step-end infinite;
+        }
+        
+        @keyframes typing {
+            from { width: 0; }
+            to { width: 100%; }
+        }
+        
+        @keyframes blink-caret {
+            from, to { border-color: transparent; }
+            50% { border-color: #00ff88; }
+        }
+        
+        /* Scrollbar */
+        ::-webkit-scrollbar {
+            width: 8px;
+        }
+        
+        ::-webkit-scrollbar-track {
+            background: #111111;
+        }
+        
+        ::-webkit-scrollbar-thumb {
+            background: linear-gradient(180deg, #00ff88, #00d4ff);
+            border-radius: 4px;
+        }
+    </style>
+  <style>@view-transition { navigation: auto; }</style>
+  <script src="/_sdk/data_sdk.js" type="text/javascript"></script>
+ </head>
+ <body class="h-full bg-cyber-bg text-cyber-text nav-smooth"><!-- Loading Screen -->
+  <div id="loading-screen" class="loading-screen">
+   <div class="text-center"><!-- Animated Startup Logo -->
+    <div class="logo-startup mb-8">
+     <div class="relative w-32 h-32 mx-auto">
+      <div class="absolute inset-0 logo-pulse">
+       <svg class="w-full h-full text-cyber-accent" fill="currentColor" viewbox="0 0 24 24"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5" />
+       </svg>
+      </div>
+      <div class="absolute inset-0 logo-orbit">
+       <div class="w-4 h-4 bg-cyber-blue rounded-full absolute -top-2 left-1/2 transform -translate-x-1/2"></div>
+       <div class="w-3 h-3 bg-cyber-accent rounded-full absolute -right-2 top-1/2 transform -translate-y-1/2"></div>
+       <div class="w-2 h-2 bg-purple-500 rounded-full absolute -bottom-2 left-1/4"></div>
+      </div>
+     </div>
+    </div>
+    <div class="typing-text text-cyber-accent font-mono text-xl" id="loading-text">
+     INITIALIZING FINOPS CONSOLE...
+    </div>
+   </div>
+  </div><!-- Matrix Background -->
+  <canvas class="matrix-bg" id="matrix"></canvas><!-- Fixed Header -->
+  <header class="fixed top-0 left-0 right-0 z-50 bg-cyber-bg bg-opacity-90 backdrop-blur-md border-b border-cyber-border">
+   <div class="max-w-7xl mx-auto px-6 py-4">
+    <div class="flex items-center justify-between">
+     <div class="flex items-center space-x-4"><!-- Compact Logo -->
+      <div class="relative w-10 h-10">
+       <div class="absolute inset-0 logo-pulse">
+        <svg class="w-full h-full text-cyber-accent" fill="currentColor" viewbox="0 0 24 24"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5" />
+        </svg>
+       </div>
+       <div class="absolute inset-0 logo-orbit">
+        <div class="w-1.5 h-1.5 bg-cyber-blue rounded-full absolute -top-0.5 left-1/2 transform -translate-x-1/2"></div>
+        <div class="w-1 h-1 bg-cyber-accent rounded-full absolute -right-0.5 top-1/2 transform -translate-y-1/2"></div>
+       </div>
+      </div>
+      <div>
+       <h1 id="platform-title" class="text-lg font-bold neon-text">AWS COST GUARDIAN</h1>
+       <p class="text-xs text-cyber-accent font-mono">FINOPS PLATFORM</p>
+      </div>
+     </div>
+     <nav class="hidden md:flex items-center space-x-6"><a href="#home" class="font-mono text-sm text-cyber-text hover:text-cyber-accent transition-colors">HOME</a> <a href="#dashboard" class="font-mono text-sm text-cyber-text hover:text-cyber-blue transition-colors">DASHBOARD</a> <a href="#profile" class="font-mono text-sm text-cyber-text hover:text-purple-400 transition-colors">PROFILE</a>
+     </nav><button id="trial-cta" class="px-4 py-2 bg-cyber-accent text-black font-mono text-sm font-bold rounded neon-glow hover:bg-opacity-80 transition-all"> START_TRIAL </button>
+    </div>
+   </div>
+  </header><!-- Main Content -->
+  <main class="pt-20"><!-- Home Section -->
+   <section id="home" class="section-spacing relative"><!-- Geometric Shapes -->
+    <div class="geo-shape geo-triangle" style="top: 10%; left: 10%;"></div>
+    <div class="geo-shape geo-hexagon" style="top: 20%; right: 15%;"></div>
+    <div class="geo-shape geo-circle" style="bottom: 30%; left: 20%;"></div>
+    <div class="geo-shape geo-triangle" style="bottom: 10%; right: 10%;"></div>
+    <div class="max-w-7xl mx-auto px-6">
+     <div class="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center"><!-- Hero Content -->
+      <div class="reveal-element" data-delay="0">
+       <h1 id="hero-title" class="text-5xl lg:text-6xl font-bold mb-6 neon-text">AUTOMATED<br><span class="neon-blue">FINOPS</span><br>
+         PLATFORM</h1>
+       <p id="hero-description" class="text-xl text-gray-300 mb-8 font-mono">Otimização inteligente de custos AWS com IA. Economize até 40% automaticamente.</p>
+       <div class="flex flex-col sm:flex-row gap-4"><button class="px-8 py-4 bg-cyber-accent text-black font-mono font-bold rounded-lg neon-glow hover:bg-opacity-80 transition-all"> <a href="#dashboard">ACESSAR DASHBOARD</a> </button> <button class="px-8 py-4 border border-cyber-blue text-cyber-blue font-mono rounded-lg hover:bg-cyber-blue hover:text-black transition-all"> SAIBA MAIS </button>
+       </div>
+      </div><!-- Hero Stats -->
+      <div class="reveal-element" data-delay="200">
+       <div class="grid grid-cols-2 gap-6">
+        <div class="holo-card card-unfold p-6 rounded-lg text-center" data-delay="300">
+         <div class="text-3xl font-bold neon-text metric-counter" data-target="47832">
+          $0
+         </div>
+         <div class="text-sm text-cyber-accent font-mono mt-2">
+          ECONOMIA MENSAL
+         </div>
+        </div>
+        <div class="holo-card card-unfold p-6 rounded-lg text-center" data-delay="400">
+         <div class="text-3xl font-bold neon-blue metric-counter" data-target="12450">
+          $0
+         </div>
+         <div class="text-sm text-cyber-blue font-mono mt-2">
+          CRÉDITOS SLA
+         </div>
+        </div>
+        <div class="holo-card card-unfold p-6 rounded-lg text-center" data-delay="500">
+         <div class="text-3xl font-bold text-purple-400 metric-counter" data-target="247">
+          0
+         </div>
+         <div class="text-sm text-purple-400 font-mono mt-2">
+          CONTAS AWS
+         </div>
+        </div>
+        <div class="holo-card card-unfold p-6 rounded-lg text-center" data-delay="600">
+         <div class="text-3xl font-bold neon-text metric-counter" data-target="94">
+          0%
+         </div>
+         <div class="text-sm text-cyber-accent font-mono mt-2">
+          OTIMIZAÇÃO
+         </div>
+        </div>
+       </div>
+      </div>
+     </div>
+    </div>
+   </section><!-- Features Section -->
+   <section class="section-spacing">
+    <div class="max-w-7xl mx-auto px-6">
+     <div class="text-center mb-16 reveal-element">
+      <h2 class="text-4xl font-bold mb-4 neon-blue">RECURSOS PRINCIPAIS</h2>
+      <p class="text-gray-400 font-mono">Tecnologia de ponta para otimização de custos</p>
+     </div>
+     <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
+      <div class="holo-card card-unfold p-8 rounded-lg" data-delay="100">
+       <div class="w-16 h-16 bg-cyber-accent bg-opacity-20 rounded-lg flex items-center justify-center mb-6">
+        <svg class="w-8 h-8 text-cyber-accent" fill="currentColor" viewbox="0 0 24 24"><path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+        </svg>
+       </div>
+       <h3 class="text-xl font-bold mb-4 neon-text">OTIMIZAÇÃO AUTOMÁTICA</h3>
+       <p class="text-gray-400 font-mono text-sm">IA identifica e implementa oportunidades de economia automaticamente.</p>
+      </div>
+      <div class="holo-card card-unfold p-8 rounded-lg" data-delay="200">
+       <div class="w-16 h-16 bg-cyber-blue bg-opacity-20 rounded-lg flex items-center justify-center mb-6">
+        <svg class="w-8 h-8 text-cyber-blue" fill="currentColor" viewbox="0 0 24 24"><path d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+        </svg>
+       </div>
+       <h3 class="text-xl font-bold mb-4 neon-blue">ANÁLISE PREDITIVA</h3>
+       <p class="text-gray-400 font-mono text-sm">Previsões precisas de custos e tendências de uso.</p>
+      </div>
+      <div class="holo-card card-unfold p-8 rounded-lg" data-delay="300">
+       <div class="w-16 h-16 bg-purple-500 bg-opacity-20 rounded-lg flex items-center justify-center mb-6">
+        <svg class="w-8 h-8 text-purple-400" fill="currentColor" viewbox="0 0 24 24"><path d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+        </svg>
+       </div>
+       <h3 class="text-xl font-bold mb-4 text-purple-400">SEGURANÇA TOTAL</h3>
+       <p class="text-gray-400 font-mono text-sm">Acesso read-only com criptografia de ponta a ponta.</p>
+      </div>
+     </div>
+    </div>
+   </section><!-- Dashboard Section -->
+   <section id="dashboard" class="section-spacing">
+    <div class="max-w-7xl mx-auto px-6">
+     <div class="text-center mb-16 reveal-element">
+      <h2 class="text-4xl font-bold mb-4 neon-text">DASHBOARD EXECUTIVO</h2>
+      <p class="text-gray-400 font-mono">Métricas em tempo real da sua infraestrutura</p>
+     </div><!-- Main Dashboard -->
+     <div class="grid grid-cols-1 lg:grid-cols-3 gap-8"><!-- Cost Overview Terminal -->
+      <div class="lg:col-span-2 reveal-element" data-delay="100">
+       <div class="terminal">
+        <div class="terminal-header">
+         <div class="terminal-dot dot-red"></div>
+         <div class="terminal-dot dot-yellow"></div>
+         <div class="terminal-dot dot-green"></div><span class="text-xs font-mono text-gray-400 ml-2">cost_analytics.exe</span>
+        </div>
+        <div class="p-6">
+         <div class="text-cyber-accent font-mono text-sm mb-6">
+          &gt; EXECUTANDO ANÁLISE DE CUSTOS...
+         </div><!-- Cost Metrics -->
+         <div class="grid grid-cols-3 gap-6 mb-6">
+          <div class="text-center">
+           <div class="text-2xl font-bold neon-text metric-counter" data-target="47832">
+            $0
+           </div>
+           <div class="text-xs text-cyber-accent font-mono">
+            ECONOMIA MENSAL
+           </div>
+           <div class="w-full bg-cyber-border rounded-full h-1 mt-2">
+            <div class="progress-bar h-1 rounded-full" style="width: 78%"></div>
+           </div>
+          </div>
+          <div class="text-center">
+           <div class="text-2xl font-bold neon-blue metric-counter" data-target="12450">
+            $0
+           </div>
+           <div class="text-xs text-cyber-blue font-mono">
+            CRÉDITOS SLA
+           </div>
+           <div class="w-full bg-cyber-border rounded-full h-1 mt-2">
+            <div class="progress-bar h-1 rounded-full" style="width: 92%"></div>
+           </div>
+          </div>
+          <div class="text-center">
+           <div class="text-2xl font-bold text-purple-400 metric-counter" data-target="247">
+            0
+           </div>
+           <div class="text-xs text-purple-400 font-mono">
+            CONTAS AWS
+           </div>
+           <div class="w-full bg-cyber-border rounded-full h-1 mt-2">
+            <div class="progress-bar h-1 rounded-full" style="width: 65%"></div>
+           </div>
+          </div>
+         </div>
+         <div class="text-cyber-accent font-mono text-sm">
+          &gt; ANÁLISE COMPLETA. TAXA DE OTIMIZAÇÃO: 94.7%
+         </div>
+        </div>
+       </div>
+      </div><!-- Side Panels -->
+      <div class="space-y-6"><!-- System Status -->
+       <div class="holo-card card-unfold p-4 rounded-lg" data-delay="200">
+        <h3 class="text-cyber-accent font-mono text-sm mb-3">STATUS_SISTEMA</h3>
+        <div class="space-y-2 text-xs font-mono">
+         <div class="flex justify-between"><span class="text-gray-400">AWS_API</span> <span class="text-cyber-accent">CONECTADO</span>
+         </div>
+         <div class="flex justify-between"><span class="text-gray-400">MARKETPLACE</span> <span class="text-cyber-accent">ATIVO</span>
+         </div>
+         <div class="flex justify-between"><span class="text-gray-400">BILLING</span> <span class="text-cyber-blue">AUTOMATIZADO</span>
+         </div>
+         <div class="flex justify-between"><span class="text-gray-400">SEGURANÇA</span> <span class="text-cyber-accent">CRIPTOGRAFADO</span>
+         </div>
+        </div>
+       </div><!-- Trial Status -->
+       <div class="holo-card card-unfold p-4 rounded-lg" data-delay="300">
+        <h3 class="text-cyber-blue font-mono text-sm mb-3">STATUS_TRIAL</h3>
+        <div class="text-xs font-mono text-gray-400 mb-2">
+         14 DIAS RESTANTES
+        </div>
+        <div class="w-full bg-cyber-border rounded-full h-2">
+         <div class="progress-bar h-2 rounded-full" style="width: 65%"></div>
+        </div>
+       </div>
+      </div>
+     </div><!-- Recommendations -->
+     <div class="mt-12 reveal-element" data-delay="400">
+      <h3 class="text-2xl font-bold mb-6 neon-blue">RECOMENDAÇÕES IA</h3>
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+       <div class="holo-card p-4 rounded-lg border-l-4 border-red-500">
+        <div class="flex items-center justify-between">
+         <div>
+          <div class="text-red-400 font-mono text-xs mb-1">
+           CRÍTICO
+          </div>
+          <div class="font-mono text-sm">
+           15 INSTÂNCIAS EC2 OCIOSAS
+          </div>
+          <div class="text-xs text-gray-400 font-mono">
+           ECONOMIA: $2,340/mês
+          </div>
+         </div><button class="px-4 py-2 bg-red-500 text-black font-mono text-xs rounded hover:bg-red-400 transition-all"> EXECUTAR </button>
+        </div>
+       </div>
+       <div class="holo-card p-4 rounded-lg border-l-4 border-cyber-blue">
+        <div class="flex items-center justify-between">
+         <div>
+          <div class="text-cyber-blue font-mono text-xs mb-1">
+           SLA_RECOVERY
+          </div>
+          <div class="font-mono text-sm">
+           CORRELAÇÃO HEALTH EVENTS
+          </div>
+          <div class="text-xs text-gray-400 font-mono">
+           CRÉDITO: $450
+          </div>
+         </div><button class="px-4 py-2 bg-cyber-blue text-black font-mono text-xs rounded hover:bg-opacity-80 transition-all"> REIVINDICAR </button>
+        </div>
+       </div>
+      </div>
+     </div>
+    </div>
+   </section><!-- Profile Section -->
+   <section id="profile" class="section-spacing">
+    <div class="max-w-4xl mx-auto px-6">
+     <div class="text-center mb-16 reveal-element">
+      <h2 class="text-4xl font-bold mb-4 text-purple-400">PERFIL DO USUÁRIO</h2>
+      <p class="text-gray-400 font-mono">Configurações e preferências da conta</p>
+     </div>
+     <div class="grid grid-cols-1 md:grid-cols-2 gap-8"><!-- User Info -->
+      <div class="holo-card card-unfold p-6 rounded-lg" data-delay="100">
+       <h3 class="text-cyber-accent font-mono text-sm mb-4">INFORMAÇÕES_USUÁRIO</h3>
+       <div class="space-y-4">
+        <div><label class="block text-xs font-mono text-gray-400 mb-1">NOME</label> <input id="user-name" type="text" value="Admin User" class="w-full bg-cyber-surface border border-cyber-border rounded px-3 py-2 font-mono text-sm text-cyber-text focus:border-cyber-accent focus:outline-none">
+        </div>
+        <div><label class="block text-xs font-mono text-gray-400 mb-1">EMAIL</label> <input id="user-email" type="email" value="admin@company.com" class="w-full bg-cyber-surface border border-cyber-border rounded px-3 py-2 font-mono text-sm text-cyber-text focus:border-cyber-accent focus:outline-none">
+        </div>
+        <div><label class="block text-xs font-mono text-gray-400 mb-1">EMPRESA</label> <input id="user-company" type="text" value="Tech Corp" class="w-full bg-cyber-surface border border-cyber-border rounded px-3 py-2 font-mono text-sm text-cyber-text focus:border-cyber-accent focus:outline-none">
+        </div>
+       </div>
+      </div><!-- Account Settings -->
+      <div class="holo-card card-unfold p-6 rounded-lg" data-delay="200">
+       <h3 class="text-cyber-blue font-mono text-sm mb-4">CONFIGURAÇÕES_CONTA</h3>
+       <div class="space-y-4">
+        <div class="flex items-center justify-between"><span class="font-mono text-sm">NOTIFICAÇÕES EMAIL</span> <button class="w-12 h-6 bg-cyber-accent rounded-full relative transition-all">
+          <div class="w-5 h-5 bg-black rounded-full absolute top-0.5 right-0.5 transition-all"></div></button>
+        </div>
+        <div class="flex items-center justify-between"><span class="font-mono text-sm">AUTO OTIMIZAÇÃO</span> <button class="w-12 h-6 bg-cyber-accent rounded-full relative transition-all">
+          <div class="w-5 h-5 bg-black rounded-full absolute top-0.5 right-0.5 transition-all"></div></button>
+        </div>
+        <div class="flex items-center justify-between"><span class="font-mono text-sm">RELATÓRIOS SEMANAIS</span> <button class="w-12 h-6 bg-gray-600 rounded-full relative transition-all">
+          <div class="w-5 h-5 bg-black rounded-full absolute top-0.5 left-0.5 transition-all"></div></button>
+        </div>
+       </div><button class="w-full mt-6 px-4 py-2 bg-cyber-accent text-black font-mono font-bold rounded hover:bg-opacity-80 transition-all"> SALVAR CONFIGURAÇÕES </button>
+      </div>
+     </div>
+    </div>
+   </section>
+  </main>
+  <script>
+        // Configuration for Element SDK
+        const defaultConfig = {
+            platform_title: "AWS COST GUARDIAN",
+            hero_title: "AUTOMATED FINOPS PLATFORM",
+            hero_description: "Otimização inteligente de custos AWS com IA. Economize até 40% automaticamente.",
+            trial_cta: "START_TRIAL",
+            user_name: "Admin User",
+            user_email: "admin@company.com",
+            user_company: "Tech Corp"
+        };
+
+        // Initialize Element SDK
+        if (window.elementSdk) {
+            window.elementSdk.init({
+                defaultConfig: defaultConfig,
+                onConfigChange: async (config) => {
+                    // Update platform title
+                    const titleElement = document.getElementById('platform-title');
+                    if (titleElement) {
+                        titleElement.textContent = config.platform_title || defaultConfig.platform_title;
+                    }
+
+                    // Update hero title
+                    const heroTitleElement = document.getElementById('hero-title');
+                    if (heroTitleElement) {
+                        heroTitleElement.innerHTML = (config.hero_title || defaultConfig.hero_title).replace('FINOPS', '<span class="neon-blue">FINOPS</span>');
+                    }
+
+                    // Update hero description
+                    const heroDescElement = document.getElementById('hero-description');
+                    if (heroDescElement) {
+                        heroDescElement.textContent = config.hero_description || defaultConfig.hero_description;
+                    }
+
+                    // Update trial CTA
+                    const trialCtaElement = document.getElementById('trial-cta');
+                    if (trialCtaElement) {
+                        trialCtaElement.textContent = config.trial_cta || defaultConfig.trial_cta;
+                    }
+
+                    // Update user info
+                    const userNameElement = document.getElementById('user-name');
+                    if (userNameElement) {
+                        userNameElement.value = config.user_name || defaultConfig.user_name;
+                    }
+
+                    const userEmailElement = document.getElementById('user-email');
+                    if (userEmailElement) {
+                        userEmailElement.value = config.user_email || defaultConfig.user_email;
+                    }
+
+                    const userCompanyElement = document.getElementById('user-company');
+                    if (userCompanyElement) {
+                        userCompanyElement.value = config.user_company || defaultConfig.user_company;
+                    }
+                },
+                mapToCapabilities: (config) => ({
+                    recolorables: [],
+                    borderables: [],
+                    fontEditable: undefined,
+                    fontSizeable: undefined
+                }),
+                mapToEditPanelValues: (config) => new Map([
+                    ["platform_title", config.platform_title || defaultConfig.platform_title],
+                    ["hero_title", config.hero_title || defaultConfig.hero_title],
+                    ["hero_description", config.hero_description || defaultConfig.hero_description],
+                    ["trial_cta", config.trial_cta || defaultConfig.trial_cta],
+                    ["user_name", config.user_name || defaultConfig.user_name],
+                    ["user_email", config.user_email || defaultConfig.user_email],
+                    ["user_company", config.user_company || defaultConfig.user_company]
+                ])
+            });
+        }
+
+        // Loading Screen Animation
+        function initLoadingScreen() {
+            const loadingScreen = document.getElementById('loading-screen');
+            const loadingText = document.getElementById('loading-text');
+            
+            const messages = [
+                'INITIALIZING FINOPS CONSOLE...',
+                'CONNECTING TO AWS API...',
+                'LOADING COST ANALYTICS...',
+                'SYSTEM READY'
+            ];
+            
+            let messageIndex = 0;
+            
+            const messageInterval = setInterval(() => {
+                if (messageIndex < messages.length - 1) {
+                    messageIndex++;
+                    loadingText.textContent = messages[messageIndex];
+                } else {
+                    clearInterval(messageInterval);
+                    setTimeout(() => {
+                        loadingScreen.classList.add('hidden');
+                        initAnimations();
+                    }, 1000);
+                }
+            }, 800);
+        }
+
+        // Matrix Rain Effect
+        function initMatrix() {
+            const canvas = document.getElementById('matrix');
+            const ctx = canvas.getContext('2d');
+            
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+            
+            const chars = '01アイウエオカキクケコサシスセソタチツテトナニヌネノハヒフヘホマミムメモヤユヨラリルレロワヲン';
+            const charArray = chars.split('');
+            const fontSize = 14;
+            const columns = canvas.width / fontSize;
+            const drops = [];
+            
+            for (let i = 0; i < columns; i++) {
+                drops[i] = 1;
+            }
+            
+            function draw() {
+                ctx.fillStyle = 'rgba(10, 10, 10, 0.05)';
+                ctx.fillRect(0, 0, canvas.width, canvas.height);
+                
+                ctx.fillStyle = '#00ff88';
+                ctx.font = fontSize + 'px monospace';
+                
+                for (let i = 0; i < drops.length; i++) {
+                    const text = charArray[Math.floor(Math.random() * charArray.length)];
+                    ctx.fillText(text, i * fontSize, drops[i] * fontSize);
+                    
+                    if (drops[i] * fontSize > canvas.height && Math.random() > 0.975) {
+                        drops[i] = 0;
+                    }
+                    drops[i]++;
+                }
+            }
+            
+            setInterval(draw, 50);
+        }
+
+        // Scroll Reveal Animation
+        function initScrollReveal() {
+            const revealElements = document.querySelectorAll('.reveal-element');
+            const cardUnfolds = document.querySelectorAll('.card-unfold');
+            const geoShapes = document.querySelectorAll('.geo-shape');
+            
+            const observer = new IntersectionObserver((entries) => {
+                entries.forEach(entry => {
+                    if (entry.isIntersecting) {
+                        const delay = entry.target.dataset.delay || 0;
+                        
+                        setTimeout(() => {
+                            entry.target.classList.add('revealed');
+                            
+                            // Animate geometric shapes
+                            if (entry.target.closest('section')) {
+                                const sectionShapes = entry.target.closest('section').querySelectorAll('.geo-shape');
+                                sectionShapes.forEach((shape, index) => {
+                                    setTimeout(() => {
+                                        shape.classList.add('active');
+                                    }, index * 200);
+                                });
+                            }
+                        }, delay);
+                    }
+                });
+            }, {
+                threshold: 0.1,
+                rootMargin: '0px 0px -50px 0px'
+            });
+            
+            const cardObserver = new IntersectionObserver((entries) => {
+                entries.forEach(entry => {
+                    if (entry.isIntersecting) {
+                        const delay = entry.target.dataset.delay || 0;
+                        
+                        setTimeout(() => {
+                            entry.target.classList.add('unfolded');
+                        }, delay);
+                    }
+                });
+            }, {
+                threshold: 0.1
+            });
+            
+            revealElements.forEach(el => observer.observe(el));
+            cardUnfolds.forEach(el => cardObserver.observe(el));
+        }
+
+        // Counter Animation
+        function animateCounters() {
+            const counters = document.querySelectorAll('.metric-counter');
+            
+            counters.forEach(counter => {
+                const target = parseInt(counter.dataset.target);
+                const duration = 2000;
+                const step = target / (duration / 16);
+                let current = 0;
+                
+                const timer = setInterval(() => {
+                    current += step;
+                    if (current >= target) {
+                        current = target;
+                        clearInterval(timer);
+                    }
+                    
+                    if (counter.textContent.includes('$')) {
+                        counter.textContent = '$' + Math.floor(current).toLocaleString();
+                    } else if (counter.textContent.includes('%')) {
+                        counter.textContent = Math.floor(current) + '%';
+                    } else {
+                        counter.textContent = Math.floor(current).toLocaleString();
+                    }
+                }, 16);
+            });
+        }
+
+        // Button Effects
+        function addButtonEffects() {
+            const buttons = document.querySelectorAll('button');
+            
+            buttons.forEach(button => {
+                button.addEventListener('click', function(e) {
+                    // Cyber effect
+                    this.style.transform = 'scale(0.95)';
+                    this.style.boxShadow = '0 0 30px rgba(0, 255, 136, 0.8)';
+                    
+                    setTimeout(() => {
+                        this.style.transform = 'scale(1)';
+                        this.style.boxShadow = '';
+                    }, 200);
+                });
+            });
+        }
+
+        // Toggle Switches
+        function initToggleSwitches() {
+            const toggles = document.querySelectorAll('button[class*="w-12 h-6"]');
+            
+            toggles.forEach(toggle => {
+                toggle.addEventListener('click', function() {
+                    const dot = this.querySelector('div');
+                    const isActive = this.classList.contains('bg-cyber-accent');
+                    
+                    if (isActive) {
+                        this.classList.remove('bg-cyber-accent');
+                        this.classList.add('bg-gray-600');
+                        dot.classList.remove('right-0.5');
+                        dot.classList.add('left-0.5');
+                    } else {
+                        this.classList.remove('bg-gray-600');
+                        this.classList.add('bg-cyber-accent');
+                        dot.classList.remove('left-0.5');
+                        dot.classList.add('right-0.5');
+                    }
+                });
+            });
+        }
+
+        // Smooth Scroll for Navigation
+        function initSmoothScroll() {
+            const navLinks = document.querySelectorAll('a[href^="#"]');
+            
+            navLinks.forEach(link => {
+                link.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    const target = document.querySelector(this.getAttribute('href'));
+                    if (target) {
+                        target.scrollIntoView({
+                            behavior: 'smooth',
+                            block: 'start'
+                        });
+                    }
+                });
+            });
+        }
+
+        // Initialize all animations after loading
+        function initAnimations() {
+            initScrollReveal();
+            setTimeout(animateCounters, 500);
+            addButtonEffects();
+            initToggleSwitches();
+            initSmoothScroll();
+        }
+
+        // Initialize everything
+        document.addEventListener('DOMContentLoaded', function() {
+            initMatrix();
+            initLoadingScreen();
+        });
+
+        // Resize handler
+        window.addEventListener('resize', function() {
+            const canvas = document.getElementById('matrix');
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+        });
+    </script>
+ <script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'997ae684d7287e12',t:'MTc2MTk5NDk1Mi4wMDAwMDA='};var a=document.createElement('script');a.nonce='';a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
+</html>

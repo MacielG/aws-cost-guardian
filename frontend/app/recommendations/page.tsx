@@ -1,281 +1,272 @@
+// frontend/app/recommendations/page.tsx
 'use client';
 
-import { useEffect, useState } from 'react';
-import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
+import React, { useState, useMemo } from 'react';
+import { motion } from 'framer-motion';
+import { BarChart2, Search, Zap, CheckCircle, Info, SlidersHorizontal, Tag, DollarSign, Server, Database, Globe } from 'lucide-react';
+import { PageHeader } from '@/components/layout/PageHeader';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { LoadingState } from '@/components/ui/loadingspinner';
-import { Alert } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
-import { apiClient } from '@/lib/api';
-import PageShell from '@/components/layout/PageShell';
+import { Input } from '@/components/ui/input';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
+import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription, SheetFooter } from '@/components/ui/sheet';
+import { useNotify } from '@/hooks/useNotify';
 
-interface Recommendation {
-  sk: string;
-  type: string;
-  status: string;
-  resourceId: string;
-  resourceType: string;
-  region: string;
-  potentialSavings: number;
-  reason: string;
-  createdAt: string;
-  executedAt?: string;
-}
+// Mock data - substitua pela chamada de API
+const mockRecommendations = [
+  { id: 'rec-001', type: 'IDLE_INSTANCE', resourceId: 'i-1234567890abcdef0', region: 'us-east-1', potentialSaving: 120.50, status: 'EXECUTED', reason: 'CPU Utilization below 5% for 14 days.' },
+  { id: 'rec-002', type: 'UNUSED_EBS', resourceId: 'vol-0abcdef1234567890', region: 'us-east-1', potentialSaving: 25.00, status: 'ACTIVE', reason: 'Volume not attached to any instance for over 30 days.' },
+  { id: 'rec-003', type: 'IDLE_INSTANCE', resourceId: 'i-abcdef12345678901', region: 'sa-east-1', potentialSaving: 88.75, status: 'ACTIVE', reason: 'CPU Utilization below 5% for 14 days.' },
+  { id: 'rec-004', type: 'OPTIMIZE_RDS', resourceId: 'db-instance-01', region: 'us-west-2', potentialSaving: 210.00, status: 'EXECUTED', reason: 'Instance is overprovisioned. Recommended to switch to a smaller instance type.' },
+  { id: 'rec-005', type: 'UNUSED_EIP', resourceId: '54.123.45.67', region: 'us-east-1', potentialSaving: 3.60, status: 'ACTIVE', reason: 'Elastic IP not associated with any running instance or network interface.' },
+];
+
+const recommendationStatusVariant: { [key: string]: "success" | "warning" | "secondary" } = {
+  'ACTIVE': 'warning',
+  'EXECUTED': 'success',
+};
+
+const recommendationTypeIcon: { [key: string]: React.ElementType } = {
+  'IDLE_INSTANCE': Server,
+  'UNUSED_EBS': Database,
+  'OPTIMIZE_RDS': Database,
+  'UNUSED_EIP': Globe,
+  'default': DollarSign,
+};
+
+type StatusFilter = "ALL" | "ACTIVE" | "EXECUTED";
+
+const processSteps = [
+    { icon: Search, title: "Análise Contínua", description: "Monitoramos seus recursos AWS 24/7, cruzando dados de uso, métricas do CloudWatch e custos." },
+    { icon: BarChart2, title: "Identificação de Padrões", description: "Nossos algoritmos identificam padrões de ociosidade, superdimensionamento e desperdício." },
+    { icon: Zap, title: "Ação Inteligente", description: "Geramos recomendações claras para você executar com um clique, ou automatizamos a otimização para você." },
+];
 
 export default function RecommendationsPage() {
-  const [recommendations, setRecommendations] = useState<Recommendation[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [executingIds, setExecutingIds] = useState<Set<string>>(new Set());
-  const [filter, setFilter] = useState<string>('all');
+  const [recommendations, setRecommendations] = useState(mockRecommendations);
+  const [selectedRec, setSelectedRec] = useState<any | null>(null);
+  const [searchTerm, setSearchTerm] = useState("");
+  const [statusFilter, setStatusFilter] = useState<StatusFilter>("ALL");
+  const [regionFilter, setRegionFilter] = useState<string>("ALL");
+  const [isExecuting, setIsExecuting] = useState(false);
+  const notify = useNotify();
 
-  useEffect(() => {
-    loadRecommendations();
-  }, []);
+  const availableRegions = useMemo(() => {
+    const regions = new Set(recommendations.map(rec => rec.region));
+    return ['ALL', ...Array.from(regions)];
+  }, [recommendations]);
 
-  const loadRecommendations = async () => {
-    try {
-      setLoading(true);
-      setError(null);
-      const response = await apiClient.get('/api/recommendations');
-      setRecommendations(response.data || []);
-    } catch (err: any) {
-      console.error('Erro ao carregar recomendações:', err);
-      setError(err.message || 'Erro ao carregar recomendações');
-    } finally {
-      setLoading(false);
-    }
-  };
+  const filteredRecommendations = useMemo(() => {
+    return recommendations
+      .filter(rec => statusFilter === 'ALL' || rec.status === statusFilter)
+      .filter(rec => regionFilter === 'ALL' || rec.region === regionFilter)
+      .filter(rec => 
+        rec.resourceId.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        rec.type.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        rec.region.toLowerCase().includes(searchTerm.toLowerCase())
+      );
+  }, [recommendations, statusFilter, regionFilter, searchTerm]);
 
-  const handleExecute = async (recommendation: Recommendation) => {
-    if (!confirm(`Tem certeza que deseja executar esta recomendação? Esta ação não pode ser desfeita.`)) {
-      return;
-    }
 
-    try {
-      setExecutingIds(prev => new Set(prev).add(recommendation.sk));
-      
-      await apiClient.post('/api/recommendations/execute', {
-        recommendationId: recommendation.sk,
-      });
+  const handleExecute = async (recommendationId: string) => {
+    setIsExecuting(true);
+    notify.info(`Executando recomendação ${recommendationId}...`);
 
-      // Atualizar lista
-      await loadRecommendations();
-      
-      alert('Recomendação executada com sucesso!');
-    } catch (err: any) {
-      console.error('Erro ao executar recomendação:', err);
-      alert(`Erro ao executar: ${err.message}`);
-    } finally {
-      setExecutingIds(prev => {
-        const newSet = new Set(prev);
-        newSet.delete(recommendation.sk);
-        return newSet;
-      });
-    }
-  };
+    // Simulação de chamada de API
+    // await fetch('/api/recommendations/execute', { method: 'POST', body: JSON.stringify({ recommendationId }) });
+    await new Promise(resolve => setTimeout(resolve, 2000));
 
-  const formatCurrency = (value: number) => {
-    return new Intl.NumberFormat('pt-BR', {
-      style: 'currency',
-      currency: 'USD',
-    }).format(value);
-  };
-
-  const getStatusBadge = (status: string) => {
-    const statusMap: Record<string, { variant: 'default' | 'success' | 'warning' | 'danger' | 'info'; label: string }> = {
-      RECOMMENDED: { variant: 'info', label: 'Recomendado' },
-      EXECUTING: { variant: 'warning', label: 'Executando' },
-      EXECUTED: { variant: 'success', label: 'Executado' },
-      FAILED: { variant: 'danger', label: 'Falhou' },
-      DISMISSED: { variant: 'default', label: 'Dispensado' },
-    };
-
-    const config = statusMap[status] || { variant: 'default', label: status };
-    return <Badge variant={config.variant}>{config.label}</Badge>;
-  };
-  const getTypeLabel = (type: string) => {
-    const typeMap: Record<string, string> = {
-      IDLE_INSTANCE: 'Instância Ociosa',
-      UNUSED_EBS: 'Volume EBS Não Utilizado',
-      IDLE_RDS: 'RDS Ocioso',
-      RESERVED_INSTANCE: 'Instância Reservada',
-    };
-    return typeMap[type] || type;
-  };
-
-  const filteredRecommendations = recommendations.filter(rec => {
-    if (filter === 'all') return true;
-    if (filter === 'active') return rec.status === 'RECOMMENDED';
-    if (filter === 'executed') return rec.status === 'EXECUTED';
-    return true;
-  });
-
-  if (loading) {
-    return <LoadingState message="Carregando recomendações..." />;
-  }
-
-  if (error) {
-    return (
-      <div className="space-y-4">
-        <Alert variant="error">
-          <h4 className="font-semibold">Erro ao carregar recomendações</h4>
-          <p className="mt-1 text-sm">{error}</p>
-          <button
-            onClick={loadRecommendations}
-            className="mt-3 text-sm underline hover:no-underline"
-          >
-            Tentar novamente
-          </button>
-        </Alert>
-      </div>
+    setRecommendations(prev =>
+      prev.map(rec => rec.id === recommendationId ? { ...rec, status: 'EXECUTED' } : rec)
     );
-  }
+    notify.success('Recomendação executada com sucesso!');
+    setIsExecuting(false);
+    setSelectedRec(null);
+  };
 
   return (
-    <PageShell title="Recomendações" subtitle="Sugestões automáticas para reduzir seus custos">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold text-gray-900">Recomendações</h1>
-          <p className="mt-2 text-gray-600">
-            Oportunidades de economia identificadas pela nossa IA
-          </p>
-        </div>
-        <Button onClick={loadRecommendations} variant="secondary">
-          <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-          </svg>
-          Atualizar
-        </Button>
-      </div>
+    <>
+      <PageHeader
+        title="Recomendações de Otimização"
+        description="Encontre e execute ações para reduzir seus custos na AWS de forma inteligente."
+      />
 
-      {/* Filtros */}
-      <div className="flex gap-2">
-        <button
-          onClick={() => setFilter('all')}
-          className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
-            filter === 'all'
-              ? 'bg-blue-600 text-white'
-              : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-          }`}
-        >
-          Todas ({recommendations.length})
-        </button>
-        <button
-          onClick={() => setFilter('active')}
-          className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
-            filter === 'active'
-              ? 'bg-blue-600 text-white'
-              : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-          }`}
-        >
-          Ativas ({recommendations.filter(r => r.status === 'RECOMMENDED').length})
-        </button>
-        <button
-          onClick={() => setFilter('executed')}
-          className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
-            filter === 'executed'
-              ? 'bg-blue-600 text-white'
-              : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-          }`}
-        >
-          Executadas ({recommendations.filter(r => r.status === 'EXECUTED').length})
-        </button>
-      </div>
-
-      {/* Lista de Recomendações */}
-      {filteredRecommendations.length === 0 ? (
-        <Card>
-          <CardContent className="py-12">
-            <div className="text-center">
-              <svg className="mx-auto h-12 w-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-              </svg>
-              <h3 className="mt-2 text-sm font-medium text-gray-900">
-                Nenhuma recomendação encontrada
-              </h3>
-              <p className="mt-1 text-sm text-gray-500">
-                Conecte sua conta AWS para receber recomendações personalizadas.
-              </p>
-            </div>
+      {/* Seção Como Funciona */}
+      <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }}>
+        <Card className="mb-8">
+          <CardHeader>
+            <CardTitle className="text-xl">Como Nossas Recomendações Funcionam</CardTitle>
+          </CardHeader>
+          <CardContent className="grid md:grid-cols-3 gap-8">
+            {processSteps.map((step, index) => (
+              <div key={index} className="flex items-start gap-4">
+                <div className="flex-shrink-0 w-12 h-12 bg-primary/10 text-primary rounded-lg flex items-center justify-center">
+                  <step.icon className="w-6 h-6" />
+                </div>
+                <div>
+                  <h3 className="font-semibold mb-1">{step.title}</h3>
+                  <p className="text-sm text-muted-foreground">{step.description}</p>
+                </div>
+              </div>
+            ))}
           </CardContent>
         </Card>
-      ) : (
-        <div className="space-y-4">
-          {filteredRecommendations.map((rec) => (
-            <Card key={rec.sk}>
-              <CardContent className="p-6">
-                <div className="flex items-start justify-between">
+      </motion.div>
+
+      {/* Filtros e Lista de Recomendações */}
+      <div className="space-y-6">
+        <Card>
+          <CardHeader className="flex-row items-center justify-between">
+            <CardTitle>Filtros</CardTitle>
+            <SlidersHorizontal className="w-5 h-5 text-muted-foreground" />
+          </CardHeader>
+          <CardContent className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className="flex-1">
+              <Input 
+                placeholder="Buscar por ID do recurso, tipo ou região..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+              />
+            </div>
+            <Select value={statusFilter} onValueChange={(value) => setStatusFilter(value as StatusFilter)} >
+              <SelectTrigger className="w-full">
+                <SelectValue placeholder="Filtrar por status" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="ALL">Todos os Status</SelectItem>
+                <SelectItem value="ACTIVE">Ativas</SelectItem>
+                <SelectItem value="EXECUTED">Executadas</SelectItem>
+              </SelectContent>
+            </Select>
+            <Select value={regionFilter} onValueChange={(value) => setRegionFilter(value)}>
+              <SelectTrigger className="w-full">
+                <SelectValue placeholder="Filtrar por região" />
+              </SelectTrigger>
+              <SelectContent>
+                {availableRegions.map(region => (
+                  <SelectItem key={region} value={region}>
+                    {region === 'ALL' ? 'Todas as Regiões' : region}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </CardContent>
+        </Card>
+
+        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+          {filteredRecommendations.map((rec) => {
+            const Icon = recommendationTypeIcon[rec.type] || recommendationTypeIcon.default;
+            return (
+              <Card key={rec.id} className="flex flex-col">
+                <CardHeader className="flex-row items-start gap-4 space-y-0">
+                  <div className="flex-shrink-0 w-10 h-10 bg-primary/10 text-primary rounded-lg flex items-center justify-center">
+                    <Icon className="w-5 h-5" />
+                  </div>
                   <div className="flex-1">
-                    <div className="flex items-center gap-3">
-                      <h3 className="text-lg font-semibold text-gray-900">
-                        {getTypeLabel(rec.type)}
-                      </h3>
-                      {getStatusBadge(rec.status)}
-                    </div>
-                    
-                    <div className="mt-3 space-y-2">
-                      <div className="flex items-center gap-2 text-sm text-gray-600">
-                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 3v2m6-2v2M9 19v2m6-2v2M5 9H3m2 6H3m18-6h-2m2 6h-2M7 19h10a2 2 0 002-2V7a2 2 0 00-2-2H7a2 2 0 00-2 2v10a2 2 0 002 2zM9 9h6v6H9V9z" />
-                        </svg>
-                        <span className="font-medium">Recurso:</span>
-                        <span>{rec.resourceId}</span>
-                      </div>
-                      
-                      <div className="flex items-center gap-2 text-sm text-gray-600">
-                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
-                        </svg>
-                        <span className="font-medium">Região:</span>
-                        <span>{rec.region}</span>
-                      </div>
-                      
-                      <div className="flex items-center gap-2 text-sm">
-                        <svg className="w-4 h-4 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                        </svg>
-                        <span className="font-medium text-green-700">Economia Potencial:</span>
-                        <span className="text-green-700 font-bold">{formatCurrency(rec.potentialSavings)}</span>
-                      </div>
-                      
-                      <div className="mt-3 p-3 bg-gray-50 rounded-md">
-                        <p className="text-sm text-gray-700">
-                          <span className="font-medium">Motivo:</span> {rec.reason}
-                        </p>
-                      </div>
-                      
-                      <div className="flex items-center gap-4 text-xs text-gray-500 mt-2">
-                        <span>Criado em: {new Date(rec.createdAt).toLocaleString('pt-BR')}</span>
-                        {rec.executedAt && (
-                          <span>Executado em: {new Date(rec.executedAt).toLocaleString('pt-BR')}</span>
-                        )}
-                      </div>
-                    </div>
+                    <CardTitle className="text-base mb-1">{rec.type.replace(/_/g, ' ')}</CardTitle>
+                    <p className="text-xs font-mono text-muted-foreground">{rec.resourceId}</p>
                   </div>
-                  
-                  <div className="ml-6">
-                    {rec.status === 'RECOMMENDED' && (
-                      <Button
-                        onClick={() => handleExecute(rec)}
-                        variant="primary"
-                        isLoading={executingIds.has(rec.sk)}
-                      >
-                        Executar
-                      </Button>
-                    )}
-                    {rec.status === 'EXECUTED' && (
-                      <Badge variant="success">Concluído</Badge>
-                    )}
+                </CardHeader>
+                <CardContent className="flex-1 space-y-4">
+                  <div className="flex justify-between text-sm">
+                    <span className="text-muted-foreground">Economia Potencial</span>
+                    <span className="font-semibold text-green-600 dark:text-green-400">${rec.potentialSaving.toFixed(2)}</span>
                   </div>
+                  <div className="flex justify-between text-sm items-center">
+                    <span className="text-muted-foreground">Status</span>
+                    <Badge variant={recommendationStatusVariant[rec.status]}>{rec.status}</Badge>
+                  </div>
+                </CardContent>
+                <div className="p-4 pt-0">
+                  <Button variant="outline" size="sm" className="w-full" onClick={() => setSelectedRec(rec)}>
+                    Ver Detalhes e Ações
+                  </Button>
                 </div>
-              </CardContent>
-            </Card>
-          ))}
+              </Card>
+            );
+          })}
         </div>
-      )}
-    </PageShell>
+        {filteredRecommendations.length === 0 && (
+          <Card className="text-center py-12">
+            <CardContent>
+              <Tag className="mx-auto h-12 w-12 text-muted-foreground" />
+              <h3 className="mt-4 text-lg font-semibold">Nenhuma Recomendação Encontrada</h3>
+              <p className="mt-2 text-sm text-muted-foreground">
+                Não encontramos recomendações com os filtros aplicados.
+              </p>
+            </CardContent>
+          </Card>
+        )}
+      </div>
+
+      {/* Painel de Detalhes da Recomendação */}
+      <Sheet open={!!selectedRec} onOpenChange={(open: boolean) => !open && setSelectedRec(null)}>
+        <SheetContent className="w-[400px] sm:w-[540px]">
+          {selectedRec && (
+            <>
+              <SheetHeader>
+                <SheetTitle>Detalhes da Recomendação</SheetTitle>
+                <SheetDescription>
+                  Revise os detalhes abaixo antes de executar a ação.
+                </SheetDescription>
+              </SheetHeader>
+              <div className="py-4 space-y-4">
+                <div className="flex justify-between items-center">
+                  <span className="text-muted-foreground">Tipo:</span>
+                  <span className="font-semibold">{selectedRec.type.replace(/_/g, ' ')}</span>
+                </div>
+                <div className="flex justify-between items-center">
+                  <span className="text-muted-foreground">Recurso:</span>
+                  <span className="font-mono text-sm">{selectedRec.resourceId}</span>
+                </div>
+                <div className="flex justify-between items-center">
+                  <span className="text-muted-foreground">Economia Potencial:</span>
+                  <span className="font-bold text-lg text-green-600">${selectedRec.potentialSaving.toFixed(2)}</span>
+                </div>
+                <Card className="bg-muted/50">
+                  <CardHeader className="flex-row items-center gap-3 space-y-0">
+                    <Info className="w-5 h-5 text-muted-foreground" />
+                    <CardTitle className="text-base">Motivo</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <p className="text-sm text-muted-foreground">{selectedRec.reason}</p>
+                  </CardContent>
+                </Card>
+              </div>
+              <SheetFooter>
+                {selectedRec.status === 'ACTIVE' ? (
+                  <AlertDialog>
+                    <AlertDialogTrigger asChild>
+                      <Button className="w-full" disabled={isExecuting}>
+                        <Zap className="mr-2 h-4 w-4" /> {isExecuting ? 'Executando...' : 'Executar Ação'}
+                      </Button>
+                    </AlertDialogTrigger>
+                    <AlertDialogContent>
+                      <AlertDialogHeader>
+                        <AlertDialogTitle>Confirmar Execução?</AlertDialogTitle>
+                        <AlertDialogDescription>
+                          Esta ação executará a otimização recomendada no recurso <strong className="font-mono">{selectedRec.resourceId}</strong>. A ação é segura e projetada para ser reversível sempre que possível. Deseja continuar?
+                        </AlertDialogDescription>
+                      </AlertDialogHeader>
+                      <AlertDialogFooter>
+                        <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                        <AlertDialogAction onClick={() => handleExecute(selectedRec.id)}>Confirmar e Executar</AlertDialogAction>
+                      </AlertDialogFooter>
+                    </AlertDialogContent>
+                  </AlertDialog>
+                ) : (
+                  <div className="flex items-center justify-center w-full text-green-600 gap-2">
+                    <CheckCircle className="w-5 h-5" />
+                    <span className="font-semibold">Esta recomendação já foi executada.</span>
+                  </div>
+                )}
+              </SheetFooter>
+            </>
+          )}
+        </SheetContent>
+      </Sheet>
+    </>
   );
 }

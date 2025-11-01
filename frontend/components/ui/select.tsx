@@ -22,7 +22,9 @@ export const Select = ({ children, value, onValueChange }: { children: React.Rea
 
 export const SelectTrigger = ({ children, className = '' }: { children?: React.ReactNode; className?: string }) => {
   const ctx = useContext(SelectContext);
-  const handleClick = () => ctx.setOpen && ctx.setOpen(!ctx.open);
+  const handleClick = () => {
+    if (ctx.setOpen) ctx.setOpen(!ctx.open);
+  };
   return (
     <button type="button" onClick={handleClick} className={`border rounded px-3 py-2 text-sm flex items-center justify-between ${className}`}>
       {children}
@@ -46,8 +48,8 @@ export const SelectContent = ({ children }: { children?: React.ReactNode }) => {
 export const SelectItem = ({ children, value }: { children?: React.ReactNode; value: string }) => {
   const ctx = useContext(SelectContext);
   const handleClick = () => {
-    ctx.onValueChange && ctx.onValueChange(value);
-    ctx.setOpen && ctx.setOpen(false);
+    if (ctx.onValueChange) ctx.onValueChange(value);
+    if (ctx.setOpen) ctx.setOpen(false);
   };
   return (
     <div onClick={handleClick} className="px-3 py-2 hover:bg-gray-100 cursor-pointer">{children}</div>

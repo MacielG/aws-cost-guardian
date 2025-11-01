@@ -56,33 +56,33 @@ export const SavingsWidget = ({ data, loading }: SavingsWidgetProps) => {
   }
 
   const breakdown = [
-    { 
-      label: 'Créditos SLA', 
-      value: data.breakdown.slaCredits || 0, 
-      icon: Award, 
-      color: 'text-purple-600',
-      bg: 'bg-purple-100'
+    {
+      label: 'Créditos SLA',
+      value: data.breakdown.slaCredits || 0,
+      icon: Award,
+      color: 'text-purple-600 dark:text-purple-400',
+      bg: 'bg-purple-100 dark:bg-purple-900/40',
     },
-    { 
-      label: 'Instâncias EC2', 
-      value: data.breakdown.idleInstances || 0, 
-      icon: Server, 
-      color: 'text-blue-600',
-      bg: 'bg-blue-100'
+    {
+      label: 'Instâncias EC2',
+      value: data.breakdown.idleInstances || 0,
+      icon: Server,
+      color: 'text-blue-600 dark:text-blue-400',
+      bg: 'bg-blue-100 dark:bg-blue-900/40',
     },
-    { 
-      label: 'Volumes EBS', 
-      value: data.breakdown.unusedEbs || 0, 
-      icon: HardDrive, 
-      color: 'text-green-600',
-      bg: 'bg-green-100'
+    {
+      label: 'Volumes EBS',
+      value: data.breakdown.unusedEbs || 0,
+      icon: HardDrive,
+      color: 'text-green-600 dark:text-green-400',
+      bg: 'bg-green-100 dark:bg-green-900/40',
     },
-    { 
-      label: 'Banco RDS', 
-      value: data.breakdown.idleRds || 0, 
-      icon: Database, 
-      color: 'text-orange-600',
-      bg: 'bg-orange-100'
+    {
+      label: 'Banco RDS',
+      value: data.breakdown.idleRds || 0,
+      icon: Database,
+      color: 'text-orange-600 dark:text-orange-400',
+      bg: 'bg-orange-100 dark:bg-orange-900/40',
     },
   ];
 
@@ -123,11 +123,11 @@ export const SavingsWidget = ({ data, loading }: SavingsWidgetProps) => {
                 initial={{ opacity: 0, x: -20 }}
                 animate={{ opacity: 1, x: 0 }}
                 transition={{ delay: idx * 0.1, duration: 0.3 }}
-                className={`rounded-lg ${item.bg} p-3 transition-all duration-300 hover:shadow-md border`}
+                className={`rounded-xl ${item.bg} p-3 transition-all duration-300 hover:shadow-lg border border-border`}
               >
                 <div className="flex items-center gap-2">
                   <item.icon className={`h-5 w-5 ${item.color}`} />
-                  <span className="text-xs font-medium">{item.label}</span>
+                  <span className="text-xs font-medium text-foreground">{item.label}</span>
                 </div>
                 <p className={`mt-1 text-lg font-bold ${item.color}`}>
                   $<AnimatedCounter value={item.value} decimals={2} />
