@@ -11,6 +11,12 @@ const alertVariants = cva(
         default: "bg-background text-foreground",
         destructive:
           "border-destructive/50 text-destructive dark:border-destructive [&>svg]:text-destructive",
+        // semantic variants used across the app
+        error:
+          "border-destructive/50 text-destructive dark:border-destructive [&>svg]:text-destructive",
+        info: "bg-blue-50 text-blue-800 border border-blue-100 [&>svg]:text-blue-600",
+        success: "bg-green-50 text-green-800 border border-green-100 [&>svg]:text-green-600",
+        warning: "bg-yellow-50 text-yellow-800 border border-yellow-100 [&>svg]:text-yellow-600",
       },
     },
     defaultVariants: {

@@ -1,10 +1,14 @@
 const { PDFDocument, rgb, StandardFonts } = require('pdf-lib');
-const AWS = require('aws-sdk');
-const dynamoDb = new AWS.DynamoDB.DocumentClient();
-const s3 = new AWS.S3();
+const { DynamoDBClient } = require('@aws-sdk/client-dynamodb');
+const { DynamoDBDocumentClient, UpdateCommand } = require('@aws-sdk/lib-dynamodb');
+const { S3Client, PutObjectCommand } = require('@aws-sdk/client-s3');
 
 const DYNAMODB_TABLE = process.env.DYNAMODB_TABLE;
 const REPORTS_BUCKET = process.env.REPORTS_BUCKET;
+
+const ddbClient = new DynamoDBClient({});
+const dynamoDb = DynamoDBDocumentClient.from(ddbClient);
+const s3Client = new S3Client({});
 
 exports.handler = async (event) => {
   console.log('Generate PDF Report:', JSON.stringify(event));
@@ -180,17 +184,17 @@ exports.handler = async (event) => {
 
     // Upload para S3
     const reportKey = `reports/${customerId}/${claimId}.pdf`;
-    await s3.putObject({
+    await s3Client.send(new PutObjectCommand({
       Bucket: REPORTS_BUCKET,
       Key: reportKey,
       Body: Buffer.from(pdfBytes),
       ContentType: 'application/pdf',
-    }).promise();
+    }));
 
     console.log(`PDF gerado e salvo em S3: ${reportKey}`);
 
     // Atualizar claim no DynamoDB com URL do relatório
-    await dynamoDb.update({
+    await dynamoDb.send(new UpdateCommand({
       TableName: DYNAMODB_TABLE,
       Key: {
         id: customerId,
@@ -201,7 +205,7 @@ exports.handler = async (event) => {
         ':reportUrl': `s3://${REPORTS_BUCKET}/${reportKey}`,
         ':now': new Date().toISOString(),
       },
-    }).promise();
+    }));
 
     return {
       ...event,

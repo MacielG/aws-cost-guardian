@@ -1,5 +1,6 @@
 // Mocks for AWS SDK v3 Clients
 const mockSend = jest.fn();
+const mockDdbSend = jest.fn();
 
 // Additional mocks for V2
 const mockGetCostAndUsage = jest.fn();
@@ -16,11 +17,19 @@ jest.mock('@aws-sdk/client-cost-explorer', () => ({
   }))
 }));
 jest.mock('@aws-sdk/client-dynamodb', () => ({
-   DynamoDBClient: jest.fn(() => ({ send: mockSend })),
-   UpdateItemCommand: jest.fn(input => ({ input })),
-   PutItemCommand: jest.fn(input => ({ input })),
-   GetItemCommand: jest.fn(input => ({ input })),
-   QueryCommand: jest.fn(input => ({ input }))
+  DynamoDBClient: jest.fn(() => ({ send: mockSend })),
+  UpdateItemCommand: jest.fn(input => ({ input })),
+  PutItemCommand: jest.fn(input => ({ input })),
+  GetItemCommand: jest.fn(input => ({ input })),
+  QueryCommand: jest.fn(input => ({ input }))
+}));
+// Mock lib-dynamodb DocumentClient.from(...) to return object with .send()
+jest.mock('@aws-sdk/lib-dynamodb', () => ({
+  DynamoDBDocumentClient: { from: jest.fn(() => ({ send: mockDdbSend })) },
+  GetCommand: function(input) { return { input }; },
+  PutCommand: function(input) { return { input }; },
+  UpdateCommand: function(input) { return { input }; },
+  QueryCommand: function(input) { return { input }; }
 }));
  jest.mock('@aws-sdk/client-s3', () => ({
    S3Client: jest.fn(() => ({ send: mockSend })),
@@ -39,69 +48,41 @@ jest.mock('@aws-sdk/client-dynamodb', () => ({
       CreateCaseCommand: jest.fn(input => ({ input }))
   }));
 
-const mockDynamoUpdate_v2 = jest.fn(); // Mock V2 separado
-
-jest.mock('aws-sdk', () => ({
-config: { update: jest.fn() },
-DynamoDB: {
-    DocumentClient: jest.fn(() => ({
-      get: jest.fn().mockReturnValue({ promise: jest.fn().mockResolvedValue({ Item: {} }) }),
-   put: jest.fn().mockReturnValue({ promise: jest.fn().mockResolvedValue({}) }),
-   query: jest.fn().mockReturnValue({ promise: jest.fn().mockResolvedValue({ Items: [] }) }),
-   update: mockDynamoUpdate_v2 // Associar o mock V2
- }))
-},
-STS: jest.fn(() => ({ // Mock V2 STS (se usado por getAssumedClients)
-    assumeRole: mockAssumeRole
- })),
-CostExplorer: jest.fn(() => ({
-    getCostAndUsage: mockGetCostAndUsage
- })),
-Support: jest.fn(() => ({
-createCase: mockSupportCreateCase
-})),
-S3: jest.fn(() => ({
-    putObject: mockS3PutObject
-  })),
-// Adicione outros serviços V2 se sla-workflow.js os usar diretamente
-}));
+// Note: we mock AWS SDK v3 clients above (mockSend). The legacy aws-sdk v2 mocks were removed
+// because this function now uses @aws-sdk v3 modular clients.
 
 // Reset mocks
 beforeEach(() => {
-mockSend.mockClear();
-mockDynamoUpdate_v2.mockClear().mockReturnValue({ promise: jest.fn().mockResolvedValue({}) });
-mockAssumeRole.mockClear().mockReturnValue({ promise: jest.fn().mockResolvedValue({ Credentials: { AccessKeyId: 'ASIA...', SecretAccessKey: 'SECRET', SessionToken: 'TOKEN' } }) });
-mockGetCostAndUsage.mockClear().mockReturnValue({ promise: jest.fn().mockResolvedValue({ ResultsByTime: [{ Total: { BlendedCost: { Amount: '123.45' } } }] }) });
-mockSupportCreateCase.mockClear().mockReturnValue({ promise: jest.fn().mockResolvedValue({ caseId: 'case-123' }) });
-mockS3PutObject.mockClear().mockReturnValue({ promise: jest.fn().mockResolvedValue({}) });
-
- // Default successful resolutions for v3 send mock
+  // Reset v3 mocks
   mockSend.mockReset();
-  mockSend.mockImplementation(async (command) => {
-      if (command.input?.TableName && command.constructor.name.includes('DynamoDB')) {
-           if (command.constructor.name === 'GetItemCommand') return { Item: { supportLevel: { S: 'premium' } } };
-           if (command.constructor.name === 'QueryCommand') return { Items: [] };
-          return {};
-      }
-      // Garantir que GetCostAndUsageCommand sempre retorne ResultsByTime para evitar forEach errors
-      if (command.constructor.name === 'GetCostAndUsageCommand') {
-           return { ResultsByTime: [{ Total: { UnblendedCost: { Amount: '123.45' } } }] };
-      }
-       if (command.constructor.name === 'AssumeRoleCommand') {
-           return { Credentials: { AccessKeyId: 'ASIA...', SecretAccessKey: '...', SessionToken: '...' }};
-       }
-       if (command.constructor.name === 'CreateCaseCommand') {
-           return { caseId: 'case-123'};
-       }
-       if (command.constructor.name === 'PutObjectCommand') {
-           return {};
-       }
-       if (command.constructor.name === 'GetSecretValueCommand') {
-          return { SecretString: '{\"key\":\"value\"}' };
-       }
+  mockDdbSend.mockClear();
 
-      // Retorna resultado padrão em vez de lançar erro
-      return { ResultsByTime: [] };
+  // DynamoDBDocumentClient.from(...).send default behavior
+  mockDdbSend.mockImplementation(async (command) => {
+    const input = command && command.input ? command.input : {};
+    // debug
+    // console.log('mockDdbSend called with input:', JSON.stringify(input));
+    // GetCommand (single item) - some tests don't set TableName in env; match on Key only
+    if (input.Key) {
+      return { Item: { externalId: 'ext-123', supportLevel: 'premium', stripeCustomerId: null } };
+    }
+    // QueryCommand
+    if (input.IndexName || input.KeyConditionExpression) {
+      return { Items: [] };
+    }
+    if (input.UpdateExpression) return {};
+    return {};
+  });
+
+  // Default successful resolutions for v3 send mock
+  mockSend.mockImplementation(async (command) => {
+    const name = command && command.constructor && command.constructor.name;
+    if (name === 'GetCostAndUsageCommand') return { ResultsByTime: [{ Total: { UnblendedCost: { Amount: '123.45' } } }] };
+    if (name === 'AssumeRoleCommand') return { Credentials: { AccessKeyId: 'ASIA...', SecretAccessKey: '...', SessionToken: '...' } };
+    if (name === 'CreateCaseCommand') return { caseId: 'case-123' };
+    if (name === 'PutObjectCommand') return {};
+    if (name === 'GetSecretValueCommand') return { SecretString: '{"key":"value"}' };
+    return { ResultsByTime: [] };
   });
 });
 
@@ -125,70 +106,49 @@ describe('SLA Workflow Functions', () => {
   };
 
   describe('calculateImpact', () => {
+
      it('should handle invalid credentials after assumeRole', async () => {
-       // Mock successful assumeRole (v2 SDK)
-       mockAssumeRole.mockReturnValueOnce({
-         promise: jest.fn().mockResolvedValue({
-           Credentials: {
-             AccessKeyId: 'ASIA...',
-             SecretAccessKey: 'SECRET',
-             SessionToken: 'TOKEN'
-           }
-         })
-       });
-       
-       // Mock CostExplorer send to fail with credential error
+       // Ensure AssumeRole returns credentials, then CostExplorer throws credential error
+       // First send() call (AssumeRole) -> return credentials
+       mockSend.mockImplementationOnce(async () => ({ Credentials: { AccessKeyId: 'ASIA...', SecretAccessKey: 'SECRET', SessionToken: 'TOKEN' } }));
        mockSend.mockImplementationOnce(async (command) => {
-          if (command.input) { // This is GetCostAndUsageCommand
-              const error = new Error("Resolved credential object is not valid");
-              error.$metadata = { attempts: 1, totalRetryDelay: 0 };
-              throw error;
-          }
-          return { ResultsByTime: [] }; // Default return for other commands
+         if (command && command.constructor && command.constructor.name === 'GetCostAndUsageCommand') {
+           const error = new Error('Resolved credential object is not valid');
+           error.$metadata = { attempts: 1, totalRetryDelay: 0 };
+           throw error;
+         }
+         return { ResultsByTime: [] };
        });
-       
+
        // Espera a mensagem de erro final lançada pela função calculateImpact
        await expect(calculateImpact(baseEvent)).rejects.toThrow('Falha ao calcular impacto: Resolved credential object is not valid');
      });
 
-     // Teste de falha no assumeRole
+
      it('should throw an error if assumeRole fails', async () => {
-         mockAssumeRole.mockReturnValueOnce({ // Mock V2 STS
-             promise: jest.fn().mockRejectedValue(new Error('AssumeRole failed'))
-         });
-          // OU Mock V3 STS (se estiver usando v3 para assumeRole)
-         // mockSend.mockImplementationOnce(async cmd => { if (cmd.constructor.name === 'AssumeRoleCommand') throw new Error('AssumeRole failed'); });
+        // Mock STS AssumeRole to fail (v3 path) - first send call will throw
+        mockSend.mockImplementationOnce(async () => { throw new Error('AssumeRole failed'); });
 
          // Espera a mensagem de erro lançada por calculateImpact após capturar o erro de assumeRole
-         // The actual error message changes to "Falha ao assumir role" when it detects "AssumeRole failed"
          await expect(calculateImpact(baseEvent)).rejects.toThrow('Falha ao assumir role: STS AssumeRole failed: AssumeRole failed');
          expect(mockGetCostAndUsage).not.toHaveBeenCalled(); // V2
          expect(mockSend).not.toHaveBeenCalledWith(expect.objectContaining({ constructor: { name: 'GetCostAndUsageCommand' } })); // V3
      });
 
-      // Teste de falha no Cost Explorer (após assumeRole bem-sucedido)
-      it('should handle CostExplorer errors', async () => {
-          // Mock successful assumeRole (v2 SDK)
-          mockAssumeRole.mockReturnValueOnce({
-            promise: jest.fn().mockResolvedValue({
-              Credentials: {
-                AccessKeyId: 'ASIA...',
-                SecretAccessKey: 'SECRET',
-                SessionToken: 'TOKEN'
-              }
-            })
-          });
-          
-          // Mock CostExplorer send to fail
-          mockSend.mockImplementationOnce(async (command) => {
-            if (command.input) { // This is GetCostAndUsageCommand
-              throw new Error('CE Error');
-            }
-            return { ResultsByTime: [] };
-          });
 
-          // Espera a mensagem de erro final
-          await expect(calculateImpact(baseEvent)).rejects.toThrow('Falha ao calcular impacto: CE Error');
+        it('should handle CostExplorer errors', async () => {
+            // AssumeRole succeeds, then CostExplorer send fails
+            // AssumeRole succeeds (first send call)
+            mockSend.mockImplementationOnce(async () => ({ Credentials: { AccessKeyId: 'ASIA...', SecretAccessKey: 'SECRET', SessionToken: 'TOKEN' } }));
+            mockSend.mockImplementationOnce(async (command) => {
+              if (command && command.constructor && command.constructor.name === 'GetCostAndUsageCommand') {
+                throw new Error('CE Error');
+              }
+              return { ResultsByTime: [] };
+            });
+
+            // Espera a mensagem de erro final
+            await expect(calculateImpact(baseEvent)).rejects.toThrow('Falha ao calcular impacto: CE Error');
       });
 
   });
@@ -217,9 +177,7 @@ describe('SLA Workflow Functions', () => {
   const noViolationEvent = { violation: false, credit: 0, customerId: 'c1', incidentId: 'i1' };
   const result = await generateReport(noViolationEvent);
   expect(result.claimGenerated).toBe(false); // Verifica o retorno explícito
-  expect(mockDynamoUpdate_v2).toHaveBeenCalledWith(expect.objectContaining({ // Usa o mock V2
-  ExpressionAttributeValues: { ':status': 'NO_VIOLATION' } // Verifica o status correto
-  }));
+  expect(mockDdbSend).toHaveBeenCalledWith(expect.objectContaining({ input: expect.objectContaining({ ExpressionAttributeValues: { ':status': 'NO_VIOLATION' } }) }));
   });
   });
 
@@ -231,10 +189,7 @@ describe('SLA Workflow Functions', () => {
     await submitSupportTicket({ ...ticketBaseEvent, supportLevel: 'basic' });
     expect(mockSupportCreateCase).not.toHaveBeenCalled(); // V2 mock
     expect(mockSend).not.toHaveBeenCalledWith(expect.objectContaining({ constructor: { name: 'CreateCaseCommand' } })); // V3 mock
-    expect(mockDynamoUpdate_v2).toHaveBeenCalledWith(expect.objectContaining({
-    // V-- Corrigir o status esperado V--
-    ExpressionAttributeValues: { ':status': 'PENDING_MANUAL_SUBMISSION' }
-    }));
+  expect(mockDdbSend).toHaveBeenCalledWith(expect.objectContaining({ input: expect.objectContaining({ ExpressionAttributeValues: { ':status': 'PENDING_MANUAL_SUBMISSION' } }) }));
     });
 
     // ... outros testes de submitSupportTicket (verificar se usam ticketBaseEvent completo) ...

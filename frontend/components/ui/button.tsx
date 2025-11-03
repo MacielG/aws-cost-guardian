@@ -39,15 +39,26 @@ export interface ButtonProps
   extends React.ButtonHTMLAttributes<HTMLButtonElement>,
     VariantProps<typeof buttonVariants> {
   asChild?: boolean
+  isLoading?: boolean
+  // allow semantic aliases (primary/danger) without causing a strict type error
+  variant?: any
 }
 
 const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
-  ({ className, variant, size, asChild = false, ...props }, ref) => {
+  ({ className, variant, size, asChild = false, isLoading, ...props }, ref) => {
     const Comp = asChild ? Slot : "button"
+
+    // map semantic aliases to defined variants
+    const effectiveVariant =
+      variant === "primary" ? "default" : variant === "danger" ? "destructive" : variant
+
+    const disabled = props.disabled || !!isLoading
+
     return (
       <Comp
-        className={cn(buttonVariants({ variant, size, className }))}
+        className={cn(buttonVariants({ variant: effectiveVariant as any, size, className }))}
         ref={ref}
+        disabled={disabled}
         {...props}
       />
     )

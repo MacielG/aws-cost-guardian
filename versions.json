@@ -1,0 +1,54 @@
+[
+    {
+        "Key": "AUTENTICACAO-MELHORIAS.md",
+        "VersionId": "Mg_VmoVgLonyCKkMfPLFkuCfVmxfZsDR"
+    },
+    {
+        "Key": "COGNITO-CONFIG.md",
+        "VersionId": "FzaHVIctrpMBOSVHKGtzNsplZK6fuf7u"
+    },
+    {
+        "Key": "CORRECTIONS-APPLIED.md",
+        "VersionId": "RMdtcTBT_0QEEuS6KVmMVh5jW7mWQkZG"
+    },
+    {
+        "Key": "MIGRATION-GUIDE-v2.md",
+        "VersionId": "QuSjZemSaF8iCQoNuMYnHKD36bFhgeSM"
+    },
+    {
+        "Key": "PRODUCTION-READINESS-REPORT.md",
+        "VersionId": "RSEUZjD73ZTyFjB6iQoeNNU4aEEuRUYk"
+    },
+    {
+        "Key": "analise-estrategica.md",
+        "VersionId": "stq1GjE276abnrJ2t6N9Z20NHRCN2bOe"
+    },
+    {
+        "Key": "cloudformation-callback-lambda.js",
+        "VersionId": "AJVyltXLEcMsWwDMefOVrC_e6LSupCnU"
+    },
+    {
+        "Key": "como-funciona.md",
+        "VersionId": "VHkB2iHGijfCOKKt2mLgBLDgDyvCfB.t"
+    },
+    {
+        "Key": "cost-guardian-TRIAL-template.yaml",
+        "VersionId": "ze5LGyWgTH_RWUzcq3AVxvq9eDMOADMs"
+    },
+    {
+        "Key": "cost-guardian-template.yaml",
+        "VersionId": "rEvnZpoPt1IdGx9vNOU0L4vknKFgRxji"
+    },
+    {
+        "Key": "deploy.md",
+        "VersionId": "mk.0z2LJOXf3wTkqQtlihPZhAnQf06Gq"
+    },
+    {
+        "Key": "dynamodb-schema-v2.md",
+        "VersionId": "SW_jc.QValQkXvNFWbiOWZNBQfeCBR49"
+    },
+    {
+        "Key": "financeiro.md",
+        "VersionId": "BgfWbFc_MHIOH2CKgMpKcQxwceO7.ZKK"
+    }
+]

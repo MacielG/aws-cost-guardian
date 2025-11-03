@@ -1,7 +1,9 @@
 // frontend/app/recommendations/page.tsx
 'use client';
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
+import { apiClient } from '@/lib/api';
+import { useNotify } from '@/hooks/useNotify';
 import { motion } from 'framer-motion';
 import { BarChart2, Search, Zap, CheckCircle, Info, SlidersHorizontal, Tag, DollarSign, Server, Database, Globe } from 'lucide-react';
 import { PageHeader } from '@/components/layout/PageHeader';
@@ -12,7 +14,6 @@ import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription, SheetFooter } from '@/components/ui/sheet';
-import { useNotify } from '@/hooks/useNotify';
 
 // Mock data - substitua pela chamada de API
 const mockRecommendations = [
@@ -45,13 +46,26 @@ const processSteps = [
 ];
 
 export default function RecommendationsPage() {
-  const [recommendations, setRecommendations] = useState(mockRecommendations);
+  const [recommendations, setRecommendations] = useState<any[]>([]);
   const [selectedRec, setSelectedRec] = useState<any | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("ALL");
   const [regionFilter, setRegionFilter] = useState<string>("ALL");
   const [isExecuting, setIsExecuting] = useState(false);
   const notify = useNotify();
+
+  useEffect(() => {
+    const fetchRecs = async () => {
+      try {
+        const recs = await apiClient.get('/recommendations');
+        setRecommendations(recs || []);
+      } catch (err: any) {
+        console.error('Erro ao carregar recomendações:', err);
+        notify.error(err?.message || 'Erro ao carregar recomendações');
+      }
+    };
+    fetchRecs();
+  }, []);
 
   const availableRegions = useMemo(() => {
     const regions = new Set(recommendations.map(rec => rec.region));
@@ -74,16 +88,21 @@ export default function RecommendationsPage() {
     setIsExecuting(true);
     notify.info(`Executando recomendação ${recommendationId}...`);
 
-    // Simulação de chamada de API
-    // await fetch('/api/recommendations/execute', { method: 'POST', body: JSON.stringify({ recommendationId }) });
-    await new Promise(resolve => setTimeout(resolve, 2000));
+    try {
+      // Chamada real à API para executar recomendação
+      await apiClient.post(`/recommendations/${recommendationId}/execute`);
 
-    setRecommendations(prev =>
-      prev.map(rec => rec.id === recommendationId ? { ...rec, status: 'EXECUTED' } : rec)
-    );
-    notify.success('Recomendação executada com sucesso!');
-    setIsExecuting(false);
-    setSelectedRec(null);
+      setRecommendations((prev) =>
+        prev.map((rec) => (rec.id === recommendationId ? { ...rec, status: 'EXECUTED' } : rec))
+      );
+      notify.success('Recomendação executada com sucesso!');
+      setSelectedRec(null);
+    } catch (err: any) {
+      console.error('Erro ao executar recomendação:', err);
+      notify.error(err?.message || 'Falha ao executar recomendação');
+    } finally {
+      setIsExecuting(false);
+    }
   };
 
   return (

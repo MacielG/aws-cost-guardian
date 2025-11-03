@@ -24,6 +24,7 @@ import React from 'react';
 import { render, screen, waitFor, within, act } from '@testing-library/react';
 import '@testing-library/jest-dom';
 import { AuthProvider } from '@/components/auth/AuthProvider';
+import { ToasterProvider } from '@/components/ui/toaster';
 import DashboardPage from '../page';
 
 // Top-level mocks (must be declared before importing the page under test)
@@ -64,7 +65,14 @@ jest.mock('@/components/charts/LineChart', () => () => <div data-testid="line-ch
 
 // @ts-ignore
 jest.mock('@/lib/api', () => ({
-apiFetch: jest.fn(),
+  apiFetch: jest.fn(),
+  // apiClient shape used by components (apiClient.get/post/put/delete)
+  apiClient: {
+    get: jest.fn(),
+    post: jest.fn(),
+    put: jest.fn(),
+    delete: jest.fn(),
+  },
 }));
 
 // @ts-ignore
@@ -92,7 +100,8 @@ AnimatePresence: ({ children }: any) => children,
 
 
 // Recupera o mock gerado pelo jest para podermos inspecioná-lo nos testes
-const mockApiFetch = (jest.requireMock('@/lib/api') as any).apiFetch as jest.Mock;
+// (a implementação do app usa `apiClient.get`, então apontamos para esse mock)
+const mockApiFetch = (jest.requireMock('@/lib/api') as any).apiClient.get as jest.Mock;
 
 // Helper functions
 const expectElementToBeInDocument = (element: Element | null) => {
@@ -299,7 +308,9 @@ const createTestData = () => {
 };
 
 const TestWrapper: React.FC<{ children: React.ReactNode }> = ({ children }) => (
-  <AuthProvider>{children}</AuthProvider>
+  <AuthProvider>
+    <ToasterProvider>{children}</ToasterProvider>
+  </AuthProvider>
 );
 
 // Importações principais (APENAS UMA VEZ!)\n// Removed test file import\nimport { formatCurrency, formatDate } from '@/lib/utils';
@@ -329,10 +340,23 @@ describe('DashboardPage', () => {
     test.each(accountScenarios)(
       '$name',
       async ({ accountType, incidents, costs, expectedElements, shouldRedirect }) => {
+        // API order in DashboardPage: 1) /billing/summary  2) /recommendations?limit=5
+        // Garantir que os mocks correspondam à ordem esperada pelo componente.
         mockApiFetch
-        .mockResolvedValueOnce(incidents)
-        .mockResolvedValueOnce(costs)
+          .mockResolvedValueOnce({
+            totalSavings: 0,
+            realizedSavings: 0,
+            recommendationsExecuted: 0,
+            slaCreditsRecovered: 0,
+            monthlySavings: [],
+          })
+          .mockResolvedValueOnce([])
           .mockResolvedValueOnce({ accountType });
+        // Provide incidents and costs responses for this scenario so the component
+        // receives the test data defined in createTestData.
+        mockApiFetch
+          .mockResolvedValueOnce(incidents)
+          .mockResolvedValueOnce(costs);
 
         let unmount: () => void;
         await act(async () => {
@@ -638,7 +662,7 @@ describe('DashboardPage', () => {
         abortControllers.push(controller);
         requestsStarted++;
 
-        return new Promise((resolve, reject) => {
+        const p = new Promise((resolve, reject) => {
           const timeoutId = setTimeout(() => {
             resolve({ accountType: 'PREMIUM', incidents: [], costs: { Groups: [] } });
           }, requestTimeout);
@@ -649,6 +673,9 @@ describe('DashboardPage', () => {
             reject(new Error('Aborted'));
           });
         });
+        // Avoid unhandled rejections if caller doesn't await the promise
+        p.catch(() => {});
+        return p;
       });
 
       let unmount: () => void;
@@ -671,6 +698,10 @@ describe('DashboardPage', () => {
         });
       }
       abortControllers.forEach(controller => controller.abort());
+
+      // Let any pending promise rejections settle so they don't become unhandled
+      // rejections in the test runner.
+      await Promise.resolve();
 
       expect(requestsCanceled).toBe(requestsStarted);
       expect(requestsStarted).toBeGreaterThanOrEqual(3);

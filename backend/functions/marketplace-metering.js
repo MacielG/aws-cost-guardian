@@ -127,7 +127,16 @@ export const handler = async (event) => {
       }));
     }
 
-    return { statusCode: 200, body: 'Metering completed' };
+    return { 
+      statusCode: 200,
+      headers: {
+        'Access-Control-Allow-Origin': '*',
+        'Access-Control-Allow-Credentials': true,
+        'Access-Control-Allow-Headers': 'Content-Type,Authorization,X-Amz-Date,X-Api-Key,X-Amz-Security-Token',
+        'Access-Control-Allow-Methods': 'GET,POST,PUT,DELETE,OPTIONS'
+      },
+      body: 'Metering completed'
+    };
   } catch (error) {
     console.error('Erro no metering:', error);
     throw error;

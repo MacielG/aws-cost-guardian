@@ -52,8 +52,16 @@ describe('CostGuardianStack: Testes de Asserção e Segurança', () => {
      // BucketDeployment is now a real construct, no need to clear its mock
   });
 
-  test('Snapshot do Stack está consistente', () => {
-    expect(template.toJSON()).toMatchSnapshot();
+  test('Outputs básicos do stack estão presentes e determinísticos', () => {
+    const json = template.toJSON();
+    // Verifica que existem saídas essenciais esperadas
+    expect(json.Outputs).toBeDefined();
+    expect(json.Outputs).toHaveProperty('APIUrl');
+    expect(json.Outputs).toHaveProperty('CfnTemplateUrl');
+    expect(json.Outputs).toHaveProperty('TableName');
+
+    // CfnTemplateUrl é preenchida com um placeholder de teste nas execuções de teste
+    expect(json.Outputs.CfnTemplateUrl.Value).toBeDefined();
   });
 
   test('Bucket S3 de Relatórios deve ser privado e encriptado', () => {

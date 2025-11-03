@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Teste CORS - AWS Cost Guardian</title>
+    <style>
+        body { font-family: Arial, sans-serif; padding: 20px; max-width: 800px; margin: 0 auto; }
+        .result { margin: 20px 0; padding: 15px; border-radius: 5px; }
+        .success { background: #d4edda; border: 1px solid #c3e6cb; color: #155724; }
+        .error { background: #f8d7da; border: 1px solid #f5c6cb; color: #721c24; }
+        button { padding: 10px 20px; font-size: 16px; margin: 5px; cursor: pointer; }
+        pre { background: #f5f5f5; padding: 10px; overflow-x: auto; }
+    </style>
+</head>
+<body>
+    <h1>🔍 Teste CORS - AWS Cost Guardian</h1>
+    
+    <div>
+        <h3>API URL:</h3>
+        <pre id="apiUrl">https://wdj68z2t62.execute-api.us-east-1.amazonaws.com/prod/</pre>
+    </div>
+
+    <div>
+        <h3>Testes:</h3>
+        <button onclick="testHealth()">1. Testar /health (sem auth)</button>
+        <button onclick="testBillingSummary()">2. Testar /billing/summary (com auth)</button>
+        <button onclick="testRecommendations()">3. Testar /recommendations</button>
+        <button onclick="clearResults()">Limpar</button>
+    </div>
+
+    <div id="results"></div>
+
+    <script>
+        const API_URL = 'https://wdj68z2t62.execute-api.us-east-1.amazonaws.com/prod';
+
+        function addResult(title, success, details) {
+            const resultsDiv = document.getElementById('results');
+            const resultDiv = document.createElement('div');
+            resultDiv.className = `result ${success ? 'success' : 'error'}`;
+            resultDiv.innerHTML = `
+                <h4>${success ? '✅' : '❌'} ${title}</h4>
+                <pre>${JSON.stringify(details, null, 2)}</pre>
+            `;
+            resultsDiv.insertBefore(resultDiv, resultsDiv.firstChild);
+        }
+
+        function clearResults() {
+            document.getElementById('results').innerHTML = '';
+        }
+
+        async function testHealth() {
+            try {
+                const response = await fetch(`${API_URL}/health`, {
+                    method: 'GET',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    }
+                });
+
+                const data = await response.json();
+                
+                addResult('GET /health', response.ok, {
+                    status: response.status,
+                    statusText: response.statusText,
+                    headers: {
+                        'access-control-allow-origin': response.headers.get('access-control-allow-origin'),
+                        'access-control-allow-credentials': response.headers.get('access-control-allow-credentials')
+                    },
+                    body: data
+                });
+            } catch (error) {
+                addResult('GET /health', false, {
+                    error: error.message,
+                    name: error.name,
+                    stack: error.stack
+                });
+            }
+        }
+
+        async function testBillingSummary() {
+            try {
+                const response = await fetch(`${API_URL}/billing/summary`, {
+                    method: 'GET',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    credentials: 'include'
+                });
+
+                let data;
+                try {
+                    data = await response.json();
+                } catch {
+                    data = await response.text();
+                }
+                
+                addResult('GET /billing/summary', response.ok, {
+                    status: response.status,
+                    statusText: response.statusText,
+                    headers: {
+                        'access-control-allow-origin': response.headers.get('access-control-allow-origin'),
+                        'access-control-allow-credentials': response.headers.get('access-control-allow-credentials')
+                    },
+                    body: data
+                });
+            } catch (error) {
+                addResult('GET /billing/summary', false, {
+                    error: error.message,
+                    name: error.name
+                });
+            }
+        }
+
+        async function testRecommendations() {
+            try {
+                const response = await fetch(`${API_URL}/recommendations?limit=5`, {
+                    method: 'GET',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    credentials: 'include'
+                });
+
+                let data;
+                try {
+                    data = await response.json();
+                } catch {
+                    data = await response.text();
+                }
+                
+                addResult('GET /recommendations', response.ok, {
+                    status: response.status,
+                    statusText: response.statusText,
+                    headers: {
+                        'access-control-allow-origin': response.headers.get('access-control-allow-origin'),
+                        'access-control-allow-credentials': response.headers.get('access-control-allow-credentials')
+                    },
+                    body: data
+                });
+            } catch (error) {
+                addResult('GET /recommendations', false, {
+                    error: error.message,
+                    name: error.name
+                });
+            }
+        }
+
+        // Teste automático ao carregar
+        window.onload = () => {
+            console.log('Página carregada. Clique nos botões para testar.');
+        };
+    </script>
+</body>
+</html>

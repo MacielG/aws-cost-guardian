@@ -13,7 +13,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 // import { useAuth } from '@/contexts/AuthContext'; // Descomente quando o contexto de auth estiver pronto
  
-export function Header() {
+export function Header({ title }: { title?: string }) {
   // const { user, signOut } = useAuth(); // Descomente
   const user = { name: "Usuário Teste" }; // Mock
   const signOut = () => console.log("Sign out"); // Mock

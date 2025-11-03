@@ -45,6 +45,25 @@ function runCliValidation() {
         process.exit(1);
     }
 
+    // 4. Validar formato da API_URL
+    const apiUrl = process.env.NEXT_PUBLIC_API_URL;
+    if (apiUrl) {
+        // Validar protocolo HTTPS (ou http://localhost em dev)
+        if (!apiUrl.startsWith('https://') && !apiUrl.startsWith('http://localhost') && !apiUrl.startsWith('http://127.0.0.1')) {
+            console.error('❌ ERRO: API_URL deve usar HTTPS em produção (ou http://localhost em desenvolvimento)');
+            console.error(`  - URL atual: ${apiUrl}`);
+            process.exit(1);
+        }
+
+        // Validar barra final
+        if (!apiUrl.endsWith('/')) {
+            console.warn('⚠️  AVISO: API_URL deve terminar com / para evitar problemas de roteamento');
+            console.warn(`  - URL atual: ${apiUrl}`);
+            console.warn('  - URL esperada: ' + apiUrl + '/');
+            console.log('\n👉 O script export-outputs.js deve garantir a barra final. Verifique a configuração.');
+        }
+    }
+
     console.log('✅ Configuração de ambiente validada com sucesso.');
 }
 

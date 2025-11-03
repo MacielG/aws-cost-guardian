@@ -10,12 +10,14 @@ const sts = new STSClient({});
 
 const DYNAMODB_TABLE = process.env.DYNAMODB_TABLE;
 
-async function getAssumedClients(roleArn, region = 'us-east-1') {
+async function getAssumedClients(roleArn, externalId, region = 'us-east-1') {
+  if (!externalId) throw new Error('ExternalId is required for AssumeRole');
   try {
     const assumeCommand = new AssumeRoleCommand({
       RoleArn: roleArn,
       RoleSessionName: 'GuardianAdvisorExecution',
       DurationSeconds: 900,
+      ExternalId: externalId,
     });
     const assumedRole = await sts.send(assumeCommand);
 
@@ -26,8 +28,8 @@ async function getAssumedClients(roleArn, region = 'us-east-1') {
     };
 
     return {
-      ec2: new EC2Client({ ...credentials, region }),
-      rds: new RDSClient({ ...credentials, region }),
+      ec2: new EC2Client({ credentials, region }),
+      rds: new RDSClient({ credentials, region }),
     };
   } catch (err) {
     console.error(`Falha ao assumir role ${roleArn}:`, err);
@@ -50,6 +52,12 @@ exports.handler = async (event) => {
     if (!rec) {
       return {
         statusCode: 404,
+        headers: {
+          'Access-Control-Allow-Origin': '*',
+          'Access-Control-Allow-Credentials': true,
+          'Access-Control-Allow-Headers': 'Content-Type,Authorization,X-Amz-Date,X-Api-Key,X-Amz-Security-Token',
+          'Access-Control-Allow-Methods': 'GET,POST,PUT,DELETE,OPTIONS'
+        },
         body: JSON.stringify({ error: 'Recomendação não encontrada' })
       };
     }
@@ -57,6 +65,12 @@ exports.handler = async (event) => {
     if (rec.status === 'COMPLETED') {
       return {
         statusCode: 400,
+        headers: {
+          'Access-Control-Allow-Origin': '*',
+          'Access-Control-Allow-Credentials': true,
+          'Access-Control-Allow-Headers': 'Content-Type,Authorization,X-Amz-Date,X-Api-Key,X-Amz-Security-Token',
+          'Access-Control-Allow-Methods': 'GET,POST,PUT,DELETE,OPTIONS'
+        },
         body: JSON.stringify({ error: 'Recomendação já foi executada' })
       };
     }
@@ -70,12 +84,31 @@ exports.handler = async (event) => {
     if (!config?.roleArn) {
       return {
         statusCode: 400,
+        headers: {
+          'Access-Control-Allow-Origin': '*',
+          'Access-Control-Allow-Credentials': true,
+          'Access-Control-Allow-Headers': 'Content-Type,Authorization,X-Amz-Date,X-Api-Key,X-Amz-Security-Token',
+          'Access-Control-Allow-Methods': 'GET,POST,PUT,DELETE,OPTIONS'
+        },
         body: JSON.stringify({ error: 'Role ARN não configurada' })
       };
     }
 
     const region = rec.region || 'us-east-1';
-    const clients = await getAssumedClients(config.roleArn, region);
+    if (!config.externalId) {
+      return {
+        statusCode: 400,
+        headers: {
+          'Access-Control-Allow-Origin': '*',
+          'Access-Control-Allow-Credentials': true,
+          'Access-Control-Allow-Headers': 'Content-Type,Authorization,X-Amz-Date,X-Api-Key,X-Amz-Security-Token',
+          'Access-Control-Allow-Methods': 'GET,POST,PUT,DELETE,OPTIONS'
+        },
+        body: JSON.stringify({ error: 'externalId not configured for this customer' })
+      };
+    }
+
+    const clients = await getAssumedClients(config.roleArn, config.externalId, region);
 
     try {
       let actionResult;
@@ -117,6 +150,12 @@ exports.handler = async (event) => {
 
       return {
         statusCode: 200,
+        headers: {
+          'Access-Control-Allow-Origin': '*',
+          'Access-Control-Allow-Credentials': true,
+          'Access-Control-Allow-Headers': 'Content-Type,Authorization,X-Amz-Date,X-Api-Key,X-Amz-Security-Token',
+          'Access-Control-Allow-Methods': 'GET,POST,PUT,DELETE,OPTIONS'
+        },
         body: JSON.stringify({
           message: 'Ação executada com sucesso',
           recommendationId: recommendationId,
@@ -143,6 +182,12 @@ exports.handler = async (event) => {
 
       return {
         statusCode: 500,
+        headers: {
+          'Access-Control-Allow-Origin': '*',
+          'Access-Control-Allow-Credentials': true,
+          'Access-Control-Allow-Headers': 'Content-Type,Authorization,X-Amz-Date,X-Api-Key,X-Amz-Security-Token',
+          'Access-Control-Allow-Methods': 'GET,POST,PUT,DELETE,OPTIONS'
+        },
         body: JSON.stringify({
           error: 'Falha ao executar ação',
           details: actionError.message
@@ -154,6 +199,12 @@ exports.handler = async (event) => {
     console.error('Erro geral:', err);
     return {
       statusCode: 500,
+      headers: {
+        'Access-Control-Allow-Origin': '*',
+        'Access-Control-Allow-Credentials': true,
+        'Access-Control-Allow-Headers': 'Content-Type,Authorization,X-Amz-Date,X-Api-Key,X-Amz-Security-Token',
+        'Access-Control-Allow-Methods': 'GET,POST,PUT,DELETE,OPTIONS'
+      },
       body: JSON.stringify({ error: 'Erro interno do servidor' })
     };
   }

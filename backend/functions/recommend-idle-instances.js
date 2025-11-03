@@ -40,7 +40,7 @@ exports.handler = async (event) => {
     ExpressionAttributeValues: {
       ':sk': 'CONFIG#ONBOARD'
     },
-    ProjectionExpression: 'id, roleArn, automationSettings, #status'
+  ProjectionExpression: 'id, roleArn, automationSettings, #status, externalId'
   };
 
   const response = await dynamoDb.send(new QueryCommand(queryParams));
@@ -72,10 +72,15 @@ exports.handler = async (event) => {
     const exclusionTags = config.exclusionTags || [];
 
     try {
+      if (!customer.externalId) {
+        console.warn(`Cliente ${customer.id} não possui externalId; pulando`);
+        continue;
+      }
       const assumeCommand = new AssumeRoleCommand({ 
         RoleArn: customer.roleArn, 
         RoleSessionName: `recommend-idle-${customer.id}-${Date.now()}`, 
-        DurationSeconds: 900 
+        DurationSeconds: 900,
+        ExternalId: customer.externalId,
       });
       const assume = await sts.send(assumeCommand);
       const creds = assume.Credentials;

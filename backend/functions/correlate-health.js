@@ -1,12 +1,14 @@
 // backend/functions/correlate-health.js
 
-const AWS = require('aws-sdk');
-const dynamoDb = new AWS.DynamoDB.DocumentClient();
+const { DynamoDBClient } = require('@aws-sdk/client-dynamodb');
+const { DynamoDBDocumentClient, QueryCommand, PutCommand } = require('@aws-sdk/lib-dynamodb');
 const { CostExplorer } = require('@aws-sdk/client-cost-explorer');
-const { StepFunctions } = require('aws-sdk'); // SDK v2
+const { SFNClient, StartExecutionCommand } = require('@aws-sdk/client-sfn');
 
 const ce = new CostExplorer({ region: 'us-east-1' });
-const sfn = new StepFunctions();
+const ddbClient = new DynamoDBClient({});
+const dynamoDb = DynamoDBDocumentClient.from(ddbClient);
+const sfn = new SFNClient({});
 const DYNAMODB_TABLE = process.env.DYNAMODB_TABLE;
 const SFN_ARN = process.env.SFN_ARN;
 
@@ -29,7 +31,7 @@ exports.handler = async (event) => {
 
   let customerId;
   try {
-    const data = await dynamoDb.query(queryParams).promise();
+    const data = await dynamoDb.send(new QueryCommand(queryParams));
     if (!data.Items || data.Items.length === 0) {
       console.error(`Nenhum cliente encontrado para AWS Account ID: ${affectedAccount}`);
       return { status: 'error', reason: 'Customer not found' };
@@ -43,7 +45,7 @@ exports.handler = async (event) => {
   // 2. Armazenar o incidente no DynamoDB (agora com o customerId correto)
   const incidentId = `INCIDENT#${healthEvent.id}`;
   const timestamp = healthEvent.startTime || new Date().toISOString();
-  await dynamoDb.put({
+  await dynamoDb.send(new PutCommand({
     TableName: DYNAMODB_TABLE,
     Item: {
       id: customerId, // PK: Nosso Customer ID
@@ -55,7 +57,7 @@ exports.handler = async (event) => {
       awsAccountId: affectedAccount,
       details: healthEvent, // Armazena o evento completo
     },
-  }).promise();
+  }));
 
   // 3. Correlacionar com custos (lógica movida para o Step Function 'calculateImpact')
   // O Lambda do EventBridge deve ser rápido. Ele apenas identifica o cliente,
@@ -68,7 +70,7 @@ exports.handler = async (event) => {
   }
 
   // 4. Iniciar o Step Function para análise de impacto
-  await sfn.startExecution({
+  await sfn.send(new StartExecutionCommand({
     stateMachineArn: SFN_ARN,
     input: JSON.stringify({
       customerId: customerId,
@@ -76,7 +78,7 @@ exports.handler = async (event) => {
       healthEvent: healthEvent,
       incidentId: incidentId
     }),
-  }).promise();
+  }));
 
   return { status: 'success', customerId: customerId, incidentId: incidentId };
 };

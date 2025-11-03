@@ -1,7 +1,12 @@
-const AWS = require('aws-sdk');
-const dynamoDb = new AWS.DynamoDB.DocumentClient();
+const { DynamoDBClient } = require('@aws-sdk/client-dynamodb');
+const { DynamoDBDocumentClient, UpdateCommand } = require('@aws-sdk/lib-dynamodb');
+const { STSClient, AssumeRoleCommand } = require('@aws-sdk/client-sts');
+const { SupportClient, DescribeCasesCommand, CreateCaseCommand } = require('@aws-sdk/client-support');
 
 const DYNAMODB_TABLE = process.env.DYNAMODB_TABLE;
+
+const ddbClient = new DynamoDBClient({});
+const dynamoDb = DynamoDBDocumentClient.from(ddbClient);
 
 /**
  * Lambda para submeter ticket ao AWS Support
@@ -13,8 +18,8 @@ exports.handler = async (event) => {
   try {
     const { customerId, claimId, impactedCost, healthEvent, reportKey, roleArn, externalId } = event;
 
-    // Assumir role do cliente para criar ticket em nome dele
-    const sts = new AWS.STS();
+    // Assumir role do cliente para criar ticket em nome dele (SDK v3)
+    const sts = new STSClient({});
     const assumeParams = {
       RoleArn: roleArn,
       RoleSessionName: `CostGuardianSLATicket-${Date.now()}`,
@@ -25,27 +30,24 @@ exports.handler = async (event) => {
       assumeParams.ExternalId = externalId;
     }
 
-    const assumedRole = await sts.assumeRole(assumeParams).promise();
+    const assumedRole = await sts.send(new AssumeRoleCommand(assumeParams));
     const credentials = {
       accessKeyId: assumedRole.Credentials.AccessKeyId,
       secretAccessKey: assumedRole.Credentials.SecretAccessKey,
       sessionToken: assumedRole.Credentials.SessionToken,
     };
 
-    // Cliente AWS Support com credenciais assumidas
-    const support = new AWS.Support({
-      region: 'us-east-1', // Support API sempre usa us-east-1
-      credentials,
-    });
+    // Cliente AWS Support com credenciais assumidas (SDK v3)
+    const support = new SupportClient({ region: 'us-east-1', credentials });
 
     // Verificar se tem plano de suporte (exceto Basic)
     let hasSupportPlan = false;
     try {
       // Tentar listar casos - se funcionar, tem suporte premium
-      await support.describeCases({ maxResults: 1 }).promise();
+      await support.send(new DescribeCasesCommand({ maxResults: 1 }));
       hasSupportPlan = true;
     } catch (err) {
-      if (err.code === 'SubscriptionRequiredException') {
+      if (err.name === 'SubscriptionRequiredException' || err.code === 'SubscriptionRequiredException') {
         console.log('Cliente não tem plano de suporte premium');
         hasSupportPlan = false;
       } else {
@@ -114,13 +116,13 @@ AWS Cost Guardian (Automated)
       language: 'en',
     };
 
-    const caseResult = await support.createCase(caseParams).promise();
-    const caseId = caseResult.caseId;
+  const caseResult = await support.send(new CreateCaseCommand(caseParams));
+  const caseId = caseResult.caseId;
 
     console.log(`Ticket criado com sucesso: ${caseId}`);
 
     // Atualizar claim no DynamoDB
-    await dynamoDb.update({
+    await dynamoDb.send(new UpdateCommand({
       TableName: DYNAMODB_TABLE,
       Key: { id: customerId, sk: claimId },
       UpdateExpression: 'SET #status = :status, supportTicketId = :ticketId, submittedAt = :now',
@@ -130,7 +132,7 @@ AWS Cost Guardian (Automated)
         ':ticketId': caseId,
         ':now': new Date().toISOString(),
       },
-    }).promise();
+    }));
 
     return {
       ...event,
@@ -144,7 +146,7 @@ AWS Cost Guardian (Automated)
 
     // Tentar atualizar status de erro
     try {
-      await dynamoDb.update({
+      await dynamoDb.send(new UpdateCommand({
         TableName: DYNAMODB_TABLE,
         Key: { id: event.customerId, sk: event.claimId },
         UpdateExpression: 'SET #status = :status, error = :error',
@@ -153,7 +155,7 @@ AWS Cost Guardian (Automated)
           ':status': 'FAILED',
           ':error': error.message,
         },
-      }).promise();
+      }));
     } catch (updateErr) {
       console.error('Erro ao atualizar status de falha:', updateErr);
     }

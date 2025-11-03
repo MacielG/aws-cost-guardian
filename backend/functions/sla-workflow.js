@@ -1,14 +1,20 @@
 // backend/functions/sla-workflow.js
 // VERSÃO FINALIZADA: Implementa a lógica real de 'calculateImpact'
 
-// SDK v2 para STS e DynamoDB
-const AWS = require('aws-sdk');
-// Usar o SDK v3 para Cost Explorer é preferível pela modularidade
+// SDK v3 clients (modulares)
 const { CostExplorerClient, GetCostAndUsageCommand } = require('@aws-sdk/client-cost-explorer');
-const dynamoDb = new AWS.DynamoDB.DocumentClient();
+const { DynamoDBClient } = require('@aws-sdk/client-dynamodb');
+const { DynamoDBDocumentClient, GetCommand, PutCommand, UpdateCommand, QueryCommand } = require('@aws-sdk/lib-dynamodb');
+const { STSClient, AssumeRoleCommand } = require('@aws-sdk/client-sts');
+const { S3Client, PutObjectCommand } = require('@aws-sdk/client-s3');
+const { SupportClient, CreateCaseCommand } = require('@aws-sdk/client-support');
 const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
 const { PDFDocument, rgb, StandardFonts } = require('pdf-lib');
-const s3 = new AWS.S3();
+
+// clients
+const ddbClient = new DynamoDBClient({});
+const dynamoDb = DynamoDBDocumentClient.from(ddbClient);
+const s3Client = new S3Client({});
 
 const DYNAMODB_TABLE = process.env.DYNAMODB_TABLE;
 
@@ -24,21 +30,23 @@ const slaTable = {
  * Função helper para assumir a role do cliente
  * Retorna clientes de serviços da AWS autenticados com as credenciais da role assumida.
  */
-async function getAssumedClients(roleArn, region = 'us-east-1') {
-  const sts = new AWS.STS();
+async function getAssumedClients(roleArn, externalId, region = 'us-east-1') {
+  if (!externalId) throw new Error('ExternalId is required for AssumeRole');
+  const sts = new STSClient({});
   try {
-    const assumedRole = await sts.assumeRole({
+    const assumedRole = await sts.send(new AssumeRoleCommand({
       RoleArn: roleArn,
       RoleSessionName: 'CostGuardianSLAAnalysis',
       DurationSeconds: 900, // 15 minutos
-    }).promise();
+      ExternalId: externalId,
+    }));
 
     const credentials = {
       accessKeyId: assumedRole.Credentials.AccessKeyId,
       secretAccessKey: assumedRole.Credentials.SecretAccessKey,
       sessionToken: assumedRole.Credentials.SessionToken,
     };
-    
+
     // Retorna clientes dos serviços necessários
     return {
       // Cost Explorer API é sempre 'us-east-1'
@@ -46,13 +54,10 @@ async function getAssumedClients(roleArn, region = 'us-east-1') {
         region: 'us-east-1',
         credentials
       }),
-      // AWS Support API também é 'us-east-1' para operações de caso
-      support: new AWS.Support({
-        region: 'us-east-1',
-        credentials
-      }),
+      // AWS Support API também é 'us-east-1' para operações de caso (SDK v3)
+      support: new SupportClient({ region: 'us-east-1', credentials }),
       // Adicione outros clientes se necessário (ex: S3, Health)
-      // s3: new AWS.S3({ credentials, region })
+      // s3: new S3Client({ credentials, region })
     };
   } catch (err) {
     console.error(`Falha ao assumir role ${roleArn}:`, err);
@@ -76,26 +81,29 @@ exports.calculateImpact = async (event) => {
 
   // Buscar a configuração do cliente para verificar o nível de suporte
   const configKey = { id: customerId, sk: 'CONFIG#ONBOARD' };
-  const configData = await dynamoDb.get({ TableName: DYNAMODB_TABLE, Key: configKey }).promise();
+  const configResp = await dynamoDb.send(new GetCommand({ TableName: DYNAMODB_TABLE, Key: configKey }));
+  const configData = { Item: configResp.Item };
   const supportLevel = configData.Item?.supportLevel || 'basic'; 
 
   // Se o evento do Health não listou ARNs de recursos, não podemos calcular o impacto.
   if (affectedResources.length === 0) {
   console.log(`Nenhum recurso específico afetado para o incidente ${incidentId}.`);
   // Atualiza o status no DB e termina o fluxo
-  await dynamoDb.update({
+  await dynamoDb.send(new UpdateCommand({
   TableName: DYNAMODB_TABLE,
   Key: { id: event.customerId, sk: incidentId },
   UpdateExpression: 'SET #status = :status',
   ExpressionAttributeNames: { '#status': 'status' },
   ExpressionAttributeValues: { ':status': 'NO_RESOURCES_LISTED' }
-  }).promise();
+  }));
   throw new Error('Nenhum recurso específico afetado para o incidente.');
   }
 
   try {
-    // 1. Assumir a role do cliente para ter permissão de ler os custos dele
-    const { costExplorer } = await getAssumedClients(roleToAssume);
+  // 1. Assumir a role do cliente para ter permissão de ler os custos dele
+  const externalId = configData.Item?.externalId;
+  if (!externalId) throw new Error('externalId not found for customer');
+  const { costExplorer } = await getAssumedClients(roleToAssume, externalId);
 
     // 2. Chamar o Cost Explorer com o filtro de RECURSO (Lógica Central)
     const costParams = {
@@ -113,8 +121,8 @@ exports.calculateImpact = async (event) => {
       },
     };
 
-    const command = new GetCostAndUsageCommand(costParams);
-    const costData = await costExplorer.send(command);
+  const command = new GetCostAndUsageCommand(costParams);
+  const costData = await costExplorer.send(command);
 
     // 3. Calcular o custo total impactado
     let impactedCost = 0;
@@ -148,12 +156,12 @@ exports.calculateImpact = async (event) => {
     }
 
     // Save potentialCredit to DB
-    await dynamoDb.update({
+    await dynamoDb.send(new UpdateCommand({
       TableName: DYNAMODB_TABLE,
       Key: { id: customerId, sk: incidentId },
       UpdateExpression: 'SET potentialCredit = :potentialCredit, impactedCost = :impactedCost',
       ExpressionAttributeValues: { ':potentialCredit': potentialCredit, ':impactedCost': impactedCost }
-    }).promise();
+    }));
 
     // Retorna o evento original enriquecido
     return {
@@ -217,13 +225,13 @@ exports.generateReport = async (event) => {
   // Se não houver violação ou crédito, não faz nada
   if (!violation || credit <= 0) {
   console.log('Nenhuma violação ou crédito. Nenhuma reivindicação gerada.');
-  await dynamoDb.update({
+  await dynamoDb.send(new UpdateCommand({
   TableName: DYNAMODB_TABLE,
   Key: { id: customerId, sk: incidentId },
   UpdateExpression: 'SET #status = :status',
   ExpressionAttributeNames: { '#status': 'status' },
   ExpressionAttributeValues: { ':status': 'NO_VIOLATION' }
-  }).promise();
+  }));
   return { ...event, claimGenerated: false }; // <-- Retorna explicitamente
   }
 
@@ -235,8 +243,8 @@ exports.generateReport = async (event) => {
   }
   const reportUrl = `s3://${reportBucket}/${reportS3Key}`;
 
-  try {
-    const pdfDoc = await PDFDocument.create();
+    try {
+      const pdfDoc = await PDFDocument.create();
     const page = pdfDoc.addPage();
     const { width, height } = page.getSize();
     const font = await pdfDoc.embedFont(StandardFonts.Helvetica);
@@ -261,19 +269,19 @@ exports.generateReport = async (event) => {
 
     const pdfBytes = await pdfDoc.save();
 
-    await s3.putObject({ Bucket: reportBucket, Key: reportS3Key, Body: pdfBytes, ContentType: 'application/pdf' }).promise();
+  await s3Client.send(new PutObjectCommand({ Bucket: reportBucket, Key: reportS3Key, Body: pdfBytes, ContentType: 'application/pdf' }));
 
   } catch (pdfError) {
     console.error(`[generateReport] Falha ao gerar ou fazer upload do relatório PDF para o incidente ${incidentId} do cliente ${customerId}:`, pdfError);
     // Atualizar DynamoDB para indicar falha na geração do relatório para rastreabilidade
     try {
-      await dynamoDb.update({
+      await dynamoDb.send(new UpdateCommand({
         TableName: DYNAMODB_TABLE,
         Key: { id: customerId, sk: incidentId },
         UpdateExpression: 'SET #status = :status, reportError = :err',
         ExpressionAttributeNames: { '#status': 'status' },
         ExpressionAttributeValues: { ':status': 'REPORT_FAILED', ':err': String(pdfError.stack || pdfError.message) }
-      }).promise();
+      }));
     } catch (dbErr) { // Este catch é para o erro de atualização do DB, não do PDF
       console.error('Falha ao atualizar DynamoDB após erro de PDF:', dbErr);
     }
@@ -283,8 +291,8 @@ exports.generateReport = async (event) => {
 
   // Verificar se o cliente possui assinatura ativa
   const userConfigKey = { id: customerId, sk: 'CONFIG#ONBOARD' };
-  const userConfig = await dynamoDb.get({ TableName: DYNAMODB_TABLE, Key: userConfigKey }).promise();
-  const config = userConfig.Item;
+  const userConfigResp = await dynamoDb.send(new GetCommand({ TableName: DYNAMODB_TABLE, Key: userConfigKey }));
+  const config = userConfigResp.Item;
   
   let invoiceId = null;
   const hasActivePlan = config?.subscriptionStatus === 'active';
@@ -305,12 +313,12 @@ exports.generateReport = async (event) => {
           });
           stripeCustomerId = customer.id;
  
-          await dynamoDb.update({
+          await dynamoDb.send(new UpdateCommand({
             TableName: DYNAMODB_TABLE,
             Key: userConfigKey,
             UpdateExpression: 'SET stripeCustomerId = :sid',
             ExpressionAttributeValues: { ':sid': stripeCustomerId }
-          }).promise();
+          }));
         }
 
         // Criar o item de fatura
@@ -337,12 +345,12 @@ exports.generateReport = async (event) => {
       console.error(`[generateReport] Erro ao criar fatura no Stripe para o cliente ${customerId} e incidente ${incidentId}:`, stripeError);
       try {
         const tmpClaimId = `CLAIM#${incidentId.replace('INCIDENT#', '')}`;
-        await dynamoDb.update({
+        await dynamoDb.send(new UpdateCommand({
           TableName: DYNAMODB_TABLE,
           Key: { id: customerId, sk: tmpClaimId },
           UpdateExpression: 'SET stripeError = :err',
           ExpressionAttributeValues: { ':err': String(stripeError.stack || stripeError.message) }
-        }).promise();
+        }));
       } catch (dbErr) {
         console.error('Erro ao gravar stripeError no DynamoDB:', dbErr);
       }
@@ -412,7 +420,7 @@ exports.generateReport = async (event) => {
 
   // 2. Salvar a reivindicação (CLAIM) no DynamoDB
   const claimId = `CLAIM#${incidentId.replace('INCIDENT#', '')}`;
-  await dynamoDb.put({
+  await dynamoDb.send(new PutCommand({
     TableName: DYNAMODB_TABLE,
     Item: {
       id: customerId,        // PK
@@ -425,16 +433,16 @@ exports.generateReport = async (event) => {
       stripeInvoiceId: null, // A fatura será criada posteriormente por um endpoint de admin
       details: event, // Armazena todos os dados do evento e cálculo
     },
-  }).promise();
+  }));
 
   // 3. Atualizar o incidente original como 'CLAIM_GENERATED'
-  await dynamoDb.update({
-      TableName: DYNAMODB_TABLE,
-      Key: { id: customerId, sk: incidentId },
-      UpdateExpression: 'SET #status = :status, #claimId = :claimId',
-      ExpressionAttributeNames: { '#status': 'status', '#claimId': 'claimId' },
-      ExpressionAttributeValues: { ':status': 'CLAIM_GENERATED', ':claimId': claimId }
-  }).promise();
+  await dynamoDb.send(new UpdateCommand({
+    TableName: DYNAMODB_TABLE,
+    Key: { id: customerId, sk: incidentId },
+    UpdateExpression: 'SET #status = :status, #claimId = :claimId',
+    ExpressionAttributeNames: { '#status': 'status', '#claimId': 'claimId' },
+    ExpressionAttributeValues: { ':status': 'CLAIM_GENERATED', ':claimId': claimId }
+  }));
 
   return { ...event, reportUrl, claimGenerated: true, claimId: claimId };
 };
@@ -450,13 +458,13 @@ exports.submitSupportTicket = async (event) => {
   // Se o cliente está no plano Basic, atualizar status para submissão manual
   if (supportLevel === 'basic') {
     console.log(`Cliente ${customerId} está no plano Basic. Requer ação manual.`);
-    await dynamoDb.update({
+    await dynamoDb.send(new UpdateCommand({
       TableName: DYNAMODB_TABLE,
       Key: { id: customerId, sk: claimId },
       UpdateExpression: 'SET #status = :status',
       ExpressionAttributeNames: { '#status': 'status' },
       ExpressionAttributeValues: { ':status': 'PENDING_MANUAL_SUBMISSION' }
-    }).promise();
+    }));
     return { ...event, status: 'manual-submission-required' };
   }
 
@@ -470,7 +478,9 @@ exports.submitSupportTicket = async (event) => {
 
   try {
     // 1. Assumir a role do cliente para ter permissão de criar um caso de suporte
-    const { support } = await getAssumedClients(roleToAssume);
+  const externalId2 = configData.Item?.externalId;
+  if (!externalId2) throw new Error('externalId not found for customer');
+  const { support } = await getAssumedClients(roleToAssume, externalId2);
 
     // 2. Montar o corpo do ticket de suporte
     const subject = `[Cost Guardian] Reivindicação de Crédito SLA para ${healthEvent.service}`;
@@ -496,37 +506,37 @@ AWS Cost Guardian
     `;
 
     // 3. Chamar a API CreateCase
-    const caseResult = await support.createCase({
+    const caseResult = await support.send(new CreateCaseCommand({
       subject,
       communicationBody,
       serviceCode: healthEvent.service.toLowerCase(), // Ex: 'ec2'. Requer mapeamento ou pode falhar.
       categoryCode: 'billing', // Categoria apropriada
       severityCode: 'low', // Casos de faturamento geralmente são de baixa severidade
-    }).promise();
+    }));
 
-    console.log(`Ticket de suporte criado com sucesso: Case ID ${caseResult.caseId}`);
+    console.log(`Ticket de suporte criado com sucesso: Case ID ${caseResult.caseId || caseResult.caseId}`);
 
     // 4. Atualizar o status da reivindicação no DynamoDB
-    await dynamoDb.update({
-        TableName: DYNAMODB_TABLE,
-        Key: { id: customerId, sk: claimId },
-        UpdateExpression: 'SET #status = :status, #caseId = :caseId',
-        ExpressionAttributeNames: { '#status': 'status', '#caseId': 'caseId' },
-        ExpressionAttributeValues: { ':status': 'SUBMITTED', ':caseId': caseResult.caseId }
-    }).promise();
+  await dynamoDb.send(new UpdateCommand({
+    TableName: DYNAMODB_TABLE,
+    Key: { id: customerId, sk: claimId },
+    UpdateExpression: 'SET #status = :status, #caseId = :caseId',
+    ExpressionAttributeNames: { '#status': 'status', '#caseId': 'caseId' },
+    ExpressionAttributeValues: { ':status': 'SUBMITTED', ':caseId': caseResult.caseId }
+  }));
 
     return { ...event, status: 'submitted', caseId: caseResult.caseId };
 
   } catch (err) {
     console.error(`Erro ao enviar ticket de suporte para ${awsAccountId} (Claim ${claimId}):`, err);
     // Atualizar status para falha para não tentar novamente
-    await dynamoDb.update({
-        TableName: DYNAMODB_TABLE,
-        Key: { id: customerId, sk: claimId },
-        UpdateExpression: 'SET #status = :status, #error = :error',
-        ExpressionAttributeNames: { '#status': 'status', '#error': 'submissionError' },
-        ExpressionAttributeValues: { ':status': 'SUBMISSION_FAILED', ':error': err.message }
-    }).promise();
+  await dynamoDb.send(new UpdateCommand({
+    TableName: DYNAMODB_TABLE,
+    Key: { id: customerId, sk: claimId },
+    UpdateExpression: 'SET #status = :status, #error = :error',
+    ExpressionAttributeNames: { '#status': 'status', '#error': 'submissionError' },
+    ExpressionAttributeValues: { ':status': 'SUBMISSION_FAILED', ':error': err.message }
+  }));
     throw new Error(`Falha ao enviar ticket de suporte: ${err.message}`);
   }
 };

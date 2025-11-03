@@ -143,6 +143,62 @@ async function exportOutputs() {
     envVars['NEXT_PUBLIC_AMPLIFY_REGION'] = REGION;
     console.log(`✓ Region → NEXT_PUBLIC_AWS_REGION`);
 
+    // Normalizações e validações robustas para evitar problemas de URL
+    function normalizeApiUrl(raw) {
+      if (!raw || typeof raw !== 'string') return raw;
+      let u = raw.trim();
+      // Remove espaços e quebras
+      // Separar protocolo para não remover as duas barras após 'https:'
+      const parts = u.split('://');
+      if (parts.length < 2) {
+        // Sem protocolo — não mexer muito, apenas remover barras duplicadas
+        const cleaned = u.replace(/\/{2,}/g, '/').replace(/\/$/, '');
+        return cleaned + '/'; // SEMPRE adicionar barra final
+      }
+      const protocol = parts.shift();
+      const rest = parts.join('://');
+      // separar host do path
+      const slashIndex = rest.indexOf('/');
+      let host = rest;
+      let pathPart = '';
+      if (slashIndex !== -1) {
+        host = rest.slice(0, slashIndex);
+        pathPart = rest.slice(slashIndex);
+      }
+      // colapsar // no path (mas preservar o '//' depois do protocolo)
+      pathPart = pathPart.replace(/\/{2,}/g, '/');
+      // remover barras finais duplicadas, mas manter uma
+      pathPart = pathPart.replace(/\/+$/, '');
+      
+      // GARANTIR barra final SEMPRE
+      return `${protocol}://${host}${pathPart}/`;
+    }
+
+    // Aplicar normalização ao endpoint da API se presente
+    if (envVars['NEXT_PUBLIC_API_URL']) {
+      const normalized = normalizeApiUrl(envVars['NEXT_PUBLIC_API_URL']);
+      
+      // Validação extra: garantir que sempre termina com /
+      const finalUrl = normalized.endsWith('/') ? normalized : normalized + '/';
+      
+      if (finalUrl !== envVars['NEXT_PUBLIC_API_URL']) {
+        console.log(`ℹ️  Normalizando NEXT_PUBLIC_API_URL: '${envVars['NEXT_PUBLIC_API_URL']}' → '${finalUrl}'`);
+        envVars['NEXT_PUBLIC_API_URL'] = finalUrl;
+      }
+    }
+
+    // Validar que chaves críticas existem antes de escrever o arquivo
+    const required = ['NEXT_PUBLIC_API_URL', 'NEXT_PUBLIC_COGNITO_USER_POOL_ID', 'NEXT_PUBLIC_COGNITO_USER_POOL_CLIENT_ID'];
+    const missing = required.filter(k => !envVars[k]);
+    if (missing.length > 0) {
+      const msg = `Required outputs missing from stack: ${missing.join(', ')}.`;
+      console.error(`\n❌ ${msg}`);
+      await logToCloudWatch(msg, 'ERROR');
+      await sendAlert(msg);
+      // Não prosseguir escrevendo um .env inconsistente
+      process.exit(1);
+    }
+
     // Verificar duplicidades e comportamento
     const existingEnv = loadExistingEnv();
     if (areEnvsEqual(existingEnv, envVars)) {

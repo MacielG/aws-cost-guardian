@@ -41,7 +41,7 @@ export const handler = async (event) => {
       ':true': true
     },
     FilterExpression: '#automationSettings.#stopIdleRds = :true',
-    ProjectionExpression: 'id, roleArn, automationSettings, exclusionTags'
+  ProjectionExpression: 'id, roleArn, automationSettings, exclusionTags, externalId'
   };
 
   const response = await dynamoDb.send(new QueryCommand(queryParams));
@@ -52,17 +52,22 @@ export const handler = async (event) => {
     return { status: 'no-op' };
   }
 
-  for (const customer of items) {
+    for (const customer of items) {
     if (!customer.roleArn) {
       console.warn(`Cliente ${customer.id} sem roleArn; pulando`);
       continue;
     }
 
     try {
+      if (!customer.externalId) {
+        console.warn(`Cliente ${customer.id} não possui externalId; pulando`);
+        continue;
+      }
       const assumeCommand = new AssumeRoleCommand({
         RoleArn: customer.roleArn,
         RoleSessionName: `recommend-rds-${customer.id}-${Date.now()}`,
-        DurationSeconds: 900
+        DurationSeconds: 900,
+        ExternalId: customer.externalId,
       });
       const assume = await sts.send(assumeCommand);
       const creds = assume.Credentials;

@@ -17,6 +17,9 @@ provider:
     STRIPE_SECRET_ARN: ${env:STRIPE_SECRET_ARN, ''}
     STRIPE_PRO_PLAN_PRICE_ID: ${env:STRIPE_PRO_PLAN_PRICE_ID, ''}
     FRONTEND_URL: ${env:FRONTEND_URL, 'http://localhost:3000'}
+    # ALLOWED_ORIGINS controls the list of origins the backend will accept for CORS.
+    # In production, set ALLOWED_ORIGINS explicitly (comma-separated). In dev we default to FRONTEND_URL.
+    ALLOWED_ORIGINS: ${env:ALLOWED_ORIGINS, '${env:FRONTEND_URL, "http://localhost:3000"}'}
     EXECUTE_RECOMMENDATION_LAMBDA_ARN: ${env:EXECUTE_RECOMMENDATION_LAMBDA_ARN, ''}
     EXECUTE_RECOMMENDATION_LAMBDA_NAME: ${env:EXECUTE_RECOMMENDATION_LAMBDA_NAME, ''}
     SFN_ARN: ${env:SFN_ARN, ''}
@@ -27,11 +30,13 @@ functions:
     handler: handler.app
     events:
       - http:
-          method: ANY
-          path: /
-      - http:
-          method: ANY
           path: /{proxy+}
+          method: ANY
+            # Disable API Gateway automatic CORS handling so that the Lambda
+            # middleware (backend/handler.js) can emit explicit Access-Control
+            # headers. This avoids the API Gateway returning '*' which breaks
+            # credentialed requests. The Lambda uses ALLOWED_ORIGINS env var.
+            cors: false
 
   correlateHealth:
     handler: functions/correlate-health.handler

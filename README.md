@@ -111,6 +111,42 @@ cd aws-cost-guardian
 
 
 ## 📊 Estrutura do Projeto
+
+## 🔁 Deploy & export de variáveis de ambiente (infra)
+
+O projeto usa o AWS CDK para construir a infra e um script `export-outputs` para exportar os
+CloudFormation Outputs para `frontend/.env.local`. O script realiza normalização e validação para
+garantir que o `NEXT_PUBLIC_API_URL` não contenha barras duplicadas ou trailing slash, evitando
+`//` indesejados quando o frontend concatena rotas.
+
+Prerequisitos
+- Credenciais AWS configuradas (profile ou variáveis de ambiente)
+- Node.js instalado
+
+Comandos (PowerShell)
+
+```powershell
+cd infra
+npm run build
+npm run cdk -- synth
+
+# Deploy e export automático de outputs
+npm run deploy
+
+# Apenas exportar os outputs (stack já deployada)
+npm run export-outputs
+```
+
+Notas
+- O `deploy` em `infra/package.json` executa `cdk deploy` e depois `npm run export-outputs`.
+- O script falha explicitamente (com logs/CloudWatch/SNS se configurado) se outputs críticos estiverem faltando,
+  prevenindo a criação de um `.env.local` incompleto.
+- Para desenvolvimento local rápido, coloque manualmente `frontend/.env.local` com `http://localhost:3001`.
+
+Utilitário frontend
+
+Use `frontend/lib/url.js` (função `joinUrl(base, path)`) para compor URLs no frontend sem gerar barras duplicadas.
+
 aws-cost-guardian/
 ├── frontend/              # Next.js + Amplify
 │   ├── app/               # Páginas: dashboard, onboard, sla-claims

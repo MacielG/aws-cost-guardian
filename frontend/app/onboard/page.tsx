@@ -11,6 +11,8 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Cloud, Lock, Settings, CheckCircle, ArrowRight, FileText, ShieldCheck, BarChart2 } from 'lucide-react';
 // Assuma que existe um hook ou contexto para obter o token de autenticação
 // import { useAuth } from '@/context/AuthContext'; 
+// utilitário para juntar URLs de forma segura
+const { joinUrl } = require('@/lib/url');
 
 const steps = [
   {
@@ -83,7 +85,7 @@ export default function Onboard() {
             // Constrói o link do CloudFormation dinamicamente
             const templateUrl = config.templateUrl || process.env.NEXT_PUBLIC_CFN_TEMPLATE_URL;
             setOnboardingStatus(config.status);
-            const callbackUrl = `${process.env.NEXT_PUBLIC_API_URL}/onboard`;
+            const callbackUrl = joinUrl(process.env.NEXT_PUBLIC_API_URL || '', 'onboard');
             const link = `https://console.aws.amazon.com/cloudformation/home?region=us-east-1#/stacks/create/review?templateURL=${templateUrl}&stackName=CostGuardianStack&param_ExternalId=${config.externalId}&param_PlatformAccountId=${config.platformAccountId}&param_CallbackUrl=${encodeURIComponent(callbackUrl)}`;
             setCfnLink(link);
         } else {
