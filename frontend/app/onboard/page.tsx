@@ -53,50 +53,64 @@ export default function Onboard() {
         setTimeout(() => setIsAnimating(false), 500);
     };
 
-    const checkOnboardingStatus = useCallback(async () => {
+    const checkOnboardingStatus = useCallback(async (signal?: AbortSignal) => {
         // const token = await getToken();
-        const response = await fetch('/api/onboard-init'); // Este endpoint agora retorna o status
-        if (response.ok) {
-            const config = await response.json();
-            // Se o usuário ainda não aceitou os termos, redireciona para a página de termos
-            if (config.termsAccepted === false) {
-                router.push('/terms');
-                return;
+        try {
+            const response = await fetch('/api/onboard-init', { signal }); // Este endpoint agora retorna o status
+            if (response.ok) {
+                const config = await response.json();
+                // Se o usuário ainda não aceitou os termos, redireciona para a página de termos
+                if (config.termsAccepted === false) {
+                    router.push('/terms');
+                    return;
+                }
+                setOnboardingStatus(config.status);
+                if (config.status === 'COMPLETED') {
+                    router.push('/dashboard');
+                }
             }
-            setOnboardingStatus(config.status);
-            if (config.status === 'COMPLETED') {
-                router.push('/dashboard');
-            }
+        } catch (e: any) {
+            if (e.name === 'AbortError') return;
         }
     }, [router]);
 
-    const fetchOnboardConfig = useCallback(async () => {
+    const fetchOnboardConfig = useCallback(async (signal?: AbortSignal) => {
         // const token = await getToken(); // Obter token do Cognito
         setLoading(true);
         const query = mode ? `?mode=${mode}` : '';
-        const response = await fetch(`/api/onboard-init${query}`, {
-            headers: {
-                // 'Authorization': `Bearer ${token}`, // Enviar o token
-            },
-        });
+        try {
+            const response = await fetch(`/api/onboard-init${query}`, {
+                signal,
+                headers: {
+                    // 'Authorization': `Bearer ${token}`, // Enviar o token
+                },
+            });
 
-        if (response.ok) {
-            const config = await response.json();
-            // Constrói o link do CloudFormation dinamicamente
-            const templateUrl = config.templateUrl || process.env.NEXT_PUBLIC_CFN_TEMPLATE_URL;
-            setOnboardingStatus(config.status);
-            const callbackUrl = joinUrl(process.env.NEXT_PUBLIC_API_URL || '', 'onboard');
-            const link = `https://console.aws.amazon.com/cloudformation/home?region=us-east-1#/stacks/create/review?templateURL=${templateUrl}&stackName=CostGuardianStack&param_ExternalId=${config.externalId}&param_PlatformAccountId=${config.platformAccountId}&param_CallbackUrl=${encodeURIComponent(callbackUrl)}`;
-            setCfnLink(link);
-        } else {
+            if (response.ok) {
+                const config = await response.json();
+                // Constrói o link do CloudFormation dinamicamente
+                const templateUrl = config.templateUrl || process.env.NEXT_PUBLIC_CFN_TEMPLATE_URL;
+                setOnboardingStatus(config.status);
+                const callbackUrl = joinUrl(process.env.NEXT_PUBLIC_API_URL || '', 'onboard');
+                const link = `https://console.aws.amazon.com/cloudformation/home?region=us-east-1#/stacks/create/review?templateURL=${templateUrl}&stackName=CostGuardianStack&param_ExternalId=${config.externalId}&param_PlatformAccountId=${config.platformAccountId}&param_CallbackUrl=${encodeURIComponent(callbackUrl)}`;
+                setCfnLink(link);
+            } else {
+                notify.error('Erro ao buscar configuração de onboarding.');
+                console.error('Erro ao buscar configuração de onboarding.'); // Adicionado para o teste
+            }
+        } catch (e: any) {
+            if (e.name === 'AbortError') return;
             notify.error('Erro ao buscar configuração de onboarding.');
+            console.error('Erro ao buscar configuração de onboarding.'); // Adicionado para o teste
         }
         setLoading(false);
     }, [mode]);
 
     // Buscar o ExternalId seguro no backend
     useEffect(() => {
-        fetchOnboardConfig();
+        const abortController = new AbortController();
+        fetchOnboardConfig(abortController.signal);
+        return () => abortController.abort();
     }, [fetchOnboardConfig]);
 
     useEffect(() => {

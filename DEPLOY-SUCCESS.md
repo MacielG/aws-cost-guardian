@@ -186,12 +186,12 @@ NEXT_PUBLIC_CFN_TEMPLATE_URL=http://costguardianstack-cfntemplatebucket4840c65e-
 | DynamoDB | On-demand | $2-5 |
 | Cognito | < 50k MAU | Free |
 | S3 | 2 buckets | $0.50 |
-| VPC NAT Gateway | 2 AZs | **$65** ⚠️ |
+| VPC | Removida | $0 ✅ |
 | Amplify | 1 app | $0 (build) + $0.15/GB |
 | Route 53 | 1 zone | $0.50 |
-| **TOTAL** | | **~$77-85/mês** |
+| **TOTAL** | | **~$12-20/mês** |
 
-⚠️ **NAT Gateway é o maior custo!** Considere remover se não precisar de VPC para Lambdas.
+✅ **VPC removida!** Eliminou o maior custo (NAT Gateway $65/mês).
 
 ---
 

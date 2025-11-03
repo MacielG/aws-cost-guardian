@@ -137,12 +137,9 @@ describe('CostGuardianStack: Testes Completos', () => {
       });
     });
 
-    test('Lambdas devem ter configuração de VPC', () => {
+    test('Lambdas não devem ter configuração de VPC', () => {
       template.hasResourceProperties('AWS::Lambda::Function', {
-        VpcConfig: Match.objectLike({
-          SecurityGroupIds: Match.anyValue(),
-          SubnetIds: Match.anyValue()
-        })
+        VpcConfig: Match.absent()
       });
     });
 

@@ -340,18 +340,20 @@ describe('DashboardPage', () => {
     test.each(accountScenarios)(
       '$name',
       async ({ accountType, incidents, costs, expectedElements, shouldRedirect }) => {
-        // API order in DashboardPage: 1) /billing/summary  2) /recommendations?limit=5
+        // API order in DashboardPage: 1) /billing/summary  2) /recommendations?limit=5  3) /api/user/status
         // Garantir que os mocks correspondam à ordem esperada pelo componente.
         mockApiFetch
-          .mockResolvedValueOnce({
-            totalSavings: 0,
-            realizedSavings: 0,
-            recommendationsExecuted: 0,
-            slaCreditsRecovered: 0,
-            monthlySavings: [],
-          })
+        .mockResolvedValueOnce({
+        summary: {
+          totalValue: 1000,
+          yourSavings: 700,
+          ourCommission: 300,
+          recommendations: { executed: 5 },
+            sla: { totalCredits: 200 },
+          },
+        })
           .mockResolvedValueOnce([])
-          .mockResolvedValueOnce({ accountType });
+          .mockResolvedValueOnce({ accountType })
         // Provide incidents and costs responses for this scenario so the component
         // receives the test data defined in createTestData.
         mockApiFetch

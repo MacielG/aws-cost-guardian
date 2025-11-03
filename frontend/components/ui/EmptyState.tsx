@@ -43,15 +43,18 @@ export const EmptyState = ({ icon: Icon, title, description, action }: EmptyStat
       </motion.div>
 
       {action && (
-        <motion.button
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ delay: 0.4 }}
-          onClick={action.onClick}
+      <motion.div
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      transition={{ delay: 0.4 }}
+      >
+      <button
+            onClick={action.onClick}
           className="mt-6 rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground transition-all duration-150 hover:bg-primary/90 active:scale-[0.98] shadow"
         >
-          {action.label}
-        </motion.button>
+            {action.label}
+          </button>
+        </motion.div>
       )}
     </motion.div>
   );

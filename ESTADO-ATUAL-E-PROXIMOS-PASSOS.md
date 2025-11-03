@@ -126,15 +126,15 @@ const command = new AssumeRoleCommand({
 
 ---
 
-### ⚠️ 3. VPC Desnecessária nas Lambdas
+### ✅ 3. VPC Removida das Lambdas
 
-**Problema:** Lambdas em VPC causam:
-- Cold start lento (5-10s)
-- Dependência de NAT Gateway ($$$)
-- Possíveis timeouts/falhas de rede
+**Solução aplicada:** VPC removida de todas as Lambdas:
+- Eliminou cold start lento
+- Removeu custos do NAT Gateway
+- Melhorou performance e confiabilidade
 
-**Lambdas com VPC (sem necessidade):**
-- ApiHandler (só chama DynamoDB/Secrets/Stripe - serviços públicos AWS)
+**Lambdas sem VPC:**
+- ApiHandler (acessa DynamoDB/Secrets/Stripe - serviços públicos AWS)
 - CostIngestor
 - SLA Workflow handlers
 - execute-recommendation
@@ -221,11 +221,11 @@ cd ..
 ```
 
 **Checklist:**
-- [ ] Remover `vpc`, `securityGroups`, `vpcSubnets` do ApiHandler
-- [ ] Trocar `lambda.Function` → `NodejsFunction`
-- [ ] Testar localmente: `cd backend && npm install && node -e "require('./handler')"`
-- [ ] Deploy: `cd infra && npm run deploy`
-- [ ] Testar: `curl https://API/prod/api/health`
+- [x] Remover `vpc`, `securityGroups`, `vpcSubnets` de TODAS as Lambdas
+- [x] Trocar `lambda.Function` → `NodejsFunction` (já feito)
+- [x] Testar localmente: `cd backend && npm install && node -e "require('./handler')"`
+- [x] Deploy: `cd infra && npm run deploy`
+- [x] Testar: `curl https://API/prod/api/health`
 
 ---
 

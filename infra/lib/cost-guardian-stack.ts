@@ -142,6 +142,10 @@ export class CostGuardianStack extends cdk.Stack {
       description: 'KMS key for S3 bucket encryption',
     });
 
+
+
+
+
     // DynamoDB (Mantido, mas adicionando stream para eficiência futura)
     const table = new dynamodb.Table(this, 'CostGuardianTable', {
       tableName: 'CostGuardianTable',
@@ -235,8 +239,7 @@ export class CostGuardianStack extends cdk.Stack {
       nonKeyAttributes: ['id'],
     });
 
-    // Observação: RecommendationsIndex é redundante com CustomerDataIndex (mesmas chaves).
-    // Removido para evitar custo duplicado. Use CustomerDataIndex com begins_with(sk, 'RECO#')
+    // RecommendationsIndex removido - era redundante com CustomerDataIndex
 
     // S3 Bucket para hospedar o template do CloudFormation
     // Em ambiente de teste usamos configurações mais simples/compatíveis com os mocks
@@ -311,24 +314,15 @@ export class CostGuardianStack extends cdk.Stack {
     }
     // If isTestEnvironment is true, the Source.asset() calls are never made.
 
-     // Ensure URLs passed to lambdas/outputs handle the test case gracefully
-     const trialTemplateUrl = !props.isTestEnvironment ? (templateBucket.bucketWebsiteUrl + '/cost-guardian-TRIAL-template.yaml') : 'test-trial-url';
-     const fullTemplateUrl = !props.isTestEnvironment ? (templateBucket.bucketWebsiteUrl + '/template.yaml') : 'test-full-url';
+    // Ensure URLs passed to lambdas/outputs handle the test case gracefully
+    if (!props.isTestEnvironment && !templateBucket.bucketWebsiteUrl) {
+      throw new Error('Bucket website URL is required for production deployments. Ensure the S3 bucket has static website hosting enabled.');
+      }
+      const trialTemplateUrl = !props.isTestEnvironment ? (templateBucket.bucketWebsiteUrl + '/cost-guardian-TRIAL-template.yaml') : 'test-trial-url';
+      const fullTemplateUrl = !props.isTestEnvironment ? (templateBucket.bucketWebsiteUrl + '/template.yaml') : 'test-full-url';
 
-    // VPC e Security Group para Lambdas (Task 8)
-    const vpc = new ec2.Vpc(this, 'CostGuardianVpc', {
-      maxAzs: 2, // Usar 2 AZs para alta disponibilidade
-      subnetConfiguration: [
-        { cidrMask: 24, name: 'Public', subnetType: ec2.SubnetType.PUBLIC },
-        { cidrMask: 24, name: 'Private', subnetType: ec2.SubnetType.PRIVATE_WITH_EGRESS },
-      ],
-    });
-
-    const lambdaSecurityGroup = new ec2.SecurityGroup(this, 'LambdaSecurityGroup', {
-      vpc,
-      description: 'Allow outbound traffic for Lambdas',
-      allowAllOutbound: true, // Lambdas precisam acessar serviços externos
-    });
+    // NOTE: VPC and Lambda security group removed intentionally to allow Lambdas
+    // to access public AWS APIs directly (avoids NAT Gateway costs and extra cold-start latency).
 
     // Cognito (Mantido)
     const userPool = new cognito.UserPool(this, 'CostGuardianPool', {
@@ -399,8 +393,6 @@ export class CostGuardianStack extends cdk.Stack {
           TRIAL_TEMPLATE_URL: trialTemplateUrl,
           FULL_TEMPLATE_URL: fullTemplateUrl,
         },
-        vpc,
-        securityGroups: [lambdaSecurityGroup],
         reservedConcurrentExecutions: 10,
       });
     } else {
@@ -419,7 +411,7 @@ export class CostGuardianStack extends cdk.Stack {
           // opcional: usar depsLockFilePath se fornecido
           depsLockFilePath: props.depsLockFilePath,
         },
-        memorySize: 1024,
+  memorySize: 1024,
         timeout: cdk.Duration.seconds(29),
         environment: {
           LOG_LEVEL: props.isTestEnvironment ? 'DEBUG' : 'INFO',
@@ -432,8 +424,6 @@ export class CostGuardianStack extends cdk.Stack {
           TRIAL_TEMPLATE_URL: trialTemplateUrl,
           FULL_TEMPLATE_URL: fullTemplateUrl,
         },
-        vpc,
-        securityGroups: [lambdaSecurityGroup],
         reservedConcurrentExecutions: 10,
       });
     }
@@ -455,7 +445,6 @@ export class CostGuardianStack extends cdk.Stack {
       runtime: lambda.Runtime.NODEJS_18_X,
       code: lambda.Code.fromAsset(backendFunctionsPath),
       handler: 'correlate-health.handler',
-  // NOTA: VPC removido - este Lambda acessa apenas serviços públicos da AWS (DynamoDB, S3, SNS)
       logGroup: new cdk.aws_logs.LogGroup(this, 'HealthEventHandlerLogGroup', {
         retention: cdk.aws_logs.RetentionDays.ONE_MONTH,
         removalPolicy: cdk.RemovalPolicy.DESTROY,
@@ -465,8 +454,6 @@ export class CostGuardianStack extends cdk.Stack {
         DYNAMODB_TABLE: table.tableName,
         SFN_ARN: '', // Será preenchido abaixo
       },
-      vpc,
-      securityGroups: [lambdaSecurityGroup],
       reservedConcurrentExecutions: 10,
     });
     table.grantReadWriteData(healthEventHandlerLambda);
@@ -478,7 +465,6 @@ export class CostGuardianStack extends cdk.Stack {
       handler: 'execute-recommendation.handler',
       code: lambda.Code.fromAsset(backendFunctionsPath),
       timeout: cdk.Duration.minutes(5),
-  // NOTA: VPC removido - este Lambda acessa apenas serviços públicos da AWS
       logGroup: new cdk.aws_logs.LogGroup(this, 'ExecuteRecommendationLogGroup', {
         retention: cdk.aws_logs.RetentionDays.ONE_MONTH,
         removalPolicy: cdk.RemovalPolicy.DESTROY,
@@ -488,8 +474,6 @@ export class CostGuardianStack extends cdk.Stack {
       environment: {
         DYNAMODB_TABLE: table.tableName,
       },
-      vpc,
-      securityGroups: [lambdaSecurityGroup],
       reservedConcurrentExecutions: 10,
     });
 
@@ -519,7 +503,6 @@ export class CostGuardianStack extends cdk.Stack {
       runtime: lambda.Runtime.NODEJS_18_X,
       code: lambda.Code.fromAsset(backendFunctionsPath),
       handler: 'sla-workflow.calculateImpact',
-  // NOTA: VPC removido - este Lambda acessa apenas serviços públicos da AWS
       logGroup: new cdk.aws_logs.LogGroup(this, 'SlaCalculateImpactLogGroup', {
         retention: cdk.aws_logs.RetentionDays.ONE_MONTH,
         removalPolicy: cdk.RemovalPolicy.DESTROY,
@@ -532,22 +515,18 @@ export class CostGuardianStack extends cdk.Stack {
       role: new iam.Role(this, 'SlaCalcRole', {
         assumedBy: new iam.ServicePrincipal('lambda.amazonaws.com'),
         managedPolicies: [
-          iam.ManagedPolicy.fromAwsManagedPolicyName('service-role/AWSLambdaBasicExecutionRole'),
-          iam.ManagedPolicy.fromAwsManagedPolicyName('service-role/AWSLambdaVPCAccessExecutionRole')
+          iam.ManagedPolicy.fromAwsManagedPolicyName('service-role/AWSLambdaBasicExecutionRole')
         ],
         inlinePolicies: {
           AssumeAndSupportPolicy: new iam.PolicyDocument({
             statements: [new iam.PolicyStatement({
               actions: ['sts:AssumeRole'],
-              resources: ['arn:aws:iam::*:role/CostGuardianDelegatedRole'], 
+              resources: ['arn:aws:iam::*:role/CostGuardianDelegatedRole'],
             })]
           })
         }
-      })
-      ,
-      vpc,
-      securityGroups: [lambdaSecurityGroup],
-      reservedConcurrentExecutions: 10,
+        }),
+        reservedConcurrentExecutions: 10,
     });
   // Garantir permissões ao DynamoDB para a Lambda de cálculo de impacto
   table.grantReadWriteData(slaCalculateImpactLambda);
@@ -557,7 +536,6 @@ export class CostGuardianStack extends cdk.Stack {
       runtime: lambda.Runtime.NODEJS_18_X,
       code: lambda.Code.fromAsset(backendFunctionsPath),
       handler: 'sla-workflow.checkSLA',
-  // NOTA: VPC removido - este Lambda acessa apenas serviços públicos da AWS
       logGroup: new cdk.aws_logs.LogGroup(this, 'SlaCheckLogGroup', {
         retention: cdk.aws_logs.RetentionDays.ONE_MONTH,
         removalPolicy: cdk.RemovalPolicy.DESTROY,
@@ -565,8 +543,6 @@ export class CostGuardianStack extends cdk.Stack {
       }),
       // A remoção de 'externalModules' permite que o esbuild empacote as dependências do SDK v3.
       environment: { DYNAMODB_TABLE: table.tableName },
-      vpc,
-      securityGroups: [lambdaSecurityGroup],
       reservedConcurrentExecutions: 10,
     });
 
@@ -575,7 +551,6 @@ export class CostGuardianStack extends cdk.Stack {
       runtime: lambda.Runtime.NODEJS_18_X,
       code: lambda.Code.fromAsset(backendFunctionsPath),
       handler: 'sla-workflow.generateReport',
-  // NOTA: VPC removido - este Lambda acessa apenas serviços públicos da AWS
       logGroup: new cdk.aws_logs.LogGroup(this, 'SlaGenerateReportLogGroup', {
         retention: cdk.aws_logs.RetentionDays.ONE_MONTH,
         removalPolicy: cdk.RemovalPolicy.DESTROY,
@@ -587,8 +562,6 @@ export class CostGuardianStack extends cdk.Stack {
         STRIPE_SECRET_ARN: stripeSecret.secretArn,
         REPORTS_BUCKET_NAME: '', // Será preenchido abaixo
       },
-      vpc,
-      securityGroups: [lambdaSecurityGroup],
       reservedConcurrentExecutions: 10,
     });
     table.grantReadWriteData(slaGenerateReportLambda);
@@ -638,33 +611,28 @@ export class CostGuardianStack extends cdk.Stack {
       runtime: lambda.Runtime.NODEJS_18_X,
       code: lambda.Code.fromAsset(backendFunctionsPath),
       handler: 'sla-workflow.submitSupportTicket',
-  // NOTA: VPC removido - este Lambda acessa apenas serviços públicos da AWS
-      logGroup: new cdk.aws_logs.LogGroup(this, 'SlaSubmitTicketLogGroup', {
-        retention: cdk.aws_logs.RetentionDays.ONE_MONTH,
+    logGroup: new cdk.aws_logs.LogGroup(this, 'SlaSubmitTicketLogGroup', {
+      retention: cdk.aws_logs.RetentionDays.ONE_MONTH,
         removalPolicy: cdk.RemovalPolicy.DESTROY,
         encryptionKey: logKmsKey,
       }),
       // A remoção de 'externalModules' permite que o esbuild empacote as dependências do SDK v3.
       environment: { DYNAMODB_TABLE: table.tableName },
       role: new iam.Role(this, 'SlaSubmitRole', {
-        assumedBy: new iam.ServicePrincipal('lambda.amazonaws.com'),
+      assumedBy: new iam.ServicePrincipal('lambda.amazonaws.com'),
         managedPolicies: [
-          iam.ManagedPolicy.fromAwsManagedPolicyName('service-role/AWSLambdaBasicExecutionRole'),
-          iam.ManagedPolicy.fromAwsManagedPolicyName('service-role/AWSLambdaVPCAccessExecutionRole')
+        iam.ManagedPolicy.fromAwsManagedPolicyName('service-role/AWSLambdaBasicExecutionRole')
         ],
         inlinePolicies: {
-          AssumeAndSupportPolicy: new iam.PolicyDocument({
-            statements: [new iam.PolicyStatement({
-              actions: ['sts:AssumeRole'],
+        AssumeAndSupportPolicy: new iam.PolicyDocument({
+          statements: [new iam.PolicyStatement({
+            actions: ['sts:AssumeRole'],
               resources: ['arn:aws:iam::*:role/CostGuardianDelegatedRole'],
             })]
           })
         }
-      })
-      ,
-      vpc,
-      securityGroups: [lambdaSecurityGroup],
-      reservedConcurrentExecutions: 10,
+        }),
+        reservedConcurrentExecutions: 10,
     });
     table.grantReadWriteData(slaSubmitTicketLambda);
     
@@ -725,7 +693,6 @@ export class CostGuardianStack extends cdk.Stack {
       code: lambda.Code.fromAsset(backendFunctionsPath),
       handler: 'ingest-costs.handler',
       timeout: cdk.Duration.minutes(5),
-  // NOTA: VPC removido - este Lambda acessa apenas serviços públicos da AWS
       deadLetterQueue: lambdaDlq,
       deadLetterQueueEnabled: true,
       logGroup: new cdk.aws_logs.LogGroup(this, 'CostIngestorLogGroup', {
@@ -741,7 +708,7 @@ export class CostGuardianStack extends cdk.Stack {
       role: new iam.Role(this, 'CostIngestorRole', {
         assumedBy: new iam.ServicePrincipal('lambda.amazonaws.com'),
         managedPolicies: [
-          iam.ManagedPolicy.fromAwsManagedPolicyName('service-role/AWSLambdaVPCAccessExecutionRole')
+          iam.ManagedPolicy.fromAwsManagedPolicyName('service-role/AWSLambdaBasicExecutionRole')
         ],
         inlinePolicies: {
           DynamoAndAssumePolicy: new iam.PolicyDocument({
@@ -757,11 +724,8 @@ export class CostGuardianStack extends cdk.Stack {
             ]
           })
         }
-      })
-      ,
-      vpc,
-      securityGroups: [lambdaSecurityGroup],
-      reservedConcurrentExecutions: 10,
+        }),
+        reservedConcurrentExecutions: 10,
     });
     table.grantReadData(costIngestorLambda);
 
@@ -781,7 +745,6 @@ export class CostGuardianStack extends cdk.Stack {
       code: lambda.Code.fromAsset(backendFunctionsPath),
       handler: 'execute-recommendation.handler',
       timeout: cdk.Duration.minutes(5),
-  // NOTA: VPC removido - este Lambda acessa apenas serviços públicos da AWS
       logGroup: new cdk.aws_logs.LogGroup(this, 'StopIdleInstancesLogGroup', {
         retention: cdk.aws_logs.RetentionDays.ONE_MONTH,
         removalPolicy: cdk.RemovalPolicy.DESTROY,
@@ -790,18 +753,15 @@ export class CostGuardianStack extends cdk.Stack {
       environment: { DYNAMODB_TABLE: table.tableName },
       role: new iam.Role(this, 'StopIdleRole', {
         assumedBy: new iam.ServicePrincipal('lambda.amazonaws.com'),
-        managedPolicies: [iam.ManagedPolicy.fromAwsManagedPolicyName('service-role/AWSLambdaVPCAccessExecutionRole')],
+        managedPolicies: [iam.ManagedPolicy.fromAwsManagedPolicyName('service-role/AWSLambdaBasicExecutionRole')],
         inlinePolicies: {
           DynamoPolicy: new iam.PolicyDocument({ statements: [
             new iam.PolicyStatement({ actions: ['dynamodb:Query','dynamodb:Scan','dynamodb:GetItem','dynamodb:PutItem'], resources: [table.tableArn, `${table.tableArn}/index/*`] }),
             new iam.PolicyStatement({ actions: ['sts:AssumeRole'], resources: ['arn:aws:iam::*:role/CostGuardianDelegatedRole'] }),
           ]})
         }
-      })
-      ,
-      vpc,
-      securityGroups: [lambdaSecurityGroup],
-      reservedConcurrentExecutions: 10,
+        }),
+        reservedConcurrentExecutions: 10,
     });
     table.grantReadWriteData(stopIdleInstancesLambda);
 
@@ -810,29 +770,25 @@ export class CostGuardianStack extends cdk.Stack {
     code: lambda.Code.fromAsset(backendFunctionsPath),
     handler: 'recommend-rds-idle.handler',
     timeout: cdk.Duration.minutes(5),
-  // NOTA: VPC removido - este Lambda acessa apenas serviços públicos da AWS
-    logGroup: new cdk.aws_logs.LogGroup(this, 'RecommendRdsIdleLogGroup', {
+      logGroup: new cdk.aws_logs.LogGroup(this, 'RecommendRdsIdleLogGroup', {
       retention: cdk.aws_logs.RetentionDays.ONE_MONTH,
-      removalPolicy: cdk.RemovalPolicy.DESTROY,
-      encryptionKey: logKmsKey,
-    }),
-      environment: { DYNAMODB_TABLE: table.tableName },
-      role: new iam.Role(this, 'RecommendRdsRole', {
-        assumedBy: new iam.ServicePrincipal('lambda.amazonaws.com'),
-        managedPolicies: [iam.ManagedPolicy.fromAwsManagedPolicyName('service-role/AWSLambdaVPCAccessExecutionRole')],
-        inlinePolicies: {
-          DynamoPolicy: new iam.PolicyDocument({ statements: [
-            new iam.PolicyStatement({ actions: ['dynamodb:Query','dynamodb:Scan','dynamodb:GetItem','dynamodb:PutItem'], resources: [table.tableArn, `${table.tableArn}/index/*`] }),
-            new iam.PolicyStatement({ actions: ['sts:AssumeRole'], resources: ['arn:aws:iam::*:role/CostGuardianDelegatedRole'] }),
-            new iam.PolicyStatement({ actions: ['rds:DescribeDBInstances'], resources: ['*'] }),
-            new iam.PolicyStatement({ actions: ['cloudwatch:GetMetricStatistics'], resources: ['*'] }),
-          ]})
-        }
-      })
-      ,
-      vpc,
-      securityGroups: [lambdaSecurityGroup],
-      reservedConcurrentExecutions: 10,
+    removalPolicy: cdk.RemovalPolicy.DESTROY,
+    encryptionKey: logKmsKey,
+  }),
+    environment: { DYNAMODB_TABLE: table.tableName },
+  role: new iam.Role(this, 'RecommendRdsRole', {
+    assumedBy: new iam.ServicePrincipal('lambda.amazonaws.com'),
+  managedPolicies: [iam.ManagedPolicy.fromAwsManagedPolicyName('service-role/AWSLambdaBasicExecutionRole')],
+  inlinePolicies: {
+    DynamoPolicy: new iam.PolicyDocument({ statements: [
+    new iam.PolicyStatement({ actions: ['dynamodb:Query','dynamodb:Scan','dynamodb:GetItem','dynamodb:PutItem'], resources: [table.tableArn, `${table.tableArn}/index/*`] }),
+  new iam.PolicyStatement({ actions: ['sts:AssumeRole'], resources: ['arn:aws:iam::*:role/CostGuardianDelegatedRole'] }),
+  new iam.PolicyStatement({ actions: ['rds:DescribeDBInstances'], resources: ['*'] }),
+  new iam.PolicyStatement({ actions: ['cloudwatch:GetMetricStatistics'], resources: ['*'] }),
+  ]})
+  }
+  }),
+  reservedConcurrentExecutions: 10,
     });
     table.grantReadWriteData(recommendRdsIdleLambda);
 
@@ -842,19 +798,18 @@ export class CostGuardianStack extends cdk.Stack {
       code: lambda.Code.fromAsset(backendFunctionsPath),
       handler: 'recommend-idle-instances.handler',
       timeout: cdk.Duration.minutes(5),
-  // NOTA: VPC removido - este Lambda acessa apenas serviços públicos da AWS
       logGroup: new cdk.aws_logs.LogGroup(this, 'RecommendIdleInstancesLogGroup', {
         retention: cdk.aws_logs.RetentionDays.ONE_MONTH,
         removalPolicy: cdk.RemovalPolicy.DESTROY,
         encryptionKey: logKmsKey,
       }),
-      environment: { 
+      environment: {
         DYNAMODB_TABLE: table.tableName,
         SNS_TOPIC_ARN: anomalyAlertsTopic.topicArn,
       },
       role: new iam.Role(this, 'RecommendIdleInstancesRole', {
         assumedBy: new iam.ServicePrincipal('lambda.amazonaws.com'),
-        managedPolicies: [iam.ManagedPolicy.fromAwsManagedPolicyName('service-role/AWSLambdaVPCAccessExecutionRole')],
+        managedPolicies: [iam.ManagedPolicy.fromAwsManagedPolicyName('service-role/AWSLambdaBasicExecutionRole')],
         inlinePolicies: {
           DynamoAndAssumePolicy: new iam.PolicyDocument({ statements: [
             new iam.PolicyStatement({ actions: ['dynamodb:Query','dynamodb:Scan','dynamodb:GetItem','dynamodb:PutItem'], resources: [table.tableArn, `${table.tableArn}/index/*`] }),
@@ -864,11 +819,8 @@ export class CostGuardianStack extends cdk.Stack {
             new iam.PolicyStatement({ actions: ['pricing:GetProducts'], resources: ['*'] }),
           ]})
         }
-      })
-      ,
-      vpc,
-      securityGroups: [lambdaSecurityGroup],
-      reservedConcurrentExecutions: 10,
+        }),
+        reservedConcurrentExecutions: 10,
     });
     table.grantReadWriteData(recommendIdleInstancesLambda);
     anomalyAlertsTopic.grantPublish(recommendIdleInstancesLambda);
@@ -879,7 +831,6 @@ export class CostGuardianStack extends cdk.Stack {
       code: lambda.Code.fromAsset(backendFunctionsPath),
       handler: 'delete-unused-ebs.handler',
       timeout: cdk.Duration.minutes(5),
-  // NOTA: VPC removido - este Lambda acessa apenas serviços públicos da AWS
       logGroup: new cdk.aws_logs.LogGroup(this, 'DeleteUnusedEbsLogGroup', {
         retention: cdk.aws_logs.RetentionDays.ONE_MONTH,
         removalPolicy: cdk.RemovalPolicy.DESTROY,
@@ -889,18 +840,15 @@ export class CostGuardianStack extends cdk.Stack {
       environment: { DYNAMODB_TABLE: table.tableName },
       role: new iam.Role(this, 'DeleteEbsRole', {
         assumedBy: new iam.ServicePrincipal('lambda.amazonaws.com'),
-        managedPolicies: [iam.ManagedPolicy.fromAwsManagedPolicyName('service-role/AWSLambdaVPCAccessExecutionRole')],
+        managedPolicies: [iam.ManagedPolicy.fromAwsManagedPolicyName('service-role/AWSLambdaBasicExecutionRole')],
         inlinePolicies: {
           DynamoPolicy: new iam.PolicyDocument({ statements: [
             new iam.PolicyStatement({ actions: ['dynamodb:Query','dynamodb:Scan','dynamodb:GetItem'], resources: [table.tableArn, `${table.tableArn}/index/*`] }),
             new iam.PolicyStatement({ actions: ['sts:AssumeRole'], resources: ['arn:aws:iam::*:role/CostGuardianDelegatedRole'] }),
           ]})
         }
-      })
-      ,
-      vpc,
-      securityGroups: [lambdaSecurityGroup],
-      reservedConcurrentExecutions: 10,
+        }),
+        reservedConcurrentExecutions: 10,
     });
     table.grantReadData(deleteUnusedEbsLambda);
 
@@ -987,7 +935,6 @@ export class CostGuardianStack extends cdk.Stack {
       runtime: lambda.Runtime.NODEJS_18_X,
       code: lambda.Code.fromAsset(backendFunctionsPath),
       handler: 'marketplace-metering.handler',
-  // NOTA: VPC removido - este Lambda acessa apenas serviços públicos da AWS
       logGroup: new cdk.aws_logs.LogGroup(this, 'MarketplaceMeteringLogGroup', {
         retention: cdk.aws_logs.RetentionDays.ONE_MONTH,
         removalPolicy: cdk.RemovalPolicy.DESTROY,
@@ -997,8 +944,6 @@ export class CostGuardianStack extends cdk.Stack {
         DYNAMODB_TABLE: table.tableName,
         PRODUCT_CODE: 'your-product-code', // Substituir pelo código real do produto
       },
-      vpc,
-      securityGroups: [lambdaSecurityGroup],
       reservedConcurrentExecutions: 10,
     });
     table.grantReadWriteData(marketplaceMeteringLambda);
@@ -1198,13 +1143,9 @@ export class CostGuardianStack extends cdk.Stack {
       description: 'Cognito Identity Pool ID',
     });
     
-    // Adicionar VPC Endpoints para serviços essenciais
-    vpc.addGatewayEndpoint('DynamoDBEndpoint', {
-      service: cdk.aws_ec2.GatewayVpcEndpointAwsService.DYNAMODB,
-    });
-    vpc.addGatewayEndpoint('S3Endpoint', {
-      service: cdk.aws_ec2.GatewayVpcEndpointAwsService.S3,
-    });
+    // VPC endpoints were removed as Lambdas are not attached to a VPC.
+    // If in the future Lambdas are attached to a VPC again, add Gateway VPC Endpoints
+    // for DynamoDB and S3 here to avoid NAT Gateway traffic.
 
     // Log Group para export de env
     const envExportLogGroup = new logs.LogGroup(this, 'EnvExportLogGroup', {

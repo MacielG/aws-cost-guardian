@@ -115,9 +115,9 @@
 ### Status: COMPLETO
 
 **VPC:**
-- ✅ VPC criada: `CostGuardianVpc` (linha 314)
-- ✅ TODAS as 11 Lambdas configuradas com VPC
-- ✅ VPC Endpoints para DynamoDB e S3 (linhas 1069-1075)
+- ✅ VPC removida: Não é necessária para Lambdas que acessam apenas serviços AWS públicos
+- ✅ TODAS as 11 Lambdas configuradas SEM VPC
+- ✅ VPC Endpoints removidos (não necessários)
 
 **Concurrency:**
 - ✅ ApiHandler: 100
@@ -229,13 +229,11 @@
 ### ✅ Network Isolation
 
 1. **VPC Endpoints:**
-   - DynamoDB Gateway Endpoint
-   - S3 Gateway Endpoint
-   - Reduz custos de NAT e melhora segurança
+   - Removidos (não necessários sem VPC)
 
 2. **VPC Configuration:**
-   - Todas as Lambdas em VPC privada
-   - Isolamento de rede
+   - Lambdas executam sem VPC (acesso direto aos serviços AWS públicos)
+   - Reduz custos e latência
 
 ---
 

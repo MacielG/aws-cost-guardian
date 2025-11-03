@@ -1,4 +1,4 @@
-﻿import * as cdk from 'aws-cdk-lib';
+import * as cdk from 'aws-cdk-lib';
 import { Template, Match } from 'aws-cdk-lib/assertions';
 import * as CostGuardian from '../lib/cost-guardian-stack';
 // V-- Import the modules to mock V--
@@ -128,12 +128,9 @@ describe('CostGuardianStack: Testes Completos', () => {
       });
     });
 
-    test('Lambdas devem ter configuraÃ§Ã£o de VPC', () => {
+    test('Lambdas não devem ter configuraÃ§Ã£o de VPC', () => {
       template.hasResourceProperties('AWS::Lambda::Function', {
-        VpcConfig: Match.objectLike({
-          SecurityGroupIds: Match.arrayWith([Match.anyValue()]),
-          SubnetIds: Match.arrayWith([Match.anyValue()])
-        })
+        VpcConfig: Match.absent()
       });
     });
 

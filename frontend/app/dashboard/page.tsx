@@ -101,16 +101,17 @@ export default function DashboardPage() {
   const { t } = useTranslation();
 
   useEffect(() => {
+    const abortController = new AbortController();
     const fetchData = async () => {
       try {
         // Start all API requests concurrently so they can be aborted and so tests
         // that simulate slow responses observe multiple in-flight requests.
-        const summaryPromise = apiClient.get('/billing/summary');
-        const recsPromise = apiClient.get('/recommendations?limit=5');
+        const summaryPromise = apiClient.get('/billing/summary', { signal: abortController.signal });
+        const recsPromise = apiClient.get('/recommendations?limit=5', { signal: abortController.signal });
         // Additional calls used by tests
-        const statusPromise = apiClient.get('/api/user/status');
-        const incidentsPromise = apiClient.get('/api/incidents');
-        const costsPromise = apiClient.get('/api/dashboard/costs');
+        const statusPromise = apiClient.get('/api/user/status', { signal: abortController.signal });
+        const incidentsPromise = apiClient.get('/api/incidents', { signal: abortController.signal });
+        const costsPromise = apiClient.get('/api/dashboard/costs', { signal: abortController.signal });
 
         // Await the primary ones first (but note all requests already started)
         const [summaryData, recsData] = await Promise.all([summaryPromise, recsPromise]);
@@ -171,6 +172,7 @@ export default function DashboardPage() {
         setCosts(costsData || null);
 
       } catch (e: any) {
+        if (e.name === 'AbortError') return;
         console.error('Erro ao carregar dashboard:', e);
         // Map common error messages to translation keys expected by tests
         const msg = String(e?.message || '').toLowerCase();
@@ -186,7 +188,11 @@ export default function DashboardPage() {
       }
     };
     fetchData();
-  }, []);
+
+    return () => {
+      abortController.abort();
+    };
+  }, [router, t, notify]);
 
   if (loading) {
     return (

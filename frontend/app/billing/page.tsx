@@ -1,7 +1,9 @@
 // frontend/app/billing/page.tsx
 'use client';
 
-import React from 'react';
+import React, { useState, useEffect } from 'react';
+import { apiClient } from '@/lib/api';
+import { useNotify } from '@/hooks/useNotify';
 import { PageHeader } from '@/components/layout/PageHeader';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
@@ -40,6 +42,65 @@ const StatCard = ({ title, value, icon: Icon, color, prefix = "R$ ", decimals = 
 );
 
 export default function BillingPage() {
+  const [summary, setSummary] = useState<any>(null);
+  const [history, setHistory] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const notify = useNotify();
+
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        const [summaryData, historyData] = await Promise.all([
+          apiClient.get('/billing/summary'),
+          apiClient.get('/billing/history')
+        ]);
+        setSummary(summaryData);
+        setHistory(historyData?.history || []);
+      } catch (error: any) {
+        console.error('Erro ao carregar dados de billing:', error);
+        notify.error(error?.message || 'Erro ao carregar dados de faturamento');
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchData();
+  }, []);
+
+  if (loading) {
+    return (
+      <>
+        <PageHeader
+          title="Faturamento e Economias"
+          description="Carregando seus dados de faturamento..."
+        />
+        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4 mb-8">
+          {[...Array(4)].map((_, i) => (
+            <Card key={i}>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <div className="h-4 bg-gray-200 rounded w-20 animate-pulse"></div>
+                <div className="h-5 w-5 bg-gray-200 rounded animate-pulse"></div>
+              </CardHeader>
+              <CardContent>
+                <div className="h-8 bg-gray-200 rounded w-16 animate-pulse"></div>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+      </>
+    );
+  }
+
+  if (!summary) {
+    return (
+      <>
+        <PageHeader
+          title="Faturamento e Economias"
+          description="Nenhum dado de faturamento encontrado."
+        />
+      </>
+    );
+  }
+
   return (
     <>
       <PageHeader
@@ -48,15 +109,15 @@ export default function BillingPage() {
       />
 
       <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4 mb-8">
-        <StatCard title="Total Economizado no Período" value={mockBillingSummary.totalSavings} icon={DollarSign} color="text-green-500" />
-        <StatCard title="Sua Economia Líquida (70%)" value={mockBillingSummary.netSavings} icon={TrendingUp} color="text-blue-500" />
-        <StatCard title="Nossa Comissão (30%)" value={mockBillingSummary.invoiceAmount} icon={ShieldCheck} color="text-purple-500" />
+        <StatCard title="Total Economizado no Período" value={summary?.totalValue || 0} icon={DollarSign} color="text-green-500" />
+        <StatCard title="Sua Economia Líquida (70%)" value={summary?.yourSavings || 0} icon={TrendingUp} color="text-blue-500" />
+        <StatCard title="Nossa Comissão (30%)" value={summary?.ourCommission || 0} icon={ShieldCheck} color="text-purple-500" />
         <Card className="lg:col-span-1">
             <CardHeader className="pb-2">
-                <CardTitle className="text-sm font-medium text-muted-foreground">Período de Faturamento</CardTitle>
+                <CardTitle className="text-sm font-medium text-muted-foreground">Recomendações Executadas</CardTitle>
             </CardHeader>
             <CardContent>
-                <div className="text-2xl font-bold">{mockBillingSummary.billingPeriod}</div>
+                <div className="text-2xl font-bold">{summary?.recommendations?.executed || 0}</div>
             </CardContent>
         </Card>
       </div>
@@ -87,18 +148,38 @@ export default function BillingPage() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {mockSavingsHistory.map((item) => (
-                <TableRow key={item.month}>
-                  <TableCell className="font-medium">{item.month}</TableCell>
-                  <TableCell className="text-right">R$ {item.recommendations.toFixed(2)}</TableCell>
-                  <TableCell className="text-right">R$ {item.slaCredits.toFixed(2)}</TableCell>
-                  <TableCell className="text-right font-semibold text-green-600">R$ {item.totalSaved.toFixed(2)}</TableCell>
-                  <TableCell className="text-right font-medium text-purple-500">R$ {item.invoice.toFixed(2)}</TableCell>
-                  <TableCell className="text-center">
-                    <Badge variant={item.status === 'PAGO' ? 'success' : 'warning'}>{item.status}</Badge>
+              {history.length === 0 ? (
+                <TableRow>
+                  <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
+                    Nenhum histórico de faturamento encontrado.
                   </TableCell>
                 </TableRow>
-              ))}
+              ) : (
+                history.map((item, index) => {
+                  const timestamp = item?.timestamp;
+                  const amount = typeof item?.amount === 'number' && !isNaN(item.amount) ? item.amount : null;
+                  const type = item?.type;
+
+                  const formattedDate = timestamp && !isNaN(new Date(timestamp).getTime()) ? new Date(timestamp).toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' }) : 'Data indisponível';
+                  const formattedSaving = type === 'saving' && amount !== null ? `R$ ${amount.toFixed(2)}` : '-';
+                  const formattedCredit = type === 'credit' && amount !== null ? `R$ ${amount.toFixed(2)}` : '-';
+                  const formattedTotal = amount !== null ? `R$ ${amount.toFixed(2)}` : 'R$ 0.00';
+                  const formattedCommission = amount !== null ? `R$ ${(amount * 0.3).toFixed(2)}` : 'R$ 0.00';
+
+                  return (
+                    <TableRow key={index}>
+                      <TableCell className="font-medium">{formattedDate}</TableCell>
+                      <TableCell className="text-right">{formattedSaving}</TableCell>
+                      <TableCell className="text-right">{formattedCredit}</TableCell>
+                      <TableCell className="text-right font-semibold text-green-600">{formattedTotal}</TableCell>
+                      <TableCell className="text-right font-medium text-purple-500">{formattedCommission}</TableCell>
+                      <TableCell className="text-center">
+                        <Badge variant="success">PAGO</Badge>
+                      </TableCell>
+                    </TableRow>
+                  );
+                })
+              )}
             </TableBody>
           </Table>
         </CardContent>
