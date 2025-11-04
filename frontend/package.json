@@ -3,12 +3,13 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "npm run validate-env && next dev",
-    "validate-env": "ts-node ./lib/validate-env.cli.ts",
-    "start": "next start",
-    "lint": "next lint",
-    "test": "jest",
-    "test:watch": "jest --watch",
+  "build": "npm run validate-env && next build",
+  "dev": "npm run validate-env && next dev",
+  "validate-env": "ts-node ./lib/validate-env.cli.ts",
+  "start": "next start",
+  "lint": "next lint",
+  "test": "jest",
+  "test:watch": "jest --watch",
     "test:coverage": "jest --coverage"
   },
   "dependencies": {
