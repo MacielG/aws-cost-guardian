@@ -6,9 +6,10 @@ import { ResourcesConfig } from 'aws-amplify';
  */
 
 // 1. Define as variáveis obrigatórias.
-const region = process.env.NEXT_PUBLIC_AMPLIFY_REGION;
-const userPoolId = process.env.NEXT_PUBLIC_COGNITO_USER_POOL_ID;
-const userPoolClientId = process.env.NEXT_PUBLIC_COGNITO_USER_POOL_CLIENT_ID;
+// Usamos o operador de asserção não-nulo (!) pois as variáveis são garantidas pelo processo de build do Amplify.
+const region = process.env.NEXT_PUBLIC_AMPLIFY_REGION!;
+const userPoolId = process.env.NEXT_PUBLIC_COGNITO_USER_POOL_ID!;
+const userPoolClientId = process.env.NEXT_PUBLIC_COGNITO_USER_POOL_CLIENT_ID!;
 
 // 2. Valida se todas as variáveis obrigatórias estão presentes.
 // Esta verificação é crucial e impede a criação de uma configuração inválida.
