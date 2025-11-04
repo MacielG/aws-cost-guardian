@@ -122,7 +122,7 @@ const getServiceName = (serviceKey: string) => {
 
 export default function StatusPage() {
   const [awsStatus, setAwsStatus] = useState<AWSStatus | null>(null);
-  const [guardianStatus, setGuardianStatus] = useState<GuardianStatus | null>(null);
+  const [guardianStatus, setGuardianStatus] = useState<GuardianStatus>({ services: {}, overallStatus: 'unknown' });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [lastRefresh, setLastRefresh] = useState<Date>(new Date());
@@ -133,13 +133,45 @@ export default function StatusPage() {
       setLoading(true);
       setError(null);
 
+      if (process.env.NODE_ENV === 'development') {
+        // Mock data for development
+        const mockAwsData = {
+          timestamp: new Date().toISOString(),
+          services: {
+            'EC2': { status: 'available', incidents: 0, lastUpdated: new Date().toISOString() },
+            'S3': { status: 'available', incidents: 0, lastUpdated: new Date().toISOString() },
+            'RDS': { status: 'available', incidents: 0, lastUpdated: new Date().toISOString() }
+          },
+          totalIncidents: 0
+        };
+        const mockGuardianServices = {
+          costIngestor: { status: 'healthy', lastRun: new Date().toISOString(), message: 'Última execução: 5 minutos atrás' },
+          correlateHealth: { status: 'healthy', lastRun: new Date().toISOString(), message: 'Última execução: 10 minutos atrás' },
+          automationSfn: { status: 'healthy', lastRun: new Date().toISOString(), message: 'Última execução: 15 minutos atrás' },
+          marketplaceMetering: { status: 'healthy', lastRun: new Date().toISOString(), message: 'Última execução: 2 minutos atrás' }
+        };
+        const mockGuardianData = {
+          services: mockGuardianServices,
+          overallStatus: 'healthy'
+        };
+        setAwsStatus(mockAwsData);
+        setGuardianStatus(mockGuardianData);
+        setLastRefresh(new Date());
+        return;
+      }
+
       const [awsData, guardianData] = await Promise.all([
         apiClient.get('/api/system-status/aws'),
         apiClient.get('/api/system-status/guardian')
       ]);
 
       setAwsStatus(awsData);
-      setGuardianStatus(guardianData);
+
+      // Transform guardianData to expected structure
+      const services = guardianData;
+      const overallStatus = Object.values(services).some(s => s.status === 'error') ? 'error' :
+                           Object.values(services).some(s => s.status === 'unknown') ? 'degraded' : 'healthy';
+      setGuardianStatus({ services, overallStatus });
       setLastRefresh(new Date());
     } catch (err: any) {
       console.error('Erro ao carregar status:', err);
