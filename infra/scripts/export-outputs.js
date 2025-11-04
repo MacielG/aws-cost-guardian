@@ -16,14 +16,18 @@ const args = process.argv.slice(2);
 const force = args.includes('--force');
 const merge = args.includes('--merge');
 const skipIfExists = args.includes('--skip-if-exists');
+const production = args.includes('--production');
 
 // Default to force if no option specified
 const defaultBehavior = !merge && !skipIfExists ? 'force' : (merge ? 'merge' : (skipIfExists ? 'skip' : 'force'));
 
+// Determine env file path
+const ENV_FILE_NAME = production ? '.env.production' : '.env.local';
+
 const STACK_NAME = 'CostGuardianStack';
 const REGION = 'us-east-1';
-const ENV_FILE_PATH = path.join(__dirname, '../../frontend/.env.local');
-const BACKUP_FILE_PATH = path.join(__dirname, '../../frontend/.env.local.backup');
+const ENV_FILE_PATH = path.join(__dirname, '../../frontend', ENV_FILE_NAME);
+const BACKUP_FILE_PATH = path.join(__dirname, '../../frontend', `${ENV_FILE_NAME}.backup`);
 
 // AWS Clients
 const cfClient = new CloudFormationClient({ region: REGION });
@@ -250,9 +254,12 @@ ${envContent}
       console.log(`   ${key}=${displayValue}`);
     });
 
-    console.log('\n✅ Pronto! Agora você pode executar o frontend localmente:');
-    console.log('   cd frontend');
-    console.log('   npm run dev\n');
+    console.log(`\n✅ Pronto! Arquivo ${ENV_FILE_NAME} criado.`);
+    if (!production) {
+      console.log('Agora você pode executar o frontend localmente:');
+      console.log('   cd frontend');
+      console.log('   npm run dev\n');
+    }
 
     await logToCloudWatch('Env export successful', 'INFO');
 
