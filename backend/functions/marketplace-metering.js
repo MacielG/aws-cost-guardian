@@ -8,7 +8,7 @@ const metering = new MarketplaceMeteringClient({});
 
 const DYNAMODB_TABLE = process.env.DYNAMODB_TABLE;
 
-export const handler = async (event) => {
+exports.handler = async (event) => {
   console.log('Marketplace Metering Lambda triggered');
 
   try {

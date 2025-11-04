@@ -528,6 +528,7 @@ export class CostGuardianStack extends cdk.Stack {
           })
         }
         }),
+      reservedConcurrentExecutions: 0,
 
     });
   // Garantir permissões ao DynamoDB para a Lambda de cálculo de impacto
@@ -609,31 +610,32 @@ export class CostGuardianStack extends cdk.Stack {
     reportsBucket.grantPut(slaGenerateReportLambda);
 
     const slaSubmitTicketLambda = new lambda.Function(this, 'SlaSubmitTicket', {
-      functionName: 'SlaSubmitTicket',
-      runtime: lambda.Runtime.NODEJS_18_X,
-      code: lambda.Code.fromAsset(backendFunctionsPath),
-      handler: 'sla-workflow.submitSupportTicket',
+    functionName: 'SlaSubmitTicket',
+    runtime: lambda.Runtime.NODEJS_18_X,
+    code: lambda.Code.fromAsset(backendFunctionsPath),
+    handler: 'sla-workflow.submitSupportTicket',
     logGroup: new cdk.aws_logs.LogGroup(this, 'SlaSubmitTicketLogGroup', {
-      retention: cdk.aws_logs.RetentionDays.ONE_MONTH,
-        removalPolicy: cdk.RemovalPolicy.DESTROY,
-        encryptionKey: logKmsKey,
-      }),
-      // A remoção de 'externalModules' permite que o esbuild empacote as dependências do SDK v3.
-      environment: { DYNAMODB_TABLE: table.tableName },
-      role: new iam.Role(this, 'SlaSubmitRole', {
-      assumedBy: new iam.ServicePrincipal('lambda.amazonaws.com'),
-        managedPolicies: [
-        iam.ManagedPolicy.fromAwsManagedPolicyName('service-role/AWSLambdaBasicExecutionRole')
-        ],
-        inlinePolicies: {
-        AssumeAndSupportPolicy: new iam.PolicyDocument({
-          statements: [new iam.PolicyStatement({
-            actions: ['sts:AssumeRole'],
-              resources: ['arn:aws:iam::*:role/CostGuardianDelegatedRole'],
-            })]
-          })
-        }
-        }),
+    retention: cdk.aws_logs.RetentionDays.ONE_MONTH,
+    removalPolicy: cdk.RemovalPolicy.DESTROY,
+    encryptionKey: logKmsKey,
+    }),
+    // A remoção de 'externalModules' permite que o esbuild empacote as dependências do SDK v3.
+    environment: { DYNAMODB_TABLE: table.tableName },
+    role: new iam.Role(this, 'SlaSubmitRole', {
+    assumedBy: new iam.ServicePrincipal('lambda.amazonaws.com'),
+    managedPolicies: [
+    iam.ManagedPolicy.fromAwsManagedPolicyName('service-role/AWSLambdaBasicExecutionRole')
+    ],
+    inlinePolicies: {
+    AssumeAndSupportPolicy: new iam.PolicyDocument({
+    statements: [new iam.PolicyStatement({
+    actions: ['sts:AssumeRole'],
+    resources: ['arn:aws:iam::*:role/CostGuardianDelegatedRole'],
+    })]
+    })
+    }
+    }),
+      reservedConcurrentExecutions: 0,
 
     });
     table.grantReadWriteData(slaSubmitTicketLambda);
@@ -727,6 +729,7 @@ export class CostGuardianStack extends cdk.Stack {
           })
         }
         }),
+      reservedConcurrentExecutions: 0,
 
     });
     table.grantReadData(costIngestorLambda);
@@ -763,6 +766,7 @@ export class CostGuardianStack extends cdk.Stack {
           ]})
         }
         }),
+      reservedConcurrentExecutions: 0,
 
     });
     table.grantReadWriteData(stopIdleInstancesLambda);
@@ -822,6 +826,7 @@ export class CostGuardianStack extends cdk.Stack {
           ]})
         }
         }),
+      reservedConcurrentExecutions: 0,
 
     });
     table.grantReadWriteData(recommendIdleInstancesLambda);
@@ -850,6 +855,7 @@ export class CostGuardianStack extends cdk.Stack {
           ]})
         }
         }),
+      reservedConcurrentExecutions: 0,
 
     });
     table.grantReadData(deleteUnusedEbsLambda);

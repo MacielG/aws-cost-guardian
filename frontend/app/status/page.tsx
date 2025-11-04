@@ -122,7 +122,16 @@ const getServiceName = (serviceKey: string) => {
 
 export default function StatusPage() {
   const [awsStatus, setAwsStatus] = useState<AWSStatus | null>(null);
-  const [guardianStatus, setGuardianStatus] = useState<GuardianStatus>({ services: {}, overallStatus: 'unknown' });
+  const [guardianStatus, setGuardianStatus] = useState<GuardianStatus>({
+    timestamp: new Date().toISOString(),
+    overallStatus: 'degraded',
+    services: {
+      costIngestor: { status: 'unknown', lastRun: null, message: '' },
+      correlateHealth: { status: 'unknown', lastRun: null, message: '' },
+      automationSfn: { status: 'unknown', lastRun: null, message: '' },
+      marketplaceMetering: { status: 'unknown', lastRun: null, message: '' },
+    },
+  });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [lastRefresh, setLastRefresh] = useState<Date>(new Date());
@@ -136,23 +145,24 @@ export default function StatusPage() {
       if (process.env.NODE_ENV === 'development') {
         // Mock data for development
         const mockAwsData = {
-          timestamp: new Date().toISOString(),
-          services: {
-            'EC2': { status: 'available', incidents: 0, lastUpdated: new Date().toISOString() },
-            'S3': { status: 'available', incidents: 0, lastUpdated: new Date().toISOString() },
-            'RDS': { status: 'available', incidents: 0, lastUpdated: new Date().toISOString() }
-          },
-          totalIncidents: 0
+            timestamp: new Date().toISOString(),
+            services: {
+                'EC2': { status: 'operational' as const, incidents: [], lastUpdatedTime: new Date().toISOString() },
+                'S3': { status: 'operational' as const, incidents: [], lastUpdatedTime: new Date().toISOString() },
+                'RDS': { status: 'operational' as const, incidents: [], lastUpdatedTime: new Date().toISOString() }
+            },
+            totalIncidents: 0
         };
         const mockGuardianServices = {
-          costIngestor: { status: 'healthy', lastRun: new Date().toISOString(), message: 'Última execução: 5 minutos atrás' },
-          correlateHealth: { status: 'healthy', lastRun: new Date().toISOString(), message: 'Última execução: 10 minutos atrás' },
-          automationSfn: { status: 'healthy', lastRun: new Date().toISOString(), message: 'Última execução: 15 minutos atrás' },
-          marketplaceMetering: { status: 'healthy', lastRun: new Date().toISOString(), message: 'Última execução: 2 minutos atrás' }
+            costIngestor: { status: 'healthy' as const, lastRun: new Date().toISOString(), message: 'Última execução: 5 minutos atrás' },
+            correlateHealth: { status: 'healthy' as const, lastRun: new Date().toISOString(), message: 'Última execução: 10 minutos atrás' },
+            automationSfn: { status: 'healthy' as const, lastRun: new Date().toISOString(), message: 'Última execução: 15 minutos atrás' },
+            marketplaceMetering: { status: 'healthy' as const, lastRun: new Date().toISOString(), message: 'Última execução: 2 minutos atrás' }
         };
         const mockGuardianData = {
+          timestamp: new Date().toISOString(),
           services: mockGuardianServices,
-          overallStatus: 'healthy'
+          overallStatus: 'healthy' as const
         };
         setAwsStatus(mockAwsData);
         setGuardianStatus(mockGuardianData);
@@ -167,11 +177,16 @@ export default function StatusPage() {
 
       setAwsStatus(awsData);
 
+      // Assuming guardianData from API is an object with 'services' and 'timestamp' properties
+      // or just the services object directly. Let's assume it's the full GuardianStatus object
+      // or at least contains 'services' and 'timestamp'.
+      const guardianApiResponse: { services: GuardianStatus['services']; timestamp?: string; overallStatus?: GuardianStatus['overallStatus'] } = guardianData;
+
       // Transform guardianData to expected structure
-      const services = guardianData;
+      const services = guardianApiResponse.services;
       const overallStatus = Object.values(services).some(s => s.status === 'error') ? 'error' :
                            Object.values(services).some(s => s.status === 'unknown') ? 'degraded' : 'healthy';
-      setGuardianStatus({ services, overallStatus });
+      setGuardianStatus({ services, overallStatus, timestamp: guardianApiResponse.timestamp || new Date().toISOString() });
       setLastRefresh(new Date());
     } catch (err: any) {
       console.error('Erro ao carregar status:', err);
@@ -311,7 +326,7 @@ export default function StatusPage() {
                           {getStatusIcon(serviceData.status)}
                           <span className="font-medium">{getServiceName(service)}</span>
                         </div>
-                        <Badge variant={getStatusBadgeVariant(serviceData.status)} size="sm">
+                        <Badge variant={getStatusBadgeVariant(serviceData.status)}>
                           {serviceData.status === 'healthy' ? 'OK' :
                            serviceData.status === 'error' ? 'Erro' : 'Desconhecido'}
                         </Badge>

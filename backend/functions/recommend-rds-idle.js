@@ -23,7 +23,7 @@ function isExcluded(resourceTags, exclusionTagsString) {
   return false;
 }
 
-export const handler = async (event) => {
+exports.handler = async (event) => {
   console.log('Executando automação: Recomendar Parada de Instâncias RDS Ociosas');
 
   const queryParams = {
