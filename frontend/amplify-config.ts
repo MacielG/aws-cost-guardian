@@ -12,14 +12,17 @@ const userPoolClientId = process.env.NEXT_PUBLIC_COGNITO_USER_POOL_CLIENT_ID;
 
 // 2. Valida se todas as variáveis obrigatórias estão presentes.
 // Esta verificação é crucial e impede a criação de uma configuração inválida.
-if (!region || !userPoolId || !userPoolClientId) {
-  // No lado do servidor, isso pode ser logado. No cliente, isso ajuda a depurar.
-  console.error('❌ Erro crítico de configuração do Amplify: Uma ou mais variáveis de ambiente obrigatórias estão ausentes.');
-  console.error('Verifique se NEXT_PUBLIC_AMPLIFY_REGION, NEXT_PUBLIC_COGNITO_USER_POOL_ID, e NEXT_PUBLIC_COGNITO_USER_POOL_CLIENT_ID estão no seu .env.local');
+// Só executa no lado do cliente, pois durante o build SSG as variáveis já são carregadas pelo Next.js.
+if (typeof window !== 'undefined') {
+  if (!region || !userPoolId || !userPoolClientId) {
+    // No lado do cliente, isso ajuda a depurar.
+    console.error('❌ Erro crítico de configuração do Amplify: Uma ou mais variáveis de ambiente obrigatórias estão ausentes.');
+    console.error('Verifique se NEXT_PUBLIC_AMPLIFY_REGION, NEXT_PUBLIC_COGNITO_USER_POOL_ID, e NEXT_PUBLIC_COGNITO_USER_POOL_CLIENT_ID estão no seu .env.local');
 
-  // Lançar um erro impede que a aplicação continue com uma configuração inválida.
-  // Isso é melhor do que ter falhas inesperadas mais tarde.
-  throw new Error('Configuração do Amplify incompleta. Verifique as variáveis de ambiente.');
+    // Lançar um erro impede que a aplicação continue com uma configuração inválida.
+    // Isso é melhor do que ter falhas inesperadas mais tarde.
+    throw new Error('Configuração do Amplify incompleta. Verifique as variáveis de ambiente.');
+  }
 }
 
 // 3. Cria a configuração somente se a validação passar.
