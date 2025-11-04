@@ -1,0 +1,42 @@
+{
+  "Changes": [
+    {
+      "Action": "CREATE",
+      "ResourceRecordSet": {
+        "Name": "_44df618db8ebcbd4719acc93e95fa1f6.awscostguardian.com",
+        "Type": "CNAME",
+        "TTL": 300,
+        "ResourceRecords": [
+          {
+            "Value": "_5b6e5fb95a2e18b6e85982e891972e22.jkddzztszm.acm-validations.aws"
+          }
+        ]
+      }
+    },
+    {
+      "Action": "CREATE",
+      "ResourceRecordSet": {
+        "Name": "awscostguardian.com",
+        "Type": "A",
+        "AliasTarget": {
+          "DNSName": "diwxukrxk0wnd.cloudfront.net",
+          "HostedZoneId": "Z2FDTNDATAQYW2",
+          "EvaluateTargetHealth": false
+        }
+      }
+    },
+    {
+      "Action": "CREATE",
+      "ResourceRecordSet": {
+        "Name": "www.awscostguardian.com",
+        "Type": "CNAME",
+        "TTL": 300,
+        "ResourceRecords": [
+          {
+            "Value": "diwxukrxk0wnd.cloudfront.net"
+          }
+        ]
+      }
+    }
+  ]
+}
