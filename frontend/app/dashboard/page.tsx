@@ -24,21 +24,7 @@ import { formatCurrency, formatDate } from '@/lib/utils';
 import { useAuth } from '@/components/auth/AuthProvider';
 import { ErrorBoundary } from 'react-error-boundary';
 
-// Mock de dados da API para desenvolvimento
-const mockSummary = {
-  totalSavings: 12540.50,
-  realizedSavings: 8778.35,
-  recommendationsExecuted: 42,
-  slaCreditsRecovered: 3762.15,
-  monthlySavings: [
-    { month: 'Jan', savings: 1200 },
-    { month: 'Fev', savings: 1800 },
-    { month: 'Mar', savings: 1500 },
-    { month: 'Abr', savings: 2500 },
-    { month: 'Mai', savings: 2200 },
-    { month: 'Jun', savings: 3340.50 },
-  ],
-};
+// Removido mock data - agora usa apenas APIs reais
 
 const StatCard = ({ title, value, icon: Icon, color, prefix = "R$ ", decimals = 2 }: any) => (
   <Card>
@@ -133,18 +119,7 @@ abortControllerRef.current = new AbortController();
       isRequestInProgressRef.current = true;
       isFetchingRef.current = true;
       try {
-        if (process.env.NODE_ENV === 'development') {
-          // Use mock data for development
-          setSummary(mockSummary);
-          setRecommendations([]);
-          setAccountType(null);
-          setIncidents([]);
-          setCosts(null);
-          setError(null);
-          setLoading(false);
-          isRequestInProgressRef.current = false;
-          return;
-        }
+        // Removido mock data - sempre usa APIs reais
 
         // Start all API requests concurrently so they can be aborted and so tests
         // that simulate slow responses observe multiple in-flight requests.

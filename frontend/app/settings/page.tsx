@@ -1,7 +1,7 @@
 // frontend/app/settings/page.tsx
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { PageHeader } from '@/components/layout/PageHeader';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -13,15 +13,18 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 import { useNotify } from '@/hooks/useNotify';
+import { apiClient } from '@/lib/api';
 import { Cloud, User, Bell, CreditCard, Bot, Trash2, Link as LinkIcon, PlusCircle, RefreshCw, AlertCircle } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 import Link from 'next/link';
 
-// Mock data - substitua pela chamada de API
-const mockConnections = [
-  { alias: 'Conta de Produção', accountId: '1234-5678-9012', status: 'ACTIVE', connectionDate: '2023-10-01T10:00:00Z', lastSync: '2023-11-01T10:05:00Z' },
-  { alias: 'Conta de Staging', accountId: '9876-5432-1098', status: 'INACTIVE', connectionDate: '2023-09-15T14:30:00Z', lastSync: null },
-];
+interface AWSConnection {
+  alias: string;
+  accountId: string;
+  status: 'ACTIVE' | 'INACTIVE' | 'ERROR';
+  connectionDate: string;
+  lastSync: string | null;
+}
 
 const statusVariant: { [key: string]: "success" | "secondary" | "destructive" } = {
   'ACTIVE': 'success',
@@ -31,27 +34,85 @@ const statusVariant: { [key: string]: "success" | "secondary" | "destructive" } 
 
 export default function SettingsPage() {
   const notify = useNotify();
-  // Mock state - substitua pelo estado real vindo do backend
-  const [profile, setProfile] = useState({ name: 'Usuário Teste', email: 'user@example.com' });
+  // Estado real - será carregado das APIs
+  const [profile, setProfile] = useState({ name: '', email: '' });
   const [automation, setAutomation] = useState({ enabled: true, threshold: 80 });
-  const [connections, setConnections] = useState(mockConnections);
+  const [connections, setConnections] = useState<AWSConnection[]>([]);
   const [loadingConnections, setLoadingConnections] = useState(false);
 
-  const handleSaveChanges = (section: string) => {
-    // Simulação de chamada de API
-    notify.info(`Salvando alterações na seção ${section}...`);
-    setTimeout(() => {
-      notify.success(`Seção ${section} atualizada com sucesso!`);
-    }, 1500);
+  useEffect(() => {
+    const loadData = async () => {
+      try {
+        // Carregar perfil do usuário
+        const profileResponse = await apiClient.get('/api/profile');
+        setProfile({
+          name: profileResponse.profile.name || '',
+          email: profileResponse.profile.email || '',
+        });
+
+        // Carregar configurações de automação
+        const automationResponse = await apiClient.get('/settings/automation');
+        setAutomation(automationResponse);
+
+        // Carregar conexões AWS
+        setLoadingConnections(true);
+        const connectionsResponse = await apiClient.get('/connections');
+        setConnections(connectionsResponse.connections || []);
+      } catch (err: any) {
+        console.error('Erro ao carregar dados:', err);
+        notify.error('Erro ao carregar configurações');
+      } finally {
+        setLoadingConnections(false);
+      }
+    };
+
+    loadData();
+  }, [notify]);
+
+  const handleSaveProfile = async () => {
+    try {
+      await apiClient.put('/api/profile', profile);
+      notify.success('Perfil atualizado com sucesso!');
+    } catch (err: any) {
+      console.error('Erro ao salvar perfil:', err);
+      notify.error('Erro ao atualizar perfil');
+    }
   };
 
-  const handleDisconnect = (accountId: string) => {
-    notify.info(`Desconectando conta ${accountId}...`);
-    // Simulação de API
-    setTimeout(() => {
-      setConnections(prev => prev.filter(c => c.accountId !== accountId));
-      notify.success('Conta desconectada com sucesso!');
-    }, 1500);
+  const handleSaveAutomation = async () => {
+    try {
+      await apiClient.put('/settings/automation', automation);
+      notify.success('Configurações de automação atualizadas!');
+    } catch (err: any) {
+      console.error('Erro ao salvar automação:', err);
+      notify.error('Erro ao atualizar configurações de automação');
+    }
+  };
+
+  const handleSaveChanges = (section: string) => {
+    switch (section) {
+      case 'profile':
+        handleSaveProfile();
+        break;
+      case 'automation':
+        handleSaveAutomation();
+        break;
+      default:
+        notify.info(`Salvando alterações na seção ${section}...`);
+    }
+  };
+
+  const handleDisconnect = async (accountId: string) => {
+    try {
+      await apiClient.delete(`/connections/${accountId}`);
+      notify.success(`Conta ${accountId} desconectada com sucesso!`);
+      // Recarregar conexões
+      const connectionsResponse = await apiClient.get('/connections');
+      setConnections(connectionsResponse.connections || []);
+    } catch (err: any) {
+      console.error('Erro ao desconectar conta:', err);
+      notify.error('Erro ao desconectar conta');
+    }
   }
 
   return (

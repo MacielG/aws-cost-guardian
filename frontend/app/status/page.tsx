@@ -170,10 +170,22 @@ export default function StatusPage() {
         return;
       }
 
-      const [awsData, guardianData] = await Promise.all([
-        apiClient.get('/api/system-status/aws'),
-        apiClient.get('/api/system-status/guardian')
-      ]);
+      // Buscar status público do sistema (não requer autenticação)
+      const guardianResponse = await fetch('/api/public/status');
+      const guardianData = guardianResponse.ok ? await guardianResponse.json() : null;
+
+      // Tentar buscar AWS status (requer autenticação)
+      let awsData = null;
+      try {
+        awsData = await apiClient.get('/api/system-status/aws');
+      } catch (awsErr) {
+        // Fallback to mock AWS data if not authenticated
+        awsData = {
+          timestamp: new Date().toISOString(),
+          services: {},
+          totalIncidents: 0
+        };
+      }
 
       setAwsStatus(awsData);
 

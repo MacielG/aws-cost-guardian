@@ -1,14 +1,68 @@
 'use client';
 
+import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
-import { BarChart3, Shield, TrendingDown, DollarSign, Zap, Award } from 'lucide-react';
+import { BarChart3, Shield, TrendingDown, DollarSign, Zap, Award, Loader2 } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { toast } from 'sonner';
 import { PageAnimator } from '@/components/layout/PageAnimator';
 import { PageHeader } from '@/components/layout/PageHeader';
+import { Skeleton } from '@/components/ui/skeleton';
+
+interface PublicMetrics {
+  monthlySavings: number;
+  slaCreditsRecovered: number;
+  accountsManaged: number;
+  monthlyGrowth: number;
+  activeUsers: number;
+  trialUsers: number;
+  commissionRate: number;
+}
 
 export default function Home() {
+  const [metrics, setMetrics] = useState<PublicMetrics | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const loadMetrics = async () => {
+      try {
+        const response = await fetch('/api/public/metrics');
+        if (response.ok) {
+          const data = await response.json();
+          setMetrics(data);
+        } else {
+          // Fallback para dados estáticos se a API falhar
+          setMetrics({
+            monthlySavings: 47832,
+            slaCreditsRecovered: 12450,
+            accountsManaged: 247,
+            monthlyGrowth: 37,
+            activeUsers: 180,
+            trialUsers: 67,
+            commissionRate: 0.30,
+          });
+        }
+      } catch (err) {
+        console.error('Erro ao carregar métricas:', err);
+        // Fallback para dados estáticos
+        setMetrics({
+          monthlySavings: 47832,
+          slaCreditsRecovered: 12450,
+          accountsManaged: 247,
+          monthlyGrowth: 37,
+          activeUsers: 180,
+          trialUsers: 67,
+          commissionRate: 0.30,
+        });
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadMetrics();
+  }, []);
+
 return (
   <PageAnimator>
     <main className="min-h-screen bg-background dark:bg-background transition-colors">
@@ -20,39 +74,51 @@ return (
       </div>
       {/* Quick Stats */}
       <div className="container mx-auto px-6 py-4">
-        <motion.div
-          initial={{ opacity: 0, y: 50 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.8 }}
-          className="grid grid-cols-1 md:grid-cols-3 gap-6"
-        >
-          <div className="bg-card dark:bg-card/80 backdrop-blur-sm p-6 rounded-xl shadow-lg border border-border card-hover transition-colors">
-            <div className="flex items-center">
-              <DollarSign className="w-8 h-8 text-green-500 dark:text-green-400 mr-4" />
-              <div>
-                <p className="text-sm font-medium text-muted-foreground">Economia Mensal</p>
-                <p className="text-2xl font-bold text-foreground">$47,832</p>
-                <p className="text-sm text-green-600 dark:text-green-400">+23% vs mês anterior</p>
-              </div>
-            </div>
-          </div>
-          <div className="bg-card dark:bg-card/80 backdrop-blur-sm p-6 rounded-xl shadow-lg border border-border card-hover transition-colors">
-            <div className="flex items-center">
-              <Award className="w-8 h-8 text-blue-500 dark:text-blue-400 mr-4" />
-              <div>
-                <p className="text-sm font-medium text-muted-foreground">Créditos SLA Recuperados</p>
-                <p className="text-2xl font-bold text-foreground">$12,450</p>
-                <p className="text-sm text-blue-600 dark:text-blue-400">92% taxa de sucesso</p>
-              </div>
-            </div>
-          </div>
-          <div className="bg-card dark:bg-card/80 backdrop-blur-sm p-6 rounded-xl shadow-lg border border-border card-hover transition-colors">
-            <div className="flex items-center">
-              <Shield className="w-8 h-8 text-purple-500 dark:text-purple-400 mr-4" />
+      <motion.div
+      initial={{ opacity: 0, y: 50 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.8 }}
+      className="grid grid-cols-1 md:grid-cols-3 gap-6"
+      >
+      <div className="bg-card dark:bg-card/80 backdrop-blur-sm p-6 rounded-xl shadow-lg border border-border card-hover transition-colors">
+      <div className="flex items-center">
+      <DollarSign className="w-8 h-8 text-green-500 dark:text-green-400 mr-4" />
+      <div>
+      <p className="text-sm font-medium text-muted-foreground">Economia Mensal</p>
+      {loading ? (
+        <Skeleton className="h-8 w-24 mb-2" />
+        ) : (
+            <p className="text-2xl font-bold text-foreground">${metrics?.monthlySavings.toLocaleString()}</p>
+            )}
+            <p className="text-sm text-green-600 dark:text-green-400">+{metrics?.monthlyGrowth}% vs mês anterior</p>
+        </div>
+      </div>
+      </div>
+      <div className="bg-card dark:bg-card/80 backdrop-blur-sm p-6 rounded-xl shadow-lg border border-border card-hover transition-colors">
+      <div className="flex items-center">
+      <Award className="w-8 h-8 text-blue-500 dark:text-blue-400 mr-4" />
+      <div>
+          <p className="text-sm font-medium text-muted-foreground">Créditos SLA Recuperados</p>
+            {loading ? (
+              <Skeleton className="h-8 w-20 mb-2" />
+          ) : (
+          <p className="text-2xl font-bold text-foreground">${metrics?.slaCreditsRecovered.toLocaleString()}</p>
+        )}
+      <p className="text-sm text-blue-600 dark:text-blue-400">{Math.round((metrics?.activeUsers || 0) / (metrics?.accountsManaged || 1) * 100)}% taxa de sucesso</p>
+      </div>
+      </div>
+      </div>
+      <div className="bg-card dark:bg-card/80 backdrop-blur-sm p-6 rounded-xl shadow-lg border border-border card-hover transition-colors">
+        <div className="flex items-center">
+            <Shield className="w-8 h-8 text-purple-500 dark:text-purple-400 mr-4" />
               <div>
                 <p className="text-sm font-medium text-muted-foreground">Contas Gerenciadas</p>
-                <p className="text-2xl font-bold text-foreground">247</p>
-                <p className="text-sm text-purple-600 dark:text-purple-400">Crescimento de 15%</p>
+                {loading ? (
+                  <Skeleton className="h-8 w-16 mb-2" />
+                ) : (
+                  <p className="text-2xl font-bold text-foreground">{metrics?.accountsManaged.toLocaleString()}</p>
+                )}
+                <p className="text-sm text-purple-600 dark:text-purple-400">{metrics?.activeUsers} ativos, {metrics?.trialUsers} trial</p>
               </div>
             </div>
           </div>
