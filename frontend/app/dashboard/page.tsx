@@ -15,7 +15,8 @@ import { Badge } from '@/components/ui/badge';
 import { AnimatedCounter } from '@/components/ui/animatedcounter';
 import { PageAnimator } from '@/components/layout/PageAnimator';
 import { PageHeader } from '@/components/layout/PageHeader';
-import { EmptyState } from '@/components/ui/emptystate';
+import { EmptyState } from '@/components/ui/EmptyState';
+import { StatCard } from '@/components/ui/StatCard';
 import { Skeleton } from '@/components/ui/skeleton';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
@@ -47,19 +48,7 @@ const mockRecommendations = [
   { id: 'rec-005', type: 'UNUSED_EIP', resourceId: '54.123.45.67', potentialSaving: 3.60, status: 'ACTIVE' },
 ];
 
-const StatCard = ({ title, value, icon: Icon, color, prefix = "", suffix = "" }: any) => (
-  <Card>
-    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-      <CardTitle className="text-sm font-medium text-muted-foreground">{title}</CardTitle>
-      <Icon className={`w-5 h-5 ${color}`} />
-    </CardHeader>
-    <CardContent>
-      <div className="text-2xl font-bold">
-        <AnimatedCounter value={value} prefix={prefix} suffix={suffix} />
-      </div>
-    </CardContent>
-  </Card>
-);
+
 
 const DashboardSkeleton = () => (
   <div className="space-y-8">

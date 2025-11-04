@@ -1,1 +1,1 @@
-{\"httpMethod\":\"GET\",\"path\":\"/api/health\"}  
+{"resource": "/{proxy+}", "path": "/health", "httpMethod": "GET", "headers": {}, "queryStringParameters": null, "pathParameters": {}, "stageVariables": null, "requestContext": {"resourceId": "123", "apiId": "123", "resourcePath": "/{proxy+}", "httpMethod": "GET", "requestId": "test", "accountId": "123", "stage": "prod"}, "body": null, "isBase64Encoded": false}

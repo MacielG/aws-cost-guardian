@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { LoadingState } from '@/components/ui/loadingspinner';
+import { LoadingState } from '@/components/ui/LoadingSpinner';
 import { Alert } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
 import { apiClient } from '@/lib/api';
