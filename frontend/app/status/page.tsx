@@ -14,7 +14,7 @@ import { AlertCircle, CheckCircle, Clock, RefreshCw, Server, Shield } from 'luci
 import { formatDate } from '@/lib/utils';
 import { PageAnimator } from '@/components/layout/PageAnimator';
 import { PageHeader } from '@/components/layout/PageHeader';
-import { EmptyState } from '@/components/ui/emptystate';
+import { EmptyState } from '@/components/ui/EmptyState';
 
 interface AWSServiceStatus {
   status: 'operational' | 'degraded' | 'major_outage';

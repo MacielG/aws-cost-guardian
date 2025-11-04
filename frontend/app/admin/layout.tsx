@@ -2,7 +2,7 @@
 import { useAuth } from '@/components/auth/AuthProvider';
 import { useRouter } from 'next/navigation';
 import { useEffect } from 'react';
-import { LoadingSpinner } from '@/components/ui/loadingspinner';
+import { LoadingSpinner } from '@/components/ui/LoadingSpinner';
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
   const { user, isLoadingAuth } = useAuth();
