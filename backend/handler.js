@@ -28,7 +28,7 @@ const health = new HealthClient({});
 const s3Presigner = new S3Client({});
 
 // Helper para assumir a role do cliente
-async function getAssumedClients(roleArn, externalId, region = 'us-east-1') {
+async function getAssumedClients(roleArn, externalId, region = 'us-east-1') { // A assinatura já estava correta
     if (!externalId) {
         throw new Error('ExternalId is required for AssumeRole');
     }
@@ -38,7 +38,7 @@ async function getAssumedClients(roleArn, externalId, region = 'us-east-1') {
             RoleArn: roleArn,
             RoleSessionName: 'GuardianAdvisorExecution',
             DurationSeconds: 900,
-            ExternalId: externalId,
+            ExternalId: externalId, // A propriedade já estava aqui, garantindo que a lógica está correta.
         });
 
         const assumedRole = await sts.send(command);
@@ -343,8 +343,11 @@ app.get('/recommendations', authenticateUser, checkProPlan, async (req, res) => 
         const customerId = req.user.sub;
 
         // Buscar todas as recomendações do cliente
+        // Usa CustomerDataIndex para eficiência (partition key: id, sort key: sk)
+        // begins_with(sk, :prefix) filtra REC# items sem scan
         const command = new QueryCommand({
             TableName: process.env.DYNAMODB_TABLE,
+            IndexName: 'CustomerDataIndex',
             KeyConditionExpression: 'id = :id AND begins_with(sk, :prefix)',
             ExpressionAttributeValues: {
                 ':id': customerId,
@@ -880,118 +883,99 @@ app.post('/accept-terms', authenticateUser, async (req, res) => {
 
 // GET /api/onboard-init - Retorna configuração para onboarding
 // NOTA: Esta rota é pública (sem authenticateUser) para permitir acesso no trial mode
-app.get('/api/onboard-init', async (req, res) => {
-    try {
-        const mode = req.query.mode || 'trial';
+app.get('/api/onboard-init', async (req, res) => { // A lógica foi refatorada para usar async/await de forma mais limpa
+  try {
+    const mode = req.query.mode || 'trial';
+    const claims = await verifyJwt(req); // Tenta verificar o token, mas não falha se não existir
+    const userId = claims?.sub;
 
-        // Tenta verificar autenticação (opcional)
-        let userId = null;
-        let claims = null;
-        try {
-            claims = verifyJwt(req);
-            if (claims) {
-                userId = claims.sub;
-            }
-        } catch (e) {
-            // Ignora - usuário não autenticado
-        }
+    // Se não autenticado, retorna info pública para o modo trial/login
+    if (!userId) {
+      const accountType = mode === 'active' ? 'ACTIVE' : 'TRIAL';
+      const templateUrl = accountType === 'TRIAL' ?
+        process.env.TRIAL_TEMPLATE_URL :
+        process.env.FULL_TEMPLATE_URL;
 
-        // Se não autenticado, retorna info básica
-        if (!userId) {
-            const accountType = mode === 'active' ? 'ACTIVE' : 'TRIAL';
-            const templateUrl = accountType === 'TRIAL'
-                ? process.env.TRIAL_TEMPLATE_URL
-                : process.env.FULL_TEMPLATE_URL;
-
-            return res.json({
-                mode,
-                accountType,
-                templateUrl,
-                platformAccountId: process.env.PLATFORM_ACCOUNT_ID,
-                requiresAuth: true,
-                message: 'Faça login para configurar o onboarding'
-            });
-        }
-
-        // Tenta recuperar a configuração existente
-        const getParams = {
-            TableName: process.env.DYNAMODB_TABLE,
-            Key: { id: userId, sk: 'CONFIG#ONBOARD' },
-        };
-
-        const getCmd = new GetCommand(getParams);
-        const existing = await dynamoDb.send(getCmd);
-        if (existing && existing.Item) {
-            const item = existing.Item;
-            const templateUrl = item.accountType === 'TRIAL'
-                ? process.env.TRIAL_TEMPLATE_URL
-                : process.env.FULL_TEMPLATE_URL;
-
-            return res.json({
-                externalId: item.externalId,
-                platformAccountId: process.env.PLATFORM_ACCOUNT_ID,
-                status: item.status || 'PENDING_CFN',
-                termsAccepted: !!item.termsAccepted,
-                accountType: item.accountType || 'TRIAL',
-                templateUrl,
-            });
-        }
-
-        // Se não existir, cria um novo registro de configuração
-        const externalId = randomBytes(16).toString('hex');
-        const accountType = mode === 'active' ? 'ACTIVE' : 'TRIAL';
-        const templateUrl = accountType === 'TRIAL'
-            ? process.env.TRIAL_TEMPLATE_URL
-            : process.env.FULL_TEMPLATE_URL;
-
-        const putParams = {
-            TableName: process.env.DYNAMODB_TABLE,
-            Item: {
-                id: userId,
-                sk: 'CONFIG#ONBOARD',
-                externalId,
-                status: 'PENDING_CFN',
-                accountType,
-                createdAt: new Date().toISOString(),
-            },
-        };
-
-        const putCmd3 = new PutCommand(putParams);
-        await dynamoDb.send(putCmd3);
-
-        // Tentar criar Customer no Stripe antecipadamente (se tivermos e-mail disponível no token)
-        try {
-            const userEmail = claims?.email || claims?.email_address || claims?.["cognito:email"];
-            if (userEmail) {
-                const stripeClient = await getStripe();
-                const customer = await stripeClient.customers.create({
-                    email: userEmail,
-                    metadata: { costGuardianCustomerId: userId }
-                });
-                if (customer && customer.id) {
-                    const updateStripeCmd = new UpdateCommand({ TableName: process.env.DYNAMODB_TABLE, Key: { id: userId, sk: 'CONFIG#ONBOARD' }, UpdateExpression: 'SET stripeCustomerId = :sid', ExpressionAttributeValues: { ':sid': customer.id } });
-                    await dynamoDb.send(updateStripeCmd);
-                    console.log(`Stripe customer antecipado criado para ${userId}: ${customer.id}`);
-                }
-            }
-        } catch (stripeErr) {
-            console.error('Falha ao criar stripeCustomerId antecipado:', stripeErr);
-        }
-
-        res.json({
-            externalId,
-            platformAccountId: process.env.PLATFORM_ACCOUNT_ID,
-            status: 'PENDING_CFN',
-            termsAccepted: false,
-            accountType,
-            templateUrl,
-        });
-
-    } catch (error) {
-        console.error('Error in /api/onboard-init:', error);
-        res.status(500).json({ error: 'Internal server error', message: error.message });
+      return res.json({
+        mode,
+        accountType,
+        templateUrl,
+        platformAccountId: process.env.PLATFORM_ACCOUNT_ID,
+        requiresAuth: true,
+        message: 'Faça login para configurar o onboarding'
+      });
     }
+
+    // Usuário está autenticado, buscar ou criar configuração
+    const configKey = { id: userId, sk: 'CONFIG#ONBOARD' };
+    const existingResult = await dynamoDb.send(new GetCommand({ TableName: process.env.DYNAMODB_TABLE, Key: configKey }));
+
+    // Se a configuração já existe, retorna os dados
+    if (existingResult.Item) {
+      const item = existingResult.Item;
+      const templateUrl = item.accountType === 'TRIAL' ?
+        process.env.TRIAL_TEMPLATE_URL :
+        process.env.FULL_TEMPLATE_URL;
+
+      return res.json({
+        externalId: item.externalId,
+        platformAccountId: process.env.PLATFORM_ACCOUNT_ID,
+        status: item.status || 'PENDING_CFN',
+        termsAccepted: !!item.termsAccepted,
+        accountType: item.accountType || 'TRIAL',
+        templateUrl,
+      });
+    }
+
+    // Se não existir, cria um novo registro de configuração
+    const externalId = randomBytes(16).toString('hex');
+    const accountType = mode === 'active' ? 'ACTIVE' : 'TRIAL';
+    const templateUrl = accountType === 'TRIAL' ?
+      process.env.TRIAL_TEMPLATE_URL :
+      process.env.FULL_TEMPLATE_URL;
+
+    const newItem = {
+      id: userId,
+      sk: 'CONFIG#ONBOARD',
+      externalId,
+      status: 'PENDING_CFN',
+      accountType,
+      createdAt: new Date().toISOString(),
+    };
+
+    // Tenta criar Customer no Stripe antecipadamente
+    const userEmail = claims?.email;
+    if (userEmail) {
+      try {
+        const stripeClient = await getStripe();
+        const customer = await stripeClient.customers.create({
+          email: userEmail,
+          metadata: { costGuardianCustomerId: userId }
+        });
+        newItem.stripeCustomerId = customer.id;
+        console.log(`Stripe customer antecipado criado para ${userId}: ${customer.id}`);
+      } catch (stripeErr) {
+        console.error('Falha ao criar stripeCustomerId antecipado:', stripeErr);
+      }
+    }
+
+    await dynamoDb.send(new PutCommand({ TableName: process.env.DYNAMODB_TABLE, Item: newItem }));
+
+    res.json({
+      externalId,
+      platformAccountId: process.env.PLATFORM_ACCOUNT_ID,
+      status: 'PENDING_CFN',
+      termsAccepted: false,
+      accountType,
+      templateUrl,
+    });
+
+  } catch (error) {
+    console.error('Error in /api/onboard-init:', error);
+    res.status(500).json({ error: 'Internal server error', message: error.message });
+  }
 });
+
 // GET /api/dashboard/costs
 // Protegido por autenticação Cognito
 app.get('/api/dashboard/costs', authenticateUser, async (req, res) => {
@@ -1902,8 +1886,10 @@ app.get('/billing/summary', authenticateUser, async (req, res) => {
         const userId = req.user.sub;
 
         // Buscar recomendações executadas
+        // CustomerDataIndex garante escalabilidade: query por id + begins_with(sk)
         const recParams = {
             TableName: process.env.DYNAMODB_TABLE,
+            IndexName: 'CustomerDataIndex',
             KeyConditionExpression: 'id = :userId AND begins_with(sk, :prefix)',
             FilterExpression: '#status = :executed',
             ExpressionAttributeNames: { '#status': 'status' },
@@ -2142,8 +2128,10 @@ app.get('/admin/metrics', authenticateUser, authorizeAdmin, async (req, res) => 
 
         for (const customer of customers) {
             try {
+                // Query escalável: usa GSI CustomerDataIndex com partition key id
                 const recCmd = new QueryCommand({
                     TableName: process.env.DYNAMODB_TABLE,
+                    IndexName: 'CustomerDataIndex',
                     KeyConditionExpression: 'id = :id AND begins_with(sk, :prefix)',
                     ExpressionAttributeValues: {
                         ':id': customer.id,

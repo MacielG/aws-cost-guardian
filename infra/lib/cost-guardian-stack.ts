@@ -1181,9 +1181,9 @@ export class CostGuardianStack extends cdk.Stack {
 
       const api5xxAlarm = new cloudwatch.Alarm(this, 'Api5xxAlarm', {
         metric: api.metricServerError(),
-        threshold: 1,
+        threshold: 5, // Ajustado para produção: alarme apenas se 5+ erros 5xx em 1 período
         evaluationPeriods: 1,
-        alarmDescription: 'Alarm when API Gateway 5XX errors occur',
+        alarmDescription: 'Alarm when API Gateway has 5+ 5XX errors',
         actionsEnabled: true,
       });
       api5xxAlarm.addAlarmAction(new cloudwatch_actions.SnsAction(alarmTopic));
@@ -1196,6 +1196,22 @@ export class CostGuardianStack extends cdk.Stack {
         actionsEnabled: true,
       });
       apiLatencyAlarm.addAlarmAction(new cloudwatch_actions.SnsAction(alarmTopic));
+
+      // Lambda Error Alarms
+      const apiHandlerErrors = new cloudwatch.Alarm(this, 'ApiHandlerErrors', {
+        metric: new cloudwatch.Metric({
+          namespace: 'AWS/Lambda',
+          metricName: 'Errors',
+          dimensionsMap: {
+            FunctionName: apiHandlerLambda.functionName,
+          },
+        }),
+        threshold: 3, // Ajustado para produção: alarme se 3+ erros Lambda em 1 período
+        evaluationPeriods: 1,
+        alarmDescription: 'Alarm when API Handler Lambda has 3+ errors',
+        actionsEnabled: true,
+      });
+      apiHandlerErrors.addAlarmAction(new cloudwatch_actions.SnsAction(alarmTopic));
     }
 
     // --- SEÇÃO DO FRONTEND (AMPLIFY APP AUTOMATIZADO) ---

@@ -2,10 +2,8 @@
 
 const { DynamoDBClient } = require('@aws-sdk/client-dynamodb');
 const { DynamoDBDocumentClient, QueryCommand, PutCommand } = require('@aws-sdk/lib-dynamodb');
-const { CostExplorer } = require('@aws-sdk/client-cost-explorer');
 const { SFNClient, StartExecutionCommand } = require('@aws-sdk/client-sfn');
 
-const ce = new CostExplorer({ region: 'us-east-1' });
 const ddbClient = new DynamoDBClient({});
 const dynamoDb = DynamoDBDocumentClient.from(ddbClient);
 const sfn = new SFNClient({});

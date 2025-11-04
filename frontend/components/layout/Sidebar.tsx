@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { LayoutDashboard, Settings, CreditCard, LifeBuoy, Lightbulb, ShieldCheck, BarChart3, Activity } from "lucide-react";
+import { LayoutDashboard, Settings, CreditCard, LifeBuoy, Lightbulb, ShieldCheck, BarChart3, Activity, Shield } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/components/auth/AuthProvider";
 
@@ -12,7 +12,8 @@ const navItems = [
 { href: "/sla-claims", label: "Créditos SLA", icon: ShieldCheck },
 { href: "/billing", label: "Faturamento", icon: CreditCard },
 { href: "/status", label: "Status do Sistema", icon: Activity },
-  { href: "/settings/connections", label: "Configurações", icon: Settings },
+{ href: "/settings/connections", label: "Configurações", icon: Settings },
+  { href: "/admin", label: "Admin", icon: Shield },
 ];
 
 interface SidebarProps {
@@ -24,6 +25,8 @@ export function Sidebar({ isMobileOpen = false }: SidebarProps) {
   const { user } = useAuth();
 
   if (!user) return null;
+
+  const isAdmin = user['cognito:groups']?.includes('Admins');
   // Mobile-only slide-over sidebar. On larger screens the header contains the nav icons.
   return (
     <>
@@ -43,8 +46,10 @@ export function Sidebar({ isMobileOpen = false }: SidebarProps) {
         </div>
 
         <nav className="flex-1 overflow-y-auto px-3 py-4">
-          <ul className="space-y-1">
-            {navItems.map((item) => {
+        <ul className="space-y-1">
+        {navItems.map((item) => {
+              // Skip admin item if not admin
+              if (item.href === '/admin' && !isAdmin) return null;
               const isActive = pathname?.startsWith(item.href);
               const Icon = item.icon;
               return (

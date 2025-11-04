@@ -168,6 +168,8 @@ exports.calculateImpact = async (event) => {
       ...event,
       impactedCost: impactedCost,
       potentialCredit: potentialCredit,
+      externalId: externalId,
+      roleArn: roleToAssume,
     };
 
   } catch (err) {
@@ -457,30 +459,38 @@ exports.submitSupportTicket = async (event) => {
   
   // Se o cliente está no plano Basic, atualizar status para submissão manual
   if (supportLevel === 'basic') {
-    console.log(`Cliente ${customerId} está no plano Basic. Requer ação manual.`);
-    await dynamoDb.send(new UpdateCommand({
-      TableName: DYNAMODB_TABLE,
-      Key: { id: customerId, sk: claimId },
-      UpdateExpression: 'SET #status = :status',
-      ExpressionAttributeNames: { '#status': 'status' },
-      ExpressionAttributeValues: { ':status': 'PENDING_MANUAL_SUBMISSION' }
-    }));
-    return { ...event, status: 'manual-submission-required' };
+  console.log(`Cliente ${customerId} está no plano Basic. Requer ação manual.`);
+  await dynamoDb.send(new UpdateCommand({
+  TableName: DYNAMODB_TABLE,
+  Key: { id: customerId, sk: claimId },
+  UpdateExpression: 'SET #status = :status',
+  ExpressionAttributeNames: { '#status': 'status' },
+  ExpressionAttributeValues: { ':status': 'PENDING_MANUAL_SUBMISSION' }
+  }));
+  return { ...event, status: 'manual-submission-required' };
   }
 
   // Se não houver claimId, algo deu errado.
   if (!claimId) {
-    console.warn('Nenhum claimId encontrado. Pulando envio de ticket.');
-    return { ...event, status: 'submission-skipped' };
+  console.warn('Nenhum claimId encontrado. Pulando envio de ticket.');
+  return { ...event, status: 'submission-skipped' };
   }
 
-  const roleToAssume = `arn:aws:iam::${awsAccountId}:role/CostGuardianDelegatedRole`;
+  // Usar externalId do event (passado de calculateImpact) ou buscar do DB se não disponível
+  let externalId = event.externalId;
+  if (!externalId) {
+    const configKey = { id: customerId, sk: 'CONFIG#ONBOARD' };
+    const configResp = await dynamoDb.send(new GetCommand({ TableName: DYNAMODB_TABLE, Key: configKey }));
+     const configData = { Item: configResp.Item };
+    externalId = configData.Item?.externalId;
+   }
 
-  try {
-    // 1. Assumir a role do cliente para ter permissão de criar um caso de suporte
-  const externalId2 = configData.Item?.externalId;
-  if (!externalId2) throw new Error('externalId not found for customer');
-  const { support } = await getAssumedClients(roleToAssume, externalId2);
+  const roleToAssume = event.roleArn || `arn:aws:iam::${awsAccountId}:role/CostGuardianDelegatedRole`;
+
+   try {
+     // 1. Assumir a role do cliente para ter permissão de criar um caso de suporte
+     if (!externalId) throw new Error('externalId not found for customer');
+  const { support } = await getAssumedClients(roleToAssume, externalId);
 
     // 2. Montar o corpo do ticket de suporte
     const subject = `[Cost Guardian] Reivindicação de Crédito SLA para ${healthEvent.service}`;
