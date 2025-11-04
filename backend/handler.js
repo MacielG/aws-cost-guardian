@@ -382,6 +382,42 @@ app.post('/recommendations/:recommendationId/execute', authenticateUser, checkPr
     }
 });
 
+// Rota para buscar incidentes
+app.get('/api/incidents', authenticateUser, async (req, res) => {
+    try {
+        const customerId = req.user.sub;
+
+        // Buscar incidentes do DynamoDB
+        const params = {
+            TableName: process.env.DYNAMODB_TABLE,
+            KeyConditionExpression: 'id = :customerId AND begins_with(sk, :incidentPrefix)',
+            ExpressionAttributeValues: {
+                ':customerId': customerId,
+                ':incidentPrefix': 'incident#'
+            }
+        };
+
+        const result = await dynamoDb.send(new QueryCommand(params));
+
+        const incidents = result.Items.map(item => ({
+            id: item.sk.replace('incident#', ''),
+            type: item.incidentType,
+            severity: item.severity,
+            status: item.status,
+            createdAt: item.createdAt,
+            updatedAt: item.updatedAt,
+            description: item.description,
+            resolution: item.resolution,
+            caseId: item.caseId
+        }));
+
+        res.status(200).json({ incidents });
+    } catch (error) {
+        console.error('Erro ao buscar incidentes:', error);
+        res.status(500).json({ error: 'Erro ao buscar incidentes' });
+    }
+});
+
 // Rotas protegidas pelo plano Pro
 app.get('/settings/automation', authenticateUser, checkProPlan, async (req, res) => {
     try {

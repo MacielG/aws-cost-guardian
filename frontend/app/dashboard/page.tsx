@@ -19,6 +19,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { formatCurrency, formatDate } from '@/lib/utils';
+import { useAuth } from '@/components/auth/AuthProvider';
 
 // Mock de dados da API para desenvolvimento
 const mockSummary = {
@@ -99,8 +100,11 @@ export default function DashboardPage() {
   const notify = useNotify();
   const router = useRouter();
   const { t } = useTranslation();
+  const { user, loading: isLoadingAuth } = useAuth();
 
   useEffect(() => {
+    if (isLoadingAuth) return; // Don't fetch data while auth is loading
+
     const abortController = new AbortController();
     const fetchData = async () => {
       try {
@@ -192,7 +196,7 @@ export default function DashboardPage() {
     return () => {
       abortController.abort();
     };
-  }, [router, t, notify]);
+  }, [router, t, notify, isLoadingAuth]);
 
   if (loading) {
     return (

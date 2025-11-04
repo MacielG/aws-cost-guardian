@@ -1,3 +1,11 @@
+// Mock apiClient
+jest.mock('@/lib/api', () => ({
+  apiClient: {
+    get: jest.fn(),
+    post: jest.fn(),
+  },
+}));
+
 // Mock AuthProvider to avoid real auth calls and act warnings
 jest.mock('@/components/auth/AuthProvider', () => ({
 AuthProvider: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
@@ -26,9 +34,13 @@ import '@testing-library/jest-dom';
 import { AuthProvider } from '@/components/auth/AuthProvider';
 import { ToasterProvider } from '@/components/ui/toaster';
 import DashboardPage from '../page';
+import { apiClient } from '@/lib/api';
 
 // Top-level mocks (must be declared before importing the page under test)
 let mockRouter = { push: jest.fn(), pathname: '/', query: {} } as any;
+
+// Type the mocked apiClient
+const mockedApiClient = apiClient.get as jest.Mock;
 
 const defaultTranslations: Record<string, string> = {
   'dashboard': 'Dashboard',
@@ -324,6 +336,26 @@ describe('DashboardPage', () => {
   beforeEach(() => {
     jest.clearAllMocks();
     abortControllers = [];
+
+    // Set up default mock responses for successful API calls
+    mockedApiClient.mockResolvedValue({}); // Default empty response
+
+    // Specific mocks for the dashboard APIs
+    mockedApiClient
+      .mockResolvedValueOnce({
+        totalSavings: 1000,
+        realizedSavings: 700,
+        recommendationsExecuted: 5,
+        slaCreditsRecovered: 300,
+        monthlySavings: [
+          { month: 'Jan', savings: 100 },
+          { month: 'Fev', savings: 200 }
+        ]
+      }) // /billing/summary
+      .mockResolvedValueOnce([]) // /recommendations?limit=5
+      .mockResolvedValueOnce({ accountType: 'PREMIUM' }) // /api/user/status
+      .mockResolvedValueOnce([]) // /api/incidents
+      .mockResolvedValueOnce({ Groups: [] }); // /api/dashboard/costs
   });
 
   afterEach(() => {
@@ -342,21 +374,22 @@ describe('DashboardPage', () => {
       async ({ accountType, incidents, costs, expectedElements, shouldRedirect }) => {
         // API order in DashboardPage: 1) /billing/summary  2) /recommendations?limit=5  3) /api/user/status
         // Garantir que os mocks correspondam à ordem esperada pelo componente.
-        mockApiFetch
+        mockedApiClient
         .mockResolvedValueOnce({
-        summary: {
-          totalValue: 1000,
-          yourSavings: 700,
-          ourCommission: 300,
-          recommendations: { executed: 5 },
-            sla: { totalCredits: 200 },
-          },
+          totalSavings: 1000,
+        realizedSavings: 700,
+        recommendationsExecuted: 5,
+        slaCreditsRecovered: 200,
+        monthlySavings: [
+        { month: 'Jan', savings: 100 },
+          { month: 'Fev', savings: 200 }
+          ],
         })
           .mockResolvedValueOnce([])
           .mockResolvedValueOnce({ accountType })
         // Provide incidents and costs responses for this scenario so the component
         // receives the test data defined in createTestData.
-        mockApiFetch
+        mockedApiClient
           .mockResolvedValueOnce(incidents)
           .mockResolvedValueOnce(costs);
 
