@@ -272,6 +272,54 @@ app.get('/api/health', (req, res) => {
     });
 });
 
+// Rota para inicializar onboarding (pode ser pública ou autenticada dependendo do fluxo)
+app.get('/api/onboard-init', authenticateUser, async (req, res) => {
+    try {
+        const customerId = req.user.sub;
+        const mode = req.query.mode || 'trial';
+        const cfnTemplateUrl = mode === 'trial'
+            ? process.env.TRIAL_TEMPLATE_URL
+            : process.env.FULL_TEMPLATE_URL;
+
+        // Verificar se já existe configuração
+        const getParams = {
+            TableName: process.env.DYNAMODB_TABLE,
+        Key: { id: customerId, sk: 'CONFIG#ONBOARD' }
+};
+    const existingConfig = await dynamoDb.send(new GetCommand(getParams));
+
+    let externalId;
+        if (existingConfig.Item && existingConfig.Item.externalId) {
+        // Já existe, usar o existente
+        externalId = existingConfig.Item.externalId;
+        } else {
+            // Gerar novo externalId e salvar
+            externalId = randomBytes(16).toString('hex');
+            const putParams = {
+                TableName: process.env.DYNAMODB_TABLE,
+                Item: {
+                    id: customerId,
+                    sk: 'CONFIG#ONBOARD',
+                    externalId,
+                    accountType: 'TRIAL',
+                    createdAt: new Date().toISOString()
+                }
+            };
+            await dynamoDb.send(new PutCommand(putParams));
+        }
+
+        res.status(200).json({
+            mode,
+            templateUrl: cfnTemplateUrl,
+            platformAccountId: process.env.PLATFORM_ACCOUNT_ID,
+            externalId
+        });
+    } catch (error) {
+        console.error('Erro em /api/onboard-init:', error);
+        res.status(500).json({ message: 'Erro ao inicializar onboarding' });
+    }
+});
+
 // Rota para criar sessão de checkout do Stripe
 app.post('/billing/create-checkout-session', authenticateUser, async (req, res) => {
     try {
@@ -982,7 +1030,7 @@ app.get('/api/onboard-init', async (req, res) => {
 });
 // GET /api/dashboard/costs
 // Protegido por autenticação Cognito
-app.get('/dashboard/costs', authenticateUser, async (req, res) => {
+app.get('/api/dashboard/costs', authenticateUser, async (req, res) => {
     try {
         const customerId = req.user.sub;
 
@@ -2040,7 +2088,7 @@ app.post('/recommendations/execute', authenticateUser, async (req, res) => {
 });
 
 // GET /admin/metrics - Métricas admin
-app.get('/admin/metrics', authenticateUser, async (req, res) => {
+app.get('/admin/metrics', authenticateUser, authorizeAdmin, async (req, res) => {
     try {
         // TODO: Verificar se o usuário é admin (grupo Cognito)
 

@@ -100,7 +100,7 @@ export default function DashboardPage() {
   const notify = useNotify();
   const router = useRouter();
   const { t } = useTranslation();
-  const { user, loading: isLoadingAuth } = useAuth();
+  const { user, isLoadingAuth } = useAuth();
 
   useEffect(() => {
     if (isLoadingAuth) return; // Don't fetch data while auth is loading
