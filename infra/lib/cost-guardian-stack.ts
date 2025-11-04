@@ -393,7 +393,8 @@ export class CostGuardianStack extends cdk.Stack {
           TRIAL_TEMPLATE_URL: trialTemplateUrl,
           FULL_TEMPLATE_URL: fullTemplateUrl,
         },
-        reservedConcurrentExecutions: 10,
+        reservedConcurrentExecutions: 0,
+
       });
     } else {
       // Importar dinamicamente para evitar que a resolução de lockfiles ocorra
@@ -424,7 +425,8 @@ export class CostGuardianStack extends cdk.Stack {
           TRIAL_TEMPLATE_URL: trialTemplateUrl,
           FULL_TEMPLATE_URL: fullTemplateUrl,
         },
-        reservedConcurrentExecutions: 10,
+        reservedConcurrentExecutions: 0,
+
       });
     }
 
@@ -451,10 +453,10 @@ export class CostGuardianStack extends cdk.Stack {
       }),
       // A remoção de 'externalModules' permite que o esbuild empacote as dependências do SDK v3.
       environment: {
-        DYNAMODB_TABLE: table.tableName,
-        SFN_ARN: '', // Será preenchido abaixo
+      DYNAMODB_TABLE: table.tableName,
+      SFN_ARN: '', // Será preenchido abaixo
       },
-      reservedConcurrentExecutions: 10,
+      reservedConcurrentExecutions: 0,
     });
     table.grantReadWriteData(healthEventHandlerLambda);
 
@@ -474,7 +476,7 @@ export class CostGuardianStack extends cdk.Stack {
       environment: {
         DYNAMODB_TABLE: table.tableName,
       },
-      reservedConcurrentExecutions: 10,
+      reservedConcurrentExecutions: 0,
     });
 
     // Permissões para o Lambda de recomendações
@@ -526,7 +528,7 @@ export class CostGuardianStack extends cdk.Stack {
           })
         }
         }),
-        reservedConcurrentExecutions: 10,
+
     });
   // Garantir permissões ao DynamoDB para a Lambda de cálculo de impacto
   table.grantReadWriteData(slaCalculateImpactLambda);
@@ -543,7 +545,7 @@ export class CostGuardianStack extends cdk.Stack {
       }),
       // A remoção de 'externalModules' permite que o esbuild empacote as dependências do SDK v3.
       environment: { DYNAMODB_TABLE: table.tableName },
-      reservedConcurrentExecutions: 10,
+      reservedConcurrentExecutions: 0,
     });
 
     const slaGenerateReportLambda = new lambda.Function(this, 'SlaGenerateReport', {
@@ -562,7 +564,7 @@ export class CostGuardianStack extends cdk.Stack {
         STRIPE_SECRET_ARN: stripeSecret.secretArn,
         REPORTS_BUCKET_NAME: '', // Será preenchido abaixo
       },
-      reservedConcurrentExecutions: 10,
+      reservedConcurrentExecutions: 0,
     });
     table.grantReadWriteData(slaGenerateReportLambda);
     stripeSecret.grantRead(slaGenerateReportLambda);
@@ -632,7 +634,7 @@ export class CostGuardianStack extends cdk.Stack {
           })
         }
         }),
-        reservedConcurrentExecutions: 10,
+
     });
     table.grantReadWriteData(slaSubmitTicketLambda);
     
@@ -725,7 +727,7 @@ export class CostGuardianStack extends cdk.Stack {
           })
         }
         }),
-        reservedConcurrentExecutions: 10,
+
     });
     table.grantReadData(costIngestorLambda);
 
@@ -761,7 +763,7 @@ export class CostGuardianStack extends cdk.Stack {
           ]})
         }
         }),
-        reservedConcurrentExecutions: 10,
+
     });
     table.grantReadWriteData(stopIdleInstancesLambda);
 
@@ -788,7 +790,7 @@ export class CostGuardianStack extends cdk.Stack {
   ]})
   }
   }),
-  reservedConcurrentExecutions: 10,
+  reservedConcurrentExecutions: 0,
     });
     table.grantReadWriteData(recommendRdsIdleLambda);
 
@@ -820,7 +822,7 @@ export class CostGuardianStack extends cdk.Stack {
           ]})
         }
         }),
-        reservedConcurrentExecutions: 10,
+
     });
     table.grantReadWriteData(recommendIdleInstancesLambda);
     anomalyAlertsTopic.grantPublish(recommendIdleInstancesLambda);
@@ -848,7 +850,7 @@ export class CostGuardianStack extends cdk.Stack {
           ]})
         }
         }),
-        reservedConcurrentExecutions: 10,
+
     });
     table.grantReadData(deleteUnusedEbsLambda);
 
@@ -944,7 +946,7 @@ export class CostGuardianStack extends cdk.Stack {
         DYNAMODB_TABLE: table.tableName,
         PRODUCT_CODE: 'your-product-code', // Substituir pelo código real do produto
       },
-      reservedConcurrentExecutions: 10,
+      reservedConcurrentExecutions: 0,
     });
     table.grantReadWriteData(marketplaceMeteringLambda);
 

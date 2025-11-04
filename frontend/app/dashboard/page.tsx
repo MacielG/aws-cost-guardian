@@ -105,6 +105,8 @@ export default function DashboardPage() {
   useEffect(() => {
     if (isLoadingAuth) return; // Don't fetch data while auth is loading
 
+    if (!user) return;
+
     const abortController = new AbortController();
     const fetchData = async () => {
       try {
@@ -196,7 +198,7 @@ export default function DashboardPage() {
     return () => {
       abortController.abort();
     };
-  }, [router, t, notify, isLoadingAuth]);
+  }, [router, t, notify, isLoadingAuth, user]);
 
   if (loading) {
     return (
