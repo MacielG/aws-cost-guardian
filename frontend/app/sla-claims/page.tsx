@@ -1,22 +1,33 @@
 // frontend/app/sla-claims/page.tsx
 'use client';
 
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { ShieldCheck, Activity, Calculator, FileWarning, FileText, Download } from 'lucide-react';
+import { ShieldCheck, Activity, Calculator, FileWarning, FileText, Download, Loader2 } from 'lucide-react';
 import { PageAnimator } from '@/components/layout/PageAnimator';
 import { PageHeader } from '@/components/layout/PageHeader';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import { Skeleton } from '@/components/ui/skeleton';
+import { apiClient } from '@/lib/api';
+import { useNotify } from '@/hooks/useNotify';
 
-// Mock data - substitua pela chamada de API
-const mockClaims = [
-  { id: 'claim-001', incidentId: 'inc-abc-123', service: 'EC2', region: 'us-east-1', status: 'CREDIT_RECOVERED', creditAmount: 150.75, incidentStart: '2023-10-25T10:00:00Z', incidentEnd: '2023-10-25T11:30:00Z', impactedCost: 1507.50, reportUrl: '#' },
-  { id: 'claim-002', incidentId: 'inc-def-456', service: 'RDS', region: 'sa-east-1', status: 'SUBMITTED', creditAmount: 45.20, incidentStart: '2023-10-28T14:00:00Z', incidentEnd: '2023-10-28T14:45:00Z', impactedCost: 452.00, reportUrl: '#' },
-  { id: 'claim-003', incidentId: 'inc-ghi-789', service: 'S3', region: 'us-east-1', status: 'ANALYSIS_COMPLETE', creditAmount: 0, incidentStart: '2023-11-01T08:00:00Z', incidentEnd: '2023-11-01T08:15:00Z', impactedCost: 10.00, reportUrl: null },
-];
+interface SlaClaim {
+  id: string;
+  incidentId: string;
+  service: string;
+  region: string;
+  status: string;
+  creditAmount: number;
+  incidentStart: string;
+  incidentEnd: string;
+  impactedCost: number;
+  reportUrl: string | null;
+  submittedAt?: string;
+  recoveredAt?: string;
+}
 
 const processSteps = [
     { icon: Activity, title: "1. Detecção do Evento", description: "Monitoramos o AWS Health Dashboard da sua conta. Tudo começa quando a AWS relata oficialmente uma falha de serviço que afetou seus recursos." },
@@ -33,11 +44,42 @@ const statusConfig: { [key: string]: { variant: "success" | "warning" | "default
 };
 
 export default function SlaClaimsPage() {
+  const [claims, setClaims] = useState<SlaClaim[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const notify = useNotify();
 
   const getDuration = (start: string, end: string) => {
     const durationMs = new Date(end).getTime() - new Date(start).getTime();
     return (durationMs / 60000).toFixed(0);
-  }
+  };
+
+  const downloadReport = async (claimId: string) => {
+    try {
+      // Redirecionar para o endpoint que serve o relatório
+      window.open(`/api/sla-claims/${claimId.replace('CLAIM#', '')}/report`, '_blank');
+    } catch (err) {
+      notify.error('Erro ao baixar relatório');
+    }
+  };
+
+  useEffect(() => {
+    const loadClaims = async () => {
+      try {
+        setLoading(true);
+        const response = await apiClient.get('/api/sla-claims');
+        setClaims(response.claims || []);
+      } catch (err: any) {
+        console.error('Erro ao carregar claims:', err);
+        setError('Erro ao carregar reivindicações SLA');
+        notify.error('Erro ao carregar reivindicações SLA');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadClaims();
+  }, [notify]);
 
   return (
     <PageAnimator>
@@ -81,8 +123,45 @@ export default function SlaClaimsPage() {
           <CardTitle>Suas Reivindicações de SLA</CardTitle>
         </CardHeader>
         <CardContent>
-          <Accordion type="single" collapsible className="w-full">
-            {mockClaims.map((claim) => (
+          {loading ? (
+            <div className="space-y-4">
+              {[...Array(3)].map((_, i) => (
+                <div key={i} className="border rounded-lg p-4">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-4">
+                      <Skeleton className="w-3 h-3 rounded-full" />
+                      <div>
+                        <Skeleton className="h-4 w-32 mb-1" />
+                        <Skeleton className="h-3 w-24" />
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-4">
+                      <Skeleton className="h-6 w-16" />
+                      <Skeleton className="h-6 w-24" />
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : error ? (
+            <div className="text-center py-8">
+              <p className="text-muted-foreground mb-4">{error}</p>
+              <Button onClick={() => window.location.reload()}>
+                <Loader2 className="w-4 h-4 mr-2" />
+                Tentar Novamente
+              </Button>
+            </div>
+          ) : claims.length === 0 ? (
+            <div className="text-center py-8">
+              <ShieldCheck className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
+              <p className="text-muted-foreground">Nenhuma reivindicação SLA encontrada ainda.</p>
+              <p className="text-sm text-muted-foreground mt-2">
+                Monitoramos automaticamente incidentes da AWS que afetam seus recursos.
+              </p>
+            </div>
+          ) : (
+            <Accordion type="single" collapsible className="w-full">
+              {claims.map((claim) => (
               <AccordionItem key={claim.id} value={claim.id}>
                 <AccordionTrigger className="hover:no-underline">
                   <div className="flex items-center justify-between w-full pr-4">
@@ -120,20 +199,23 @@ export default function SlaClaimsPage() {
                       <span className="font-semibold">${(claim.impactedCost * 0.1).toFixed(2)}</span>
                     </div>
                     {claim.reportUrl && (
-                      <div className="pt-4">
-                        <Button variant="outline" size="sm" asChild>
-                          <a href={claim.reportUrl} target="_blank" rel="noopener noreferrer">
-                            <Download className="mr-2 h-4 w-4" />
-                            Baixar Relatório PDF
-                          </a>
+                    <div className="pt-4">
+                    <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => downloadReport(claim.id)}
+                    >
+                      <Download className="mr-2 h-4 w-4" />
+                        Baixar Relatório PDF
                         </Button>
-                      </div>
-                    )}
-                  </div>
-                </AccordionContent>
-              </AccordionItem>
-            ))}
-          </Accordion>
+                        </div>
+                        )}
+                        </div>
+                        </AccordionContent>
+                        </AccordionItem>
+              ))}
+            </Accordion>
+          )}
         </CardContent>
       </Card>
     </PageAnimator>

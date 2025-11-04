@@ -16,6 +16,7 @@ const { SupportClient, DescribeSeverityLevelsCommand } = require('@aws-sdk/clien
 const { HealthClient, DescribeEventsCommand } = require('@aws-sdk/client-health');
 const { S3Client, GetObjectCommand } = require('@aws-sdk/client-s3');
 const { getSignedUrl } = require('@aws-sdk/s3-request-presigner');
+const { CognitoIdentityProviderClient, AdminGetUserCommand, AdminUpdateUserAttributesCommand } = require('@aws-sdk/client-cognito-identity-provider');
 
 const { randomBytes } = require('crypto');
 
@@ -1482,6 +1483,86 @@ app.post('/admin/claims/:customerId/:claimId/create-invoice', authenticateUser, 
     }
 });
 
+// GET /api/sla-claims - Listar claims SLA do usuário
+app.get('/api/sla-claims', authenticateUser, async (req, res) => {
+       try {
+           const customerId = req.user?.userId;
+
+        if (!customerId) {
+            return res.status(401).json({ message: 'Usuário não autenticado' });
+        }
+
+        // Buscar claims do usuário
+        const command = new QueryCommand({
+            TableName: process.env.DYNAMODB_TABLE,
+            KeyConditionExpression: 'id = :customerId AND begins_with(sk, :prefix)',
+            ExpressionAttributeValues: {
+                ':customerId': customerId,
+                ':prefix': 'CLAIM#',
+            },
+            ScanIndexForward: false, // Mais recente primeiro
+        });
+
+        const result = await dynamoDb.send(command);
+        const claims = (result.Items || []).map(item => ({
+            id: item.sk,
+            incidentId: item.incidentId,
+            service: item.service,
+            region: item.region,
+            status: item.status,
+            creditAmount: item.creditAmount || 0,
+            incidentStart: item.incidentStart,
+            incidentEnd: item.incidentEnd,
+            impactedCost: item.impactedCost || 0,
+            reportUrl: item.reportUrl || null,
+            submittedAt: item.submittedAt,
+            recoveredAt: item.recoveredAt,
+        }));
+
+        res.json({ claims });
+    } catch (err) {
+        console.error('Erro ao buscar claims:', err);
+        res.status(500).json({ message: 'Erro interno do servidor' });
+    }
+});
+
+// GET /api/sla-claims/:claimId/report - Baixar relatório de claim
+app.get('/api/sla-claims/:claimId/report', authenticateUser, async (req, res) => {
+    try {
+        const customerId = req.user?.userId;
+        const { claimId } = req.params;
+
+        if (!customerId) {
+            return res.status(401).json({ message: 'Usuário não autenticado' });
+        }
+
+        // Verificar se a claim pertence ao usuário
+        const getCmd = new GetCommand({
+            TableName: process.env.DYNAMODB_TABLE,
+            Key: {
+                id: customerId,
+                sk: `CLAIM#${claimId}`,
+            },
+        });
+
+        const claimData = await dynamoDb.send(getCmd);
+
+        if (!claimData.Item) {
+            return res.status(404).json({ message: 'Claim não encontrada' });
+        }
+
+        if (!claimData.Item.reportUrl) {
+            return res.status(404).json({ message: 'Relatório não disponível para esta claim' });
+        }
+
+        // Redirecionar para o relatório (presumivelmente um S3 presigned URL)
+        res.redirect(claimData.Item.reportUrl);
+    } catch (err) {
+        console.error('Erro ao baixar relatório:', err);
+        res.status(500).json({ message: 'Erro interno do servidor' });
+    }
+});
+
 /**
  * Função helper obrigatória para enviar a resposta de volta ao S3 (via presigned URL)
  * para o CloudFormation Custom Resource.
@@ -1762,6 +1843,79 @@ app.get('/billing', authenticateUser, async (req, res) => {
     } catch (err) {
         console.error('Erro ao buscar histórico de cobrança:', err);
         res.status(500).json({ message: 'Erro ao buscar histórico de cobrança' });
+    }
+});
+
+// GET /api/profile - Obter dados do perfil do usuário
+app.get('/api/profile', authenticateUser, async (req, res) => {
+    try {
+        const userId = req.user?.userId;
+
+        if (!userId) {
+            return res.status(401).json({ message: 'Usuário não autenticado' });
+        }
+
+        // Buscar dados do usuário no Cognito
+        const cognitoClient = new CognitoIdentityProviderClient({ region: process.env.AWS_REGION });
+        const getUserCmd = new AdminGetUserCommand({
+            UserPoolId: process.env.COGNITO_USER_POOL_ID,
+            Username: userId,
+        });
+
+        const userData = await cognitoClient.send(getUserCmd);
+
+        const profile = {
+            userId: userId,
+            email: userData.UserAttributes?.find(attr => attr.Name === 'email')?.Value || '',
+            name: userData.UserAttributes?.find(attr => attr.Name === 'name')?.Value || '',
+            emailVerified: userData.UserAttributes?.find(attr => attr.Name === 'email_verified')?.Value === 'true',
+            createdAt: userData.UserCreateDate?.toISOString(),
+            updatedAt: userData.UserLastModifiedDate?.toISOString(),
+        };
+
+        res.json({ profile });
+    } catch (err) {
+        console.error('Erro ao buscar perfil:', err);
+        res.status(500).json({ message: 'Erro ao buscar perfil' });
+    }
+});
+
+// PUT /api/profile - Atualizar dados do perfil do usuário
+app.put('/api/profile', authenticateUser, async (req, res) => {
+    try {
+        const userId = req.user?.userId;
+        const { name, email } = req.body;
+
+        if (!userId) {
+            return res.status(401).json({ message: 'Usuário não autenticado' });
+        }
+
+        // Validar entrada
+        if (!name || name.trim().length < 2) {
+            return res.status(400).json({ message: 'Nome deve ter pelo menos 2 caracteres' });
+        }
+
+        if (!email || !email.includes('@')) {
+            return res.status(400).json({ message: 'Email inválido' });
+        }
+
+        // Atualizar no Cognito
+        const cognitoClient = new CognitoIdentityProviderClient({ region: process.env.AWS_REGION });
+        const updateCmd = new AdminUpdateUserAttributesCommand({
+            UserPoolId: process.env.COGNITO_USER_POOL_ID,
+            Username: userId,
+            UserAttributes: [
+                { Name: 'name', Value: name.trim() },
+                { Name: 'email', Value: email.toLowerCase().trim() },
+            ],
+        });
+
+        await cognitoClient.send(updateCmd);
+
+        res.json({ message: 'Perfil atualizado com sucesso' });
+    } catch (err) {
+        console.error('Erro ao atualizar perfil:', err);
+        res.status(500).json({ message: 'Erro ao atualizar perfil' });
     }
 });
 
