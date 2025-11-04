@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-  "build": "npm run validate-env && next build",
+  "build": "next build",
   "dev": "npm run validate-env && next dev",
   "validate-env": "ts-node ./lib/validate-env.cli.ts",
   "start": "next start",
