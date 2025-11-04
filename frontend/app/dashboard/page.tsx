@@ -1,11 +1,12 @@
 // frontend/app/dashboard/page.tsx
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { apiClient } from '@/lib/api';
 import { useNotify } from '@/hooks/useNotify';
 import { motion } from 'framer-motion';
 import { useTranslation } from 'react-i18next';
+import { staggerContainer, staggerItem, hoverLift } from '@/lib/animations';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from 'recharts';
 import { DollarSign, Zap, ShieldCheck, TrendingUp, AlertCircle, ArrowRight, FileText } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -20,6 +21,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { formatCurrency, formatDate } from '@/lib/utils';
 import { useAuth } from '@/components/auth/AuthProvider';
+import { ErrorBoundary } from 'react-error-boundary';
 
 // Mock de dados da API para desenvolvimento
 const mockSummary = {
@@ -97,27 +99,68 @@ export default function DashboardPage() {
   const [accountType, setAccountType] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [retryCount, setRetryCount] = useState(0);
   const notify = useNotify();
   const router = useRouter();
   const { t } = useTranslation();
   const { user, isLoadingAuth } = useAuth();
+  const abortControllerRef = useRef<AbortController | null>(null);
+  const isRequestInProgressRef = useRef(false);
+  const isFetchingRef = useRef(false);
 
-  useEffect(() => {
-    if (isLoadingAuth) return; // Don't fetch data while auth is loading
+// Error boundary fallback component
+const ErrorFallback = ({ error, resetErrorBoundary }: { error: Error; resetErrorBoundary: () => void }) => (
+  <PageAnimator>
+    <EmptyState
+      icon={AlertCircle}
+      title="Erro no Dashboard"
+      description={`Ocorreu um erro ao carregar o dashboard: ${error.message}`}
+      action={{
+        label: 'Tentar Novamente',
+        onClick: resetErrorBoundary
+      }}
+    />
+  </PageAnimator>
+);
 
-    if (!user) return;
+useEffect(() => {
+if (isLoadingAuth) return; // Don't fetch data while auth is loading
 
-    const abortController = new AbortController();
+if (!user) return;
+
+if (isFetchingRef.current) return;
+
+// Abort any previous request only if not currently in progress
+if (abortControllerRef.current && !isRequestInProgressRef.current) {
+  abortControllerRef.current.abort();
+    }
+abortControllerRef.current = new AbortController();
+
     const fetchData = async () => {
+      isRequestInProgressRef.current = true;
+      isFetchingRef.current = true;
       try {
+        if (process.env.NODE_ENV === 'development') {
+          // Use mock data for development
+          setSummary(mockSummary);
+          setRecommendations([]);
+          setAccountType(null);
+          setIncidents([]);
+          setCosts(null);
+          setError(null);
+          setLoading(false);
+          isRequestInProgressRef.current = false;
+          return;
+        }
+
         // Start all API requests concurrently so they can be aborted and so tests
         // that simulate slow responses observe multiple in-flight requests.
-        const summaryPromise = apiClient.get('/billing/summary', { signal: abortController.signal });
-        const recsPromise = apiClient.get('/recommendations?limit=5', { signal: abortController.signal });
+        const summaryPromise = apiClient.get('/billing/summary', { signal: abortControllerRef.current!.signal });
+        const recsPromise = apiClient.get('/recommendations?limit=5', { signal: abortControllerRef.current!.signal });
         // Additional calls used by tests
-        const statusPromise = apiClient.get('/api/user/status', { signal: abortController.signal });
-        const incidentsPromise = apiClient.get('/api/incidents', { signal: abortController.signal });
-        const costsPromise = apiClient.get('/api/dashboard/costs', { signal: abortController.signal });
+        const statusPromise = apiClient.get('/api/user/status', { signal: abortControllerRef.current!.signal });
+        const incidentsPromise = apiClient.get('/api/incidents', { signal: abortControllerRef.current!.signal });
+        const costsPromise = apiClient.get('/api/dashboard/costs', { signal: abortControllerRef.current!.signal });
 
         // Await the primary ones first (but note all requests already started)
         const [summaryData, recsData] = await Promise.all([summaryPromise, recsPromise]);
@@ -180,6 +223,19 @@ export default function DashboardPage() {
       } catch (e: any) {
         if (e.name === 'AbortError') return;
         console.error('Erro ao carregar dashboard:', e);
+
+        // Implement retry logic for network errors
+        const isRetryableError = e?.status >= 500 || e?.code === 'NETWORK_ERROR' || !e?.status;
+        if (isRetryableError && retryCount < 3) {
+          console.log(`Tentando novamente em ${Math.pow(2, retryCount)} segundos...`);
+          setTimeout(() => {
+            setRetryCount(prev => prev + 1);
+            // Trigger re-run by updating a dependency
+            setLoading(true);
+          }, Math.pow(2, retryCount) * 1000);
+          return;
+        }
+
         // Map common error messages to translation keys expected by tests
         const msg = String(e?.message || '').toLowerCase();
         let userMessage = t('dashboard.error.network');
@@ -188,17 +244,23 @@ export default function DashboardPage() {
         } else if (msg.includes('timeout') || msg.includes('request timeout')) {
           userMessage = t('dashboard.error.timeout');
         }
-  setError(userMessage);
+        setError(userMessage);
+        setRetryCount(0);
       } finally {
         setLoading(false);
+        isRequestInProgressRef.current = false;
+        isFetchingRef.current = false;
       }
     };
     fetchData();
 
     return () => {
-      abortController.abort();
+      if (abortControllerRef.current) {
+        abortControllerRef.current.abort();
+      }
+      isRequestInProgressRef.current = false;
     };
-  }, [router, t, notify, isLoadingAuth, user]);
+  }, [isLoadingAuth, user, retryCount]);
 
   if (loading) {
     return (
@@ -240,41 +302,39 @@ export default function DashboardPage() {
   };
 
   return (
-    <PageAnimator>
-      <PageHeader title="Dashboard" description="Sua visão geral de otimização de custos na AWS." />
+  <ErrorBoundary FallbackComponent={ErrorFallback}>
+  <PageAnimator>
+        <PageHeader title="Dashboard" description="Sua visão geral de otimização de custos na AWS." />
   <div data-testid="dashboard-content">
   {accountType === 'PREMIUM' && <span style={{ display: 'none' }}>$70.00</span>}
   {accountType === 'FREE' && <span style={{ display: 'none' }}>$0.00</span>}
 
       <motion.div
-        className="grid gap-4 md:grid-cols-2 lg:grid-cols-4"
-        initial="hidden"
-        animate="visible"
-        variants={{
-          hidden: {},
-          visible: { transition: { staggerChildren: 0.1 } }
-        }}
+      className="grid gap-4 md:grid-cols-2 lg:grid-cols-4"
+      variants={staggerContainer}
+      initial="initial"
+      animate="animate"
       >
-        <motion.div variants={{ hidden: { opacity: 0, y: 20 }, visible: { opacity: 1, y: 0 } }} className="cursor-pointer">
-            <Link href="/billing">
-            <StatCard title={t('dashboard.totalEarnings')} value={summary.totalSavings} prefix="R$ " icon={DollarSign} color="text-green-500" />
-          </Link>
-        </motion.div>
-        <motion.div variants={{ hidden: { opacity: 0, y: 20 }, visible: { opacity: 1, y: 0 } }} className="cursor-pointer">
+      <motion.div variants={staggerItem} whileHover={hoverLift} className="cursor-pointer">
           <Link href="/billing">
-            <StatCard title="Suas Economias (70%)" value={summary.realizedSavings} prefix="R$ " icon={TrendingUp} color="text-blue-500" />
-          </Link>
-        </motion.div>
-        <motion.div variants={{ hidden: { opacity: 0, y: 20 }, visible: { opacity: 1, y: 0 } }} className="cursor-pointer">
-            <Link href="/recommendations">
-            <StatCard title={t('dashboard.activeIncidents')} value={summary.recommendationsExecuted} icon={Zap} color="text-orange-500" decimals={0} />
-          </Link>
-        </motion.div>
-        <motion.div variants={{ hidden: { opacity: 0, y: 20 }, visible: { opacity: 1, y: 0 } }} className="cursor-pointer">
-          <Link href="/sla-claims">
-            <StatCard title="Créditos SLA Recuperados" value={summary.slaCreditsRecovered} prefix="R$ " icon={ShieldCheck} color="text-purple-500" />
-          </Link>
-        </motion.div>
+            <StatCard title={t('dashboard.totalEarnings')} value={summary.totalSavings} prefix="R$ " icon={DollarSign} color="text-green-500" />
+        </Link>
+      </motion.div>
+      <motion.div variants={staggerItem} whileHover={hoverLift} className="cursor-pointer">
+      <Link href="/billing">
+          <StatCard title="Suas Economias (70%)" value={summary.realizedSavings} prefix="R$ " icon={TrendingUp} color="text-blue-500" />
+        </Link>
+      </motion.div>
+      <motion.div variants={staggerItem} whileHover={hoverLift} className="cursor-pointer">
+        <Link href="/recommendations">
+          <StatCard title={t('dashboard.activeIncidents')} value={summary.recommendationsExecuted} icon={Zap} color="text-orange-500" decimals={0} />
+        </Link>
+      </motion.div>
+      <motion.div variants={staggerItem} whileHover={hoverLift} className="cursor-pointer">
+      <Link href="/sla-claims">
+          <StatCard title="Créditos SLA Recuperados" value={summary.slaCreditsRecovered} prefix="R$ " icon={ShieldCheck} color="text-purple-500" />
+        </Link>
+      </motion.div>
       </motion.div>
 
       <div className="mt-8 grid grid-cols-1 gap-8 lg:grid-cols-5">
@@ -284,20 +344,20 @@ export default function DashboardPage() {
               <CardTitle>Economia Mensal (Últimos 6 Meses)</CardTitle>
             </CardHeader>
             <CardContent className="h-80">
-              <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={summary.monthlySavings}>
-                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="hsl(var(--border))" />
-                  <XAxis dataKey="month" stroke="hsl(var(--muted-foreground))" fontSize={12} tickLine={false} axisLine={false} />
-                  <YAxis stroke="hsl(var(--muted-foreground))" fontSize={12} tickLine={false} axisLine={false} tickFormatter={(value) => `R$${value}`} />
-                  <Tooltip
-                    cursor={{ fill: 'hsl(var(--muted))' }}
-                    contentStyle={{
-                      background: 'hsl(var(--background))',
-                      border: '1px solid hsl(var(--border))',
-                      borderRadius: 'var(--radius)',
-                    }}
-                  />
-                  <Bar dataKey="savings" fill="hsl(var(--primary))" radius={[4, 4, 0, 0]} />
+            <ResponsiveContainer width="100%" height={300}>
+            <BarChart data={summary?.monthlySavings || []}>
+            <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="hsl(var(--border))" />
+            <XAxis dataKey="month" stroke="hsl(var(--muted-foreground))" fontSize={12} tickLine={false} axisLine={false} />
+            <YAxis stroke="hsl(var(--muted-foreground))" fontSize={12} tickLine={false} axisLine={false} tickFormatter={(value) => `R$${value}`} />
+            <Tooltip
+            cursor={{ fill: 'hsl(var(--muted))' }}
+            contentStyle={{
+            background: 'hsl(var(--background))',
+            border: '1px solid hsl(var(--border))',
+            borderRadius: 'var(--radius)',
+            }}
+            />
+            <Bar dataKey="savings" fill="hsl(var(--primary))" radius={[4, 4, 0, 0]} />
                 </BarChart>
               </ResponsiveContainer>
             </CardContent>
@@ -385,6 +445,7 @@ export default function DashboardPage() {
       </div>
 
       </div>
-    </PageAnimator>
+      </PageAnimator>
+    </ErrorBoundary>
   );
 }

@@ -1,6 +1,6 @@
-import { MarketplaceMeteringClient, MeterUsageCommand } from '@aws-sdk/client-marketplace-metering';
-import { DynamoDBClient } from '@aws-sdk/client-dynamodb';
-import { DynamoDBDocumentClient, QueryCommand, UpdateCommand, PutCommand } from '@aws-sdk/lib-dynamodb';
+const { MarketplaceMeteringClient, MeterUsageCommand } = require('@aws-sdk/client-marketplace-metering');
+const { DynamoDBClient } = require('@aws-sdk/client-dynamodb');
+const { DynamoDBDocumentClient, QueryCommand, UpdateCommand, PutCommand } = require('@aws-sdk/lib-dynamodb');
 
 const ddbClient = new DynamoDBClient({});
 const dynamoDb = DynamoDBDocumentClient.from(ddbClient);

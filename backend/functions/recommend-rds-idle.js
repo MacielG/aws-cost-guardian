@@ -1,8 +1,8 @@
-import { STSClient, AssumeRoleCommand } from '@aws-sdk/client-sts';
-import { RDSClient, DescribeDBInstancesCommand } from '@aws-sdk/client-rds';
-import { CloudWatchClient, GetMetricStatisticsCommand } from '@aws-sdk/client-cloudwatch';
-import { DynamoDBClient } from '@aws-sdk/client-dynamodb';
-import { DynamoDBDocumentClient, QueryCommand, PutCommand } from '@aws-sdk/lib-dynamodb';
+const { STSClient, AssumeRoleCommand } = require('@aws-sdk/client-sts');
+const { RDSClient, DescribeDBInstancesCommand } = require('@aws-sdk/client-rds');
+const { CloudWatchClient, GetMetricStatisticsCommand } = require('@aws-sdk/client-cloudwatch');
+const { DynamoDBClient } = require('@aws-sdk/client-dynamodb');
+const { DynamoDBDocumentClient, QueryCommand, PutCommand } = require('@aws-sdk/lib-dynamodb');
 
 const ddbClient = new DynamoDBClient({});
 const dynamoDb = DynamoDBDocumentClient.from(ddbClient);

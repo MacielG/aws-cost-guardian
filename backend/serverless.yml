@@ -32,11 +32,11 @@ functions:
       - http:
           path: /{proxy+}
           method: ANY
-            # Disable API Gateway automatic CORS handling so that the Lambda
-            # middleware (backend/handler.js) can emit explicit Access-Control
-            # headers. This avoids the API Gateway returning '*' which breaks
-            # credentialed requests. The Lambda uses ALLOWED_ORIGINS env var.
-            cors: false
+          # Disable API Gateway automatic CORS handling so that the Lambda
+          # middleware (backend/handler.js) can emit explicit Access-Control
+          # headers. This avoids the API Gateway returning '*' which breaks
+          # credentialed requests. The Lambda uses ALLOWED_ORIGINS env var.
+          cors: false
 
   correlateHealth:
     handler: functions/correlate-health.handler

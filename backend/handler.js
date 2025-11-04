@@ -187,7 +187,7 @@ const getStripe = async () => {
 
 // Middleware de autenticação e checkProPlan definidos antecipadamente para evitar erros de hoisting
 
-const authenticateUser = (req, res, next) => {
+const authenticateUser = async (req, res, next) => {
     try {
         // If API Gateway authorizer populated claims, use them
         if (req.apiGateway?.event?.requestContext?.authorizer?.claims) {
@@ -196,7 +196,7 @@ const authenticateUser = (req, res, next) => {
         }
 
         // Otherwise attempt direct JWT verification
-        const claims = verifyJwt(req);
+        const claims = await verifyJwt(req);
         if (claims) {
             req.user = claims;
             return next();
@@ -212,22 +212,29 @@ const authenticateUser = (req, res, next) => {
 
 // Middleware para verificar plano Pro (definido antecipadamente para evitar erros de hoisting)
 const checkProPlan = async (req, res, next) => {
-    const customerId = req.user.sub;
-    const command = new GetCommand({
-        TableName: process.env.DYNAMODB_TABLE,
-        Key: { id: customerId, sk: 'CONFIG#ONBOARD' }
-    });
-    const result = await dynamoDb.send(command);
-    const config = result.Item;
+    try {
+        const customerId = req.user.sub;
+        const command = new GetCommand({
+            TableName: process.env.DYNAMODB_TABLE,
+            Key: { id: customerId, sk: 'CONFIG#ONBOARD' }
+        });
+        const result = await dynamoDb.send(command);
+        const config = result.Item;
 
-    if (config && config.subscriptionStatus === 'active') {
-        req.customerConfig = config; // Passa a config para a próxima rota
-        return next(); // Permite o acesso
+        if (config && config.subscriptionStatus === 'active') {
+            req.customerConfig = config; // Passa a config para a próxima rota
+            return next(); // Permite o acesso
+        }
+
+        res.status(403).send({
+            error: 'Acesso negado. Esta funcionalidade requer um plano Pro.'
+        });
+    } catch (error) {
+        console.error('Erro no checkProPlan:', error);
+        res.status(500).send({
+            error: 'Erro interno do servidor ao verificar plano.'
+        });
     }
-
-    res.status(403).send({
-        error: 'Acesso negado. Esta funcionalidade requer um plano Pro.'
-    });
 };
 
 // Middleware para parsing JSON (exceto para webhook Stripe)
@@ -402,16 +409,16 @@ app.get('/api/incidents', authenticateUser, async (req, res) => {
 
         const result = await dynamoDb.send(new QueryCommand(params));
 
-        const incidents = result.Items.map(item => ({
-            id: item.sk.replace('incident#', ''),
-            type: item.incidentType,
-            severity: item.severity,
-            status: item.status,
-            createdAt: item.createdAt,
-            updatedAt: item.updatedAt,
-            description: item.description,
-            resolution: item.resolution,
-            caseId: item.caseId
+        const incidents = (result.Items || []).map(item => ({
+        id: item?.sk?.replace('incident#', '') || 'unknown',
+        type: item?.incidentType || 'unknown',
+        severity: item?.severity || 'unknown',
+        status: item?.status || 'unknown',
+        createdAt: item?.createdAt || new Date().toISOString(),
+        updatedAt: item?.updatedAt || new Date().toISOString(),
+        description: item?.description || '',
+        resolution: item?.resolution || '',
+        caseId: item?.caseId || ''
         }));
 
         res.status(200).json({ incidents });
@@ -465,7 +472,7 @@ const jwt = require('jsonwebtoken');
 const jwksClient = require('jwks-rsa');
 
 // Middleware para verificar JWT diretamente (fallback quando API Gateway não usa authorizer)
-const verifyJwt = (req) => {
+const verifyJwt = async (req) => {
     const auth = req.headers?.authorization || req.headers?.Authorization;
     if (!auth) return null;
     const parts = auth.split(' ');
@@ -482,16 +489,18 @@ const verifyJwt = (req) => {
         cacheMaxAge: 600000
     });
 
-    function getKey(header, callback) {
-        client.getSigningKey(header.kid, function (err, key) {
-            if (err) return callback(err);
-            const signingKey = key.getPublicKey();
-            callback(null, signingKey);
-        });
-    }
-
     try {
-        const decoded = jwt.verify(token, getKey, {
+        const getKey = (header) => {
+            return new Promise((resolve, reject) => {
+                client.getSigningKey(header.kid, function (err, key) {
+                    if (err) return reject(err);
+                    const signingKey = key.getPublicKey();
+                    resolve(signingKey);
+                });
+            });
+        };
+
+        const decoded = await jwt.verify(token, getKey, {
             algorithms: ['RS256'],
             audience: process.env.USER_POOL_CLIENT_ID || undefined,
             issuer: `https://cognito-idp.${region}.amazonaws.com/${userPoolId}`,
@@ -1004,10 +1013,20 @@ app.get('/api/dashboard/costs', authenticateUser, async (req, res) => {
         const data = await dynamoDb.send(queryCmd);
 
         if (!data.Items || data.Items.length === 0) {
-            return res.status(404).send({ message: 'Nenhum dado de custo encontrado.' });
+        // Retornar dados vazios em vez de erro 404 para evitar quebrar o dashboard
+            return res.status(200).json({
+                Groups: [],
+                Start: new Date().toISOString().split('T')[0],
+                End: new Date().toISOString().split('T')[0]
+            });
         }
 
-        return res.status(200).json(data.Items[0].data);
+        const item = data.Items[0];
+        return res.status(200).json(item?.data || {
+            Groups: [],
+            Start: new Date().toISOString().split('T')[0],
+            End: new Date().toISOString().split('T')[0]
+        });
     } catch (err) {
         console.error('Erro ao buscar dados do dashboard:', err);
         return res.status(500).send({ error: 'Falha ao buscar dados.' });
@@ -1900,17 +1919,20 @@ app.get('/billing/summary', authenticateUser, async (req, res) => {
         const executedRecs = recResult.Items || [];
 
         // Calcular economia realizada
-        const totalSavings = executedRecs.reduce((sum, rec) => sum + (rec.potentialSavings || 0), 0);
+        const totalSavings = executedRecs.reduce((sum, rec) => {
+            const savings = rec?.potentialSavings || rec?.amountPerHour || 0;
+            return sum + (typeof savings === 'number' ? savings : 0);
+        }, 0);
         const commission = totalSavings * 0.30; // 30% de comissão
 
         // Buscar claims de SLA
         const claimParams = {
-            TableName: process.env.DYNAMODB_TABLE,
-            KeyConditionExpression: 'id = :userId AND begins_with(sk, :prefix)',
-            FilterExpression: '#status = :status',
-            ExpressionAttributeNames: { '#status': 'status' },
-            ExpressionAttributeValues: {
-                ':userId': userId,
+        TableName: process.env.DYNAMODB_TABLE,
+        KeyConditionExpression: 'id = :userId AND begins_with(sk, :prefix)',
+        FilterExpression: '#status = :status',
+        ExpressionAttributeNames: { '#status': 'status' },
+        ExpressionAttributeValues: {
+            ':userId': userId,
                 ':prefix': 'SLA#',
                 ':status': 'REFUNDED',
             },
@@ -1920,7 +1942,10 @@ app.get('/billing/summary', authenticateUser, async (req, res) => {
         const claimResult = await dynamoDb.send(claimCmd);
         const refundedClaims = claimResult.Items || [];
 
-        const totalCredits = refundedClaims.reduce((sum, claim) => sum + (claim.creditAmount || 0), 0);
+        const totalCredits = refundedClaims.reduce((sum, claim) => {
+            const credit = claim?.creditAmount || claim?.recoveredAmount || 0;
+            return sum + (typeof credit === 'number' ? credit : 0);
+        }, 0);
         const creditCommission = totalCredits * 0.30;
 
         res.json({
@@ -2295,10 +2320,10 @@ app.get('/api/system-status/guardian', authenticateUser, async (req, res) => {
             const serviceKey = item.sk.replace('HEARTBEAT#', '');
             // Map DynamoDB keys to camelCase systemStatus keys
             const serviceMap = {
-                'COSTINGESTOR': 'costIngestor',
-                'CORRELATEHEALTH': 'correlateHealth',
-                'AUTOMATIONSFN': 'automationSfn',
-                'MARKETPLACEMETERING': 'marketplaceMetering'
+                'COST_INGESTOR': 'costIngestor',
+                'CORRELATE_HEALTH': 'correlateHealth',
+                'AUTOMATION_SFN': 'automationSfn',
+                'MARKETPLACE_METERING': 'marketplaceMetering'
             };
             const service = serviceMap[serviceKey];
             if (service && systemStatus[service]) {
