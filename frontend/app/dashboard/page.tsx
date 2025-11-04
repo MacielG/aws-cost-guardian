@@ -12,7 +12,7 @@ import { DollarSign, Zap, ShieldCheck, TrendingUp, AlertCircle, ArrowRight, File
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { AnimatedCounter } from '@/components/ui/animatedcounter';
+import { AnimatedCounter } from '@/components/ui/AnimatedCounter';
 import { PageAnimator } from '@/components/layout/PageAnimator';
 import { PageHeader } from '@/components/layout/PageHeader';
 import { EmptyState } from '@/components/ui/EmptyState';

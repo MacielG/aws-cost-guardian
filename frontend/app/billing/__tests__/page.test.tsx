@@ -90,7 +90,7 @@ jest.mock('@/components/ui/badge', () => ({
 }));
 
 // Mock AnimatedCounter
-jest.mock('@/components/ui/animatedcounter', () => ({
+jest.mock('@/components/ui/AnimatedCounter', () => ({
   AnimatedCounter: ({ value, prefix, decimals }: { value: number; prefix?: string; decimals?: number }) => (
     <span data-testid="animated-counter">{prefix || ''}{value.toFixed(decimals || 2)}</span>
   ),
