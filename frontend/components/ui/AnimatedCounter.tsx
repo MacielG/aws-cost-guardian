@@ -1,67 +1,71 @@
-"use client";
-
-import { motion, useSpring, useTransform } from 'framer-motion';
-import { useEffect } from 'react';
+'use client';
+import { useEffect, useState } from 'react';
+import {
+  motion,
+  useSpring,
+  useTransform,
+  MotionValue,
+  animate,
+} from 'framer-motion';
 
 interface AnimatedCounterProps {
   value: number;
-  prefix?: string;
-  suffix?: string;
-  decimals?: number;
+  animationOptions?: any;
+  formatValue?: (value: number) => string;
   className?: string;
 }
 
-export const AnimatedCounter = ({ 
-  value, 
-  prefix = "", 
-  suffix = "",
-  decimals = 2,
-  className = ""
+const AnimatedCounter = ({
+  value,
+  animationOptions,
+  formatValue,
+  className,
 }: AnimatedCounterProps) => {
-  // Defensive: some test environments may mock or not provide framer-motion hooks.
-  const hasMotionHooks = typeof useSpring === 'function' && typeof useTransform === 'function';
+  const [isMounted, setIsMounted] = useState(false);
 
-  if (!hasMotionHooks) {
-    // Fallback: render static formatted value so tests and SSR/dev don't crash
-    // Defensive: value may be undefined in some tests — coerce to number and
-    // fallback to 0 so toFixed() never throws.
-    const numeric = Number(value ?? 0);
-    const formatted = `${prefix}${numeric.toFixed(decimals)}${suffix}`;
-    return <span className={className}>{formatted}</span>;
-  }
-
+  /* CORREÇÃO: Mova todas as chamadas de Hooks (useSpring, useTransform, useEffect)
+    para o topo do componente, ANTES do 'return' condicional.
+  */
   const spring = useSpring(0, {
-    mass: 0.8,
-    stiffness: 75,
-    damping: 15,
+    to: value,
+    mass: 1,
+    tension: 20,
+    friction: 10,
+    ...animationOptions,
   });
 
   const displayValue = useTransform(spring, (currentValue) => {
-    return `${prefix}${currentValue.toFixed(decimals)}${suffix}`;
+    return formatValue
+      ? formatValue(currentValue)
+      : Math.round(currentValue).toLocaleString();
   });
 
   useEffect(() => {
-    // Coerce incoming value to finite number to avoid runtime exceptions
-    const numeric = Number(value ?? 0);
-    spring.set(isFinite(numeric) ? numeric : 0);
-  }, [spring, value]);
+    setIsMounted(true);
+  }, []);
 
-  // In test environments our framer-motion mock returns plain DOM elements and
-  // the animated value may be a simple object with a .get() method. Read the
-  // current value defensively so we always render a primitive string inside
-  // the span (avoids React trying to render an object).
-  let displayString: string;
-  try {
-    if (displayValue && typeof (displayValue as any).get === 'function') {
-      displayString = String((displayValue as any).get());
-    } else {
-      displayString = String(displayValue);
-    }
-  } catch (e) {
-    // Fallback: compute from numeric value
-    const numeric = Number(value ?? 0);
-    displayString = `${prefix}${(isFinite(numeric) ? numeric : 0).toFixed(decimals)}${suffix}`;
+  useEffect(() => {
+    const controls = animate(spring, value);
+    return () => controls.stop();
+  }, [value, spring]);
+
+
+  /* Agora o 'return' condicional pode ser usado sem problemas */
+  if (!isMounted) {
+    /* Opcionalmente, você pode querer que o valor inicial seja formatado 
+      mesmo antes da montagem, se 'formatValue' for fornecido.
+    */
+    const initialDisplay = formatValue
+      ? formatValue(value)
+      : value.toLocaleString();
+    return <span className={className}>{initialDisplay}</span>;
   }
 
-  return <motion.span className={className}>{displayString}</motion.span>;
+  return (
+    <motion.span className={className} {...animationOptions}>
+      {displayValue}
+    </motion.span>
+  );
 };
+
+export default AnimatedCounter;

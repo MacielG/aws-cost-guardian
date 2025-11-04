@@ -8,24 +8,11 @@ import { PageHeader } from '@/components/layout/PageHeader';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
-import { AnimatedCounter } from '@/components/ui/AnimatedCounter';
+import AnimatedCounter from '@/components/ui/AnimatedCounter';
 import { DollarSign, TrendingUp, ShieldCheck, Info } from 'lucide-react';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 
-// Mock data - substitua pela chamada de API
-const mockBillingSummary = {
-  totalSavings: 8778.35,
-  commissionRate: 0.30,
-  netSavings: 8778.35 * (1 - 0.30),
-  invoiceAmount: 8778.35 * 0.30,
-  billingPeriod: '1 de Out - 31 de Out de 2023',
-};
 
-const mockSavingsHistory = [
-  { month: 'Outubro 2023', totalSaved: 8778.35, recommendations: 5016.20, slaCredits: 3762.15, invoice: 2633.51, status: 'PAGO' },
-  { month: 'Setembro 2023', totalSaved: 7540.10, recommendations: 7540.10, slaCredits: 0, invoice: 2262.03, status: 'PAGO' },
-  { month: 'Agosto 2023', totalSaved: 6210.50, recommendations: 6210.50, slaCredits: 0, invoice: 1863.15, status: 'PAGO' },
-];
 
 const StatCard = ({ title, value, icon: Icon, color, prefix = "R$ ", decimals = 2 }: any) => (
   <Card>
@@ -35,7 +22,7 @@ const StatCard = ({ title, value, icon: Icon, color, prefix = "R$ ", decimals = 
     </CardHeader>
     <CardContent>
       <div className="text-2xl font-bold">
-        <AnimatedCounter value={value} prefix={prefix} decimals={decimals} />
+        <AnimatedCounter value={value} formatValue={(v) => `${prefix}${v.toFixed(decimals)}`} />
       </div>
     </CardContent>
   </Card>
@@ -64,7 +51,7 @@ export default function BillingPage() {
       }
     };
     fetchData();
-  }, []);
+  }, [notify]);
 
   if (loading) {
     return (

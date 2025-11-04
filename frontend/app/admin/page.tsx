@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { PageHeader } from '@/components/layout/PageHeader';
+
 import { PageAnimator } from '@/components/layout/PageAnimator';
 import { ProtectedRoute } from '@/components/auth/ProtectedRoute';
 import { apiFetch } from '@/lib/api';

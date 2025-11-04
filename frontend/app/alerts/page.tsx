@@ -31,7 +31,7 @@ export default function AlertsPage() {
         notify.error('Erro ao buscar alertas');
       })
       .finally(() => setLoading(false));
-  }, []);
+  }, [notify]);
 
   if (loading) return <Skeleton className="w-full h-32" />;
   if (error) return <div className="text-destructive">{error}</div>;

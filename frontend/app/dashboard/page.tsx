@@ -3,7 +3,7 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import { apiClient } from '@/lib/api';
-import { useNotify } from '@/hooks/useNotify';
+
 import { motion } from 'framer-motion';
 import { useTranslation } from 'react-i18next';
 import { staggerContainer, staggerItem, hoverLift } from '@/lib/animations';
@@ -12,11 +12,11 @@ import { DollarSign, Zap, ShieldCheck, TrendingUp, AlertCircle, ArrowRight, File
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { AnimatedCounter } from '@/components/ui/AnimatedCounter';
+import AnimatedCounter from '@/components/ui/AnimatedCounter';
 import { PageAnimator } from '@/components/layout/PageAnimator';
 import { PageHeader } from '@/components/layout/PageHeader';
 import { EmptyState } from '@/components/ui/EmptyState';
-import { StatCard } from '@/components/ui/StatCard';
+
 import { Skeleton } from '@/components/ui/skeleton';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
@@ -40,15 +40,19 @@ const mockSummary = {
   ],
 };
 
-const mockRecommendations = [
-  { id: 'rec-001', type: 'IDLE_INSTANCE', resourceId: 'i-1234567890abcdef0', potentialSaving: 120.50, status: 'EXECUTED' },
-  { id: 'rec-002', type: 'UNUSED_EBS', resourceId: 'vol-0abcdef1234567890', potentialSaving: 25.00, status: 'ACTIVE' },
-  { id: 'rec-003', type: 'IDLE_INSTANCE', resourceId: 'i-abcdef12345678901', potentialSaving: 88.75, status: 'ACTIVE' },
-  { id: 'rec-004', type: 'OPTIMIZE_RDS', resourceId: 'db-instance-01', potentialSaving: 210.00, status: 'EXECUTED' },
-  { id: 'rec-005', type: 'UNUSED_EIP', resourceId: '54.123.45.67', potentialSaving: 3.60, status: 'ACTIVE' },
-];
-
-
+const StatCard = ({ title, value, icon: Icon, color, prefix = "R$ ", decimals = 2 }: any) => (
+  <Card>
+    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+      <CardTitle className="text-sm font-medium text-muted-foreground">{title}</CardTitle>
+      <Icon className={`w-5 h-5 ${color}`} />
+    </CardHeader>
+    <CardContent>
+      <div className="text-2xl font-bold">
+        <AnimatedCounter value={value} formatValue={(v) => `${prefix}${v.toFixed(decimals)}`} />
+      </div>
+    </CardContent>
+  </Card>
+);
 
 const DashboardSkeleton = () => (
   <div className="space-y-8">
@@ -89,7 +93,7 @@ export default function DashboardPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [retryCount, setRetryCount] = useState(0);
-  const notify = useNotify();
+
   const router = useRouter();
   const { t } = useTranslation();
   const { user, isLoadingAuth } = useAuth();
@@ -180,7 +184,7 @@ abortControllerRef.current = new AbortController();
           try {
             router.push('/trial');
             return;
-          } catch (e) {
+            } catch (_e) {
             // ignore in tests if router mock doesn't implement push
           }
         }
@@ -200,7 +204,7 @@ abortControllerRef.current = new AbortController();
                 const ts = new Date(inc.timestamp);
                 if (isNaN(ts.getTime())) return false;
                 return true;
-              } catch (e) {
+                } catch (_e) {
                 return false;
               }
             })
@@ -249,7 +253,7 @@ abortControllerRef.current = new AbortController();
       }
       isRequestInProgressRef.current = false;
     };
-  }, [isLoadingAuth, user, retryCount]);
+  }, [isLoadingAuth, user, retryCount, router, t]);
 
   if (loading) {
     return (

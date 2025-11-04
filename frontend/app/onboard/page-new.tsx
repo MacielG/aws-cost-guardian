@@ -7,11 +7,13 @@ import { Button } from '@/components/ui/button';
 import { LoadingState } from '@/components/ui/LoadingSpinner';
 import { Alert } from '@/components/ui/alert';
 import { apiClient } from '@/lib/api';
+import { useNotify } from '@/hooks/useNotify';
 
 export default function OnboardPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const mode = searchParams.get('mode') || 'active';
+  const notify = useNotify();
   
   const [loading, setLoading] = useState(true);
   const [cfnTemplateUrl, setCfnTemplateUrl] = useState('');
@@ -19,11 +21,7 @@ export default function OnboardPage() {
   const [error, setError] = useState<string | null>(null);
   const [currentStep, setCurrentStep] = useState(1);
 
-  useEffect(() => {
-    fetchOnboardingConfig();
-  }, [mode]);
-
-  const fetchOnboardingConfig = async () => {
+  const fetchOnboardingConfig = useCallback(async () => {
     try {
       setLoading(true);
       setError(null);
@@ -43,7 +41,11 @@ export default function OnboardPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [mode, notify, router]);
+
+  useEffect(() => {
+    fetchOnboardingConfig();
+  }, [fetchOnboardingConfig]);
 
   const handleLaunchStack = () => {
     const quickCreateUrl = `https://console.aws.amazon.com/cloudformation/home?region=us-east-1#/stacks/create/review?templateURL=${encodeURIComponent(cfnTemplateUrl)}`;

@@ -1,8 +1,8 @@
 "use client";
 
 import { motion } from 'framer-motion';
-import { DollarSign, TrendingUp, TrendingDown, Award, Database, Server, HardDrive } from 'lucide-react';
-import { AnimatedCounter } from '@/components/ui/AnimatedCounter';
+import { DollarSign, Award, Database, Server, HardDrive } from 'lucide-react';
+import AnimatedCounter from '@/components/ui/AnimatedCounter';
 import {
   Card,
   CardContent,
@@ -106,12 +106,12 @@ export const SavingsWidget = ({ data, loading }: SavingsWidgetProps) => {
           <div className="flex items-baseline gap-2">
             <DollarSign className="h-8 w-8 text-green-600" />
             <div className="text-3xl font-bold">
-              $<AnimatedCounter value={data.totalSavings} decimals={2} />
+              <AnimatedCounter value={data.totalSavings} formatValue={(v) => `$${v.toFixed(2)}`} />
             </div>
           </div>
           <p className="text-xs text-muted-foreground mt-1">
             Sua comissão: <span className="font-semibold text-blue-600">
-              $<AnimatedCounter value={data.commission} decimals={2} />
+              <AnimatedCounter value={data.commission} formatValue={(v) => `$${v.toFixed(2)}`} />
             </span> ({data.commissionRate * 100}%)
           </p>
 
@@ -130,7 +130,7 @@ export const SavingsWidget = ({ data, loading }: SavingsWidgetProps) => {
                   <span className="text-xs font-medium text-foreground">{item.label}</span>
                 </div>
                 <p className={`mt-1 text-lg font-bold ${item.color}`}>
-                  $<AnimatedCounter value={item.value} decimals={2} />
+                  <AnimatedCounter value={item.value} formatValue={(v) => `$${v.toFixed(2)}`} />
                 </p>
               </motion.div>
             ))}

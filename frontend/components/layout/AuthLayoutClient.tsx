@@ -5,9 +5,9 @@ import { useAuth } from "@/components/auth/AuthProvider";
 import AppLayout from "./AppLayout";
 
 export default function AuthLayoutClient({ children }: { children: React.ReactNode }) {
-  const { user, loading } = useAuth();
+  const { user, isLoadingAuth } = useAuth();
 
-  if (loading) {
+  if (isLoadingAuth) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-50">
         <div className="text-center">

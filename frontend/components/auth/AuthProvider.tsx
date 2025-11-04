@@ -12,7 +12,7 @@ interface AuthenticatedUser {
 
 interface AuthContextType {
   user: AuthenticatedUser | null;
-  session: FetchUserAttributesOutput | null;
+  session: any;
   isAuthenticated: boolean;
   isLoadingAuth: boolean;
   signOut: () => Promise<void>;
@@ -23,7 +23,7 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<AuthenticatedUser | null>(null);
-  const [session, setSession] = useState<FetchUserAttributesOutput | null>(null);
+  const [session, setSession] = useState<any>(null);
   const [isLoadingAuth, setIsLoadingAuth] = useState(true);
 
   const loadUser = async () => {

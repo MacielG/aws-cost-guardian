@@ -11,7 +11,7 @@
     "project": "./tsconfig.json"
   },
   "plugins": ["@typescript-eslint"],
-  "ignorePatterns": ["node_modules/", "**/dist/", ".next/"],
+  "ignorePatterns": ["node_modules/", "**/dist/", ".next/", "lib/url.js"],
   "rules": {
     "@typescript-eslint/explicit-module-boundary-types": "off",
     "react/react-in-jsx-scope": "off",

@@ -15,14 +15,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription, SheetFooter } from '@/components/ui/sheet';
 
-// Mock data - substitua pela chamada de API
-const mockRecommendations = [
-  { id: 'rec-001', type: 'IDLE_INSTANCE', resourceId: 'i-1234567890abcdef0', region: 'us-east-1', potentialSaving: 120.50, status: 'EXECUTED', reason: 'CPU Utilization below 5% for 14 days.' },
-  { id: 'rec-002', type: 'UNUSED_EBS', resourceId: 'vol-0abcdef1234567890', region: 'us-east-1', potentialSaving: 25.00, status: 'ACTIVE', reason: 'Volume not attached to any instance for over 30 days.' },
-  { id: 'rec-003', type: 'IDLE_INSTANCE', resourceId: 'i-abcdef12345678901', region: 'sa-east-1', potentialSaving: 88.75, status: 'ACTIVE', reason: 'CPU Utilization below 5% for 14 days.' },
-  { id: 'rec-004', type: 'OPTIMIZE_RDS', resourceId: 'db-instance-01', region: 'us-west-2', potentialSaving: 210.00, status: 'EXECUTED', reason: 'Instance is overprovisioned. Recommended to switch to a smaller instance type.' },
-  { id: 'rec-005', type: 'UNUSED_EIP', resourceId: '54.123.45.67', region: 'us-east-1', potentialSaving: 3.60, status: 'ACTIVE', reason: 'Elastic IP not associated with any running instance or network interface.' },
-];
+
 
 const recommendationStatusVariant: { [key: string]: "success" | "warning" | "secondary" } = {
   'ACTIVE': 'warning',
@@ -65,7 +58,7 @@ export default function RecommendationsPage() {
       }
     };
     fetchRecs();
-  }, []);
+  }, [notify]);
 
   const availableRegions = useMemo(() => {
     const regions = new Set(recommendations.map(rec => rec.region));

@@ -116,19 +116,11 @@ AnimatePresence: ({ children }: any) => children,
 const mockApiFetch = (jest.requireMock('@/lib/api') as any).apiClient.get as jest.Mock;
 
 // Helper functions
-const expectElementToBeInDocument = (element: Element | null) => {
-  expect(element).toBeInTheDocument();
-};
 
-const expectTextToBePresent = (text: string | RegExp) => {
-  const element = screen.getByText(text);
-  expect(element).toBeInTheDocument();
-};
 
-const expectTextNotToBePresent = (text: string | RegExp) => {
-  const element = screen.queryByText(text);
-  expect(element).not.toBeInTheDocument();
-};
+
+
+
 
 // Tipos
 interface MockIncident {
@@ -452,7 +444,6 @@ describe('DashboardPage', () => {
               const match = textContent.match(/(R\$|\$)\s?([\d,.]+)/);
               let numericValue = 0;
               if (match) {
-                const currency = match[1];
                 const amountString = match[2];
                 
                 // Handle both US ($1,000.00) and BR (R$ 1.000,00) formats

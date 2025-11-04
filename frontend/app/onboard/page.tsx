@@ -8,7 +8,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { useNotify } from '@/hooks/useNotify';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Cloud, Lock, Settings, CheckCircle, ArrowRight, FileText, ShieldCheck, BarChart2 } from 'lucide-react';
+import { Cloud, CheckCircle, ArrowRight, FileText, ShieldCheck, BarChart2 } from 'lucide-react';
 // Assuma que existe um hook ou contexto para obter o token de autenticação
 // import { useAuth } from '@/context/AuthContext'; 
 // utilitário para juntar URLs de forma segura
@@ -42,15 +42,13 @@ export default function Onboard() {
     const [isConnecting, setIsConnecting] = useState(false);
     const [loading, setLoading] = useState(true);
     const [step, setStep] = useState(1);
-    const [isAnimating, setIsAnimating] = useState(false);
+
     const router = useRouter();
     const searchParams = useSearchParams();
     const mode = searchParams.get('mode');
 
     const handleNext = () => {
-        setIsAnimating(true);
         setStep((prev) => Math.min(prev + 1, steps.length + 1));
-        setTimeout(() => setIsAnimating(false), 500);
     };
 
     const checkOnboardingStatus = useCallback(async (signal?: AbortSignal) => {
@@ -104,7 +102,7 @@ export default function Onboard() {
             console.error('Erro ao buscar configuração de onboarding.'); // Adicionado para o teste
         }
         setLoading(false);
-    }, [mode]);
+    }, [mode, notify]);
 
     // Buscar o ExternalId seguro no backend
     useEffect(() => {
