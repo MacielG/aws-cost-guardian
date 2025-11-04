@@ -80,5 +80,21 @@ exports.handler = async (event) => {
     }),
   }));
 
+  // Registrar heartbeat de sucesso
+  try {
+    await dynamoDb.send(new PutCommand({
+      TableName: process.env.DYNAMODB_TABLE,
+      Item: {
+        id: 'SYSTEM#STATUS',
+        sk: 'HEARTBEAT#CORRELATEHEALTH',
+        lastRun: new Date().toISOString(),
+        status: 'SUCCESS',
+        ttl: Math.floor(Date.now() / 1000) + (60 * 60 * 24 * 7), // 7 dias
+      }
+    }));
+  } catch (heartbeatErr) {
+    console.error('Falha ao registrar heartbeat:', heartbeatErr);
+  }
+
   return { status: 'success', customerId: customerId, incidentId: incidentId };
 };

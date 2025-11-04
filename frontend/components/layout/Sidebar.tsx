@@ -2,15 +2,16 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { LayoutDashboard, Settings, CreditCard, LifeBuoy, Lightbulb, ShieldCheck, BarChart3 } from "lucide-react";
+import { LayoutDashboard, Settings, CreditCard, LifeBuoy, Lightbulb, ShieldCheck, BarChart3, Activity } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/components/auth/AuthProvider";
 
 const navItems = [
-  { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
-  { href: "/recommendations", label: "Recomendações", icon: Lightbulb },
-  { href: "/sla-claims", label: "Créditos SLA", icon: ShieldCheck },
-  { href: "/billing", label: "Faturamento", icon: CreditCard },
+{ href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
+{ href: "/recommendations", label: "Recomendações", icon: Lightbulb },
+{ href: "/sla-claims", label: "Créditos SLA", icon: ShieldCheck },
+{ href: "/billing", label: "Faturamento", icon: CreditCard },
+{ href: "/status", label: "Status do Sistema", icon: Activity },
   { href: "/settings/connections", label: "Configurações", icon: Settings },
 ];
 

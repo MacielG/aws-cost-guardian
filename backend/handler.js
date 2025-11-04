@@ -13,6 +13,7 @@ const { RDSClient } = require('@aws-sdk/client-rds');
 const { LambdaClient, InvokeCommand } = require('@aws-sdk/client-lambda');
 const { MarketplaceMeteringClient, ResolveCustomerCommand } = require('@aws-sdk/client-marketplace-metering');
 const { SupportClient, DescribeSeverityLevelsCommand } = require('@aws-sdk/client-support');
+const { HealthClient, DescribeEventsCommand } = require('@aws-sdk/client-health');
 const { S3Client, GetObjectCommand } = require('@aws-sdk/client-s3');
 const { getSignedUrl } = require('@aws-sdk/s3-request-presigner');
 
@@ -23,6 +24,7 @@ const ddbClient = new DynamoDBClient({});
 const dynamoDb = DynamoDBDocumentClient.from(ddbClient);
 const secretsManager = new SecretsManagerClient({});
 const sfn = new SFNClient({});
+const health = new HealthClient({});
 const s3Presigner = new S3Client({});
 
 // Helper para assumir a role do cliente
@@ -272,53 +274,6 @@ app.get('/api/health', (req, res) => {
     });
 });
 
-// Rota para inicializar onboarding (pode ser pública ou autenticada dependendo do fluxo)
-app.get('/api/onboard-init', authenticateUser, async (req, res) => {
-    try {
-        const customerId = req.user.sub;
-        const mode = req.query.mode || 'trial';
-        const cfnTemplateUrl = mode === 'trial'
-            ? process.env.TRIAL_TEMPLATE_URL
-            : process.env.FULL_TEMPLATE_URL;
-
-        // Verificar se já existe configuração
-        const getParams = {
-            TableName: process.env.DYNAMODB_TABLE,
-        Key: { id: customerId, sk: 'CONFIG#ONBOARD' }
-};
-    const existingConfig = await dynamoDb.send(new GetCommand(getParams));
-
-    let externalId;
-        if (existingConfig.Item && existingConfig.Item.externalId) {
-        // Já existe, usar o existente
-        externalId = existingConfig.Item.externalId;
-        } else {
-            // Gerar novo externalId e salvar
-            externalId = randomBytes(16).toString('hex');
-            const putParams = {
-                TableName: process.env.DYNAMODB_TABLE,
-                Item: {
-                    id: customerId,
-                    sk: 'CONFIG#ONBOARD',
-                    externalId,
-                    accountType: 'TRIAL',
-                    createdAt: new Date().toISOString()
-                }
-            };
-            await dynamoDb.send(new PutCommand(putParams));
-        }
-
-        res.status(200).json({
-            mode,
-            templateUrl: cfnTemplateUrl,
-            platformAccountId: process.env.PLATFORM_ACCOUNT_ID,
-            externalId
-        });
-    } catch (error) {
-        console.error('Erro em /api/onboard-init:', error);
-        res.status(500).json({ message: 'Erro ao inicializar onboarding' });
-    }
-});
 
 // Rota para criar sessão de checkout do Stripe
 app.post('/billing/create-checkout-session', authenticateUser, async (req, res) => {
@@ -2242,6 +2197,144 @@ app.get('/admin/metrics', authenticateUser, authorizeAdmin, async (req, res) => 
     } catch (err) {
         console.error('Erro ao buscar métricas admin:', err);
         res.status(500).json({ message: 'Erro ao buscar métricas' });
+    }
+});
+
+// GET /api/system-status/aws - Status dos serviços AWS (usando Health API)
+app.get('/api/system-status/aws', authenticateUser, async (req, res) => {
+    try {
+        // Buscar eventos de saúde recentes (últimas 24 horas)
+        const yesterday = new Date();
+        yesterday.setDate(yesterday.getDate() - 1);
+
+        const command = new DescribeEventsCommand({
+            filter: {
+                startTimes: [{
+                    from: yesterday
+                }],
+                eventStatusCodes: ['open', 'upcoming'],
+                services: ['EC2', 'RDS', 'S3', 'LAMBDA', 'DYNAMODB']
+            },
+            maxResults: 50
+        });
+
+        const response = await health.send(command);
+
+        const events = response.events || [];
+
+        // Agrupar por serviço e severidade
+        const serviceStatus = {};
+        events.forEach(event => {
+            const service = event.service || 'UNKNOWN';
+            if (!serviceStatus[service]) {
+                serviceStatus[service] = {
+                    status: 'operational',
+                    incidents: []
+                };
+            }
+
+            // Se há evento aberto, considerar como issue
+            if (event.eventStatusCode === 'open') {
+                serviceStatus[service].status = 'degraded';
+            }
+
+            serviceStatus[service].incidents.push({
+                eventTypeCode: event.eventTypeCode,
+                eventDescription: event.eventDescription?.[0]?.latestDescription,
+                startTime: event.startTime,
+                lastUpdatedTime: event.lastUpdatedTime,
+                region: event.region,
+                availabilityZone: event.availabilityZone,
+                statusCode: event.eventStatusCode,
+                affectedResources: event.affectedEntities?.length || 0
+            });
+        });
+
+        res.json({
+            timestamp: new Date().toISOString(),
+            services: serviceStatus,
+            totalIncidents: events.length
+        });
+
+    } catch (err) {
+        console.error('Erro ao buscar status AWS:', err);
+        res.status(500).json({
+            message: 'Erro ao buscar status dos serviços AWS',
+            timestamp: new Date().toISOString(),
+            services: {},
+            totalIncidents: 0
+        });
+    }
+});
+
+// GET /api/system-status/guardian - Status interno do sistema (heartbeats)
+app.get('/api/system-status/guardian', authenticateUser, async (req, res) => {
+    try {
+        // Buscar heartbeats do sistema
+        const params = {
+            TableName: process.env.DYNAMODB_TABLE,
+            KeyConditionExpression: 'id = :systemId AND begins_with(sk, :heartbeatPrefix)',
+            ExpressionAttributeValues: {
+                ':systemId': 'SYSTEM#STATUS',
+                ':heartbeatPrefix': 'HEARTBEAT#'
+            }
+        };
+
+        const result = await dynamoDb.send(new QueryCommand(params));
+        const heartbeats = result.Items || [];
+
+        // Processar heartbeats
+        const systemStatus = {
+            costIngestor: { status: 'unknown', lastRun: null, message: 'Nunca executado' },
+            correlateHealth: { status: 'unknown', lastRun: null, message: 'Nunca executado' },
+            automationSfn: { status: 'unknown', lastRun: null, message: 'Nunca executado' },
+            marketplaceMetering: { status: 'unknown', lastRun: null, message: 'Nunca executado' }
+        };
+
+        heartbeats.forEach(item => {
+            const serviceKey = item.sk.replace('HEARTBEAT#', '');
+            // Map DynamoDB keys to camelCase systemStatus keys
+            const serviceMap = {
+                'COSTINGESTOR': 'costIngestor',
+                'CORRELATEHEALTH': 'correlateHealth',
+                'AUTOMATIONSFN': 'automationSfn',
+                'MARKETPLACEMETERING': 'marketplaceMetering'
+            };
+            const service = serviceMap[serviceKey];
+            if (service && systemStatus[service]) {
+                const lastRun = new Date(item.lastRun);
+                const now = new Date();
+                const minutesAgo = Math.floor((now.getTime() - lastRun.getTime()) / (1000 * 60));
+
+                systemStatus[service] = {
+                    status: item.status === 'SUCCESS' ? 'healthy' : 'error',
+                    lastRun: item.lastRun,
+                    message: item.status === 'SUCCESS'
+                        ? `Última execução: ${minutesAgo} minutos atrás`
+                        : `Erro: ${item.message || 'Falha desconhecida'}`
+                };
+            }
+        });
+
+        // Calcular status geral
+        const healthyCount = Object.values(systemStatus).filter(s => s.status === 'healthy').length;
+        const overallStatus = healthyCount === Object.keys(systemStatus).length ? 'healthy' :
+                            healthyCount > 0 ? 'degraded' : 'error';
+
+        res.json({
+            timestamp: new Date().toISOString(),
+            overallStatus,
+            services: systemStatus
+        });
+
+    } catch (err) {
+        console.error('Erro ao buscar status do sistema:', err);
+        res.status(500).json({
+            message: 'Erro ao buscar status interno',
+            timestamp: new Date().toISOString(),
+            overallStatus: 'error',
+            services: {}
+        });
     }
 });
 

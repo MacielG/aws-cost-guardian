@@ -1,6 +1,6 @@
 import { MarketplaceMeteringClient, MeterUsageCommand } from '@aws-sdk/client-marketplace-metering';
 import { DynamoDBClient } from '@aws-sdk/client-dynamodb';
-import { DynamoDBDocumentClient, QueryCommand, UpdateCommand } from '@aws-sdk/lib-dynamodb';
+import { DynamoDBDocumentClient, QueryCommand, UpdateCommand, PutCommand } from '@aws-sdk/lib-dynamodb';
 
 const ddbClient = new DynamoDBClient({});
 const dynamoDb = DynamoDBDocumentClient.from(ddbClient);
@@ -127,7 +127,22 @@ export const handler = async (event) => {
       }));
     }
 
-    return { 
+    // Registrar heartbeat de sucesso
+    try {
+      await dynamoDb.send(new PutCommand({
+        TableName: DYNAMODB_TABLE,
+        Item: {
+          id: 'SYSTEM#STATUS',
+          sk: 'HEARTBEAT#MARKETPLACEMETERING',
+          lastRun: new Date().toISOString(),
+          status: 'SUCCESS'
+        }
+      }));
+    } catch (heartbeatErr) {
+      console.error('Falha ao registrar heartbeat:', heartbeatErr);
+    }
+
+    return {
       statusCode: 200,
       headers: {
         'Access-Control-Allow-Origin': '*',

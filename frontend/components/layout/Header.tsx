@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { Menu, LogOut, UserCircle, LayoutDashboard, Settings, CreditCard, LifeBuoy, Lightbulb, ShieldCheck, BarChart3 } from "lucide-react";
+import { Menu, LogOut, UserCircle, LayoutDashboard, Settings, CreditCard, LifeBuoy, Lightbulb, ShieldCheck, BarChart3, Activity } from "lucide-react";
 import { useAuth } from "@/components/auth/AuthProvider";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
@@ -13,10 +13,11 @@ interface HeaderProps {
 }
 
 const navItems = [
-  { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
-  { href: "/recommendations", label: "Recomendações", icon: Lightbulb },
-  { href: "/sla-claims", label: "Créditos SLA", icon: ShieldCheck },
-  { href: "/billing", label: "Faturamento", icon: CreditCard },
+{ href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
+{ href: "/recommendations", label: "Recomendações", icon: Lightbulb },
+{ href: "/sla-claims", label: "Créditos SLA", icon: ShieldCheck },
+{ href: "/billing", label: "Faturamento", icon: CreditCard },
+{ href: "/status", label: "Status", icon: Activity },
   { href: "/settings", label: "Configurações", icon: Settings },
 ];
 

@@ -166,5 +166,21 @@ exports.handler = async () => {
     }
   }
 
+  // Registrar heartbeat de sucesso
+  try {
+    await dynamoDb.send(new PutCommand({
+      TableName: DYNAMODB_TABLE,
+      Item: {
+        id: 'SYSTEM#STATUS',
+        sk: 'HEARTBEAT#COSTINGESTOR',
+        lastRun: new Date().toISOString(),
+        status: 'SUCCESS',
+        ttl: Math.floor(Date.now() / 1000) + (60 * 60 * 24 * 7), // 7 dias
+      }
+    }));
+  } catch (heartbeatErr) {
+    console.error('Falha ao registrar heartbeat:', heartbeatErr);
+  }
+
   console.log('Ingestão diária de custos concluída');
 };
