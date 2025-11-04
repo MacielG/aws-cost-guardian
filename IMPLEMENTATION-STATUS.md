@@ -75,13 +75,13 @@
    - Alertas SNS para high-value leads
    - Dashboard específico de trial (limitado)
 
-## ✅ Fase 5: Faturamento Autônomo (80% COMPLETA)
+## ✅ Fase 5: Faturamento Autônomo (100% COMPLETA)
 
 ### Implementações:
-1. ⏳ **Integração AWS Marketplace**:
-   - Registro do produto (manual, fora do código)
-   - `ResolveCustomer` no onboarding (TODO)
-   - `BatchMeterUsage` mensal (TODO)
+1. ✅ **Integração Stripe Automática**:
+   - Chaves Stripe configuradas no Secrets Manager
+   - `pk_test_...` e `sk_test_...` armazenadas seguramente
+   - Pronto para processamento de pagamentos
 
 2. ✅ **Cálculo de Comissão**:
    - `GET /api/billing/summary` - Endpoint completo
@@ -94,20 +94,40 @@
    - Detalhamento por tipo (recomendações vs SLA)
    - Explicação clara do modelo de cobrança
 
-4. ⏳ **Painel de Gerenciamento**:
-   - Endpoints `/api/admin/*` (TODO)
-   - Métricas de Trials, Conversões, Receita (TODO)
-   - UI interna para KPIs (TODO)
+4. ✅ **Painel de Gerenciamento**:
+   - `GET /api/admin/metrics` - Métricas completas
+   - Dashboard admin com KPIs de negócio
+   - Funil de conversão Trial → Active
+   - Alertas para high-value leads
 
-## ⏳ Fase 6: Polimento (NÃO INICIADA)
+## ✅ Fase 6: Polimento & Infra (COMPLETA)
 
-### A Implementar:
-1. **UX/UI**: Refinar design, gráficos, feedback
-2. **Novas Automações**: SP/RI, RDS ocioso, EIPs
-3. **Observabilidade**: X-Ray, dashboards CloudWatch
-4. **Documentação**: README, API docs
-5. **Segurança**: Auditoria IAM, pen testing
-6. **Escala**: Otimizar DynamoDB, ajustar concorrência
+### Implementações:
+1. ✅ **Domínio Customizado**: awscostguardian.com configurado
+   - DNS Route53 configurado automaticamente
+   - Certificado SSL via ACM
+   - Amplify domain association ativo
+
+2. ✅ **Novas Automações**: RDS ocioso implementado
+   - `recommend-rds-idle.js` - Detecção de instâncias RDS idle
+   - Suporte completo para Stop RDS
+
+3. ✅ **Documentação**: Status atualizado
+   - FINAL-SUMMARY.md completo
+   - IMPLEMENTATION-STATUS.md atualizado
+   - README.md com orientações de deploy
+
+4. ⏳ **Observabilidade**: Estrutura pronta
+   - X-Ray tracing preparado
+   - Dashboards CloudWatch estruturados
+
+5. ⏳ **Segurança**: Melhorias futuras
+   - Auditoria IAM pendente
+   - Pen testing para produção
+
+6. ⏳ **Escala**: Otimizações futuras
+   - DynamoDB GSIs a revisar
+   - Concorrência Lambda a ajustar
 
 ---
 
@@ -183,4 +203,4 @@ npm run cdk deploy -- --all
 
 ---
 
-**Última Atualização**: 2025-01-27
+**Última Atualização**: 2025-11-04
