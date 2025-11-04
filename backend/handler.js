@@ -533,6 +533,23 @@ async function updateSubscriptionStatus(customerId, status, subscriptionId) {
 // Valid statuses for admin updates
 const VALID_ADMIN_STATUSES = ['READY_TO_SUBMIT', 'SUBMITTED', 'SUBMISSION_FAILED', 'PAID', 'REFUNDED', 'NO_VIOLATION', 'NO_RESOURCES_LISTED', 'REPORT_FAILED'];
 
+// Helper function to get commission rate from settings
+const getCommissionRate = async () => {
+    try {
+        const settingsCmd = new GetCommand({
+            TableName: process.env.DYNAMODB_TABLE,
+            Key: {
+                id: 'SYSTEM',
+                sk: 'SETTINGS',
+            },
+        });
+        const settingsResult = await dynamoDb.send(settingsCmd);
+        return settingsResult.Item?.commissionRate || 0.30; // Default 30%
+    } catch (err) {
+        console.error('Erro ao buscar taxa de comissão:', err);
+        return 0.30; // Fallback
+    }
+};
 
 // Middleware de autorização para Admins
 const authorizeAdmin = (req, res, next) => {
@@ -1428,8 +1445,10 @@ app.post('/admin/claims/:customerId/:claimId/create-invoice', authenticateUser, 
         const credit = claimData.Item.creditAmount;
         const creditFixed = credit.toFixed(2); // Para a descrição da fatura
 
-        // 2. Calcular comissão (30%)
-        const commissionAmount = Math.round(credit * 0.30 * 100); // 30% de comissão em centavos
+        // 2. Calcular comissão (usando taxa configurável)
+        const commissionRate = await getCommissionRate();
+        const commissionAmount = Math.round(credit * commissionRate * 100); // Comissão em centavos
+        console.log(`Calculando comissão: crédito $${credit}, taxa ${commissionRate}, valor $${commissionAmount / 100}`);
         if (commissionAmount <= 50) { // Stripe tem um valor mínimo de cobrança (ex: $0.50)
             return res.status(200).json({ message: 'Comissão muito baixa, fatura não gerada.' });
         }
@@ -1446,7 +1465,7 @@ app.post('/admin/claims/:customerId/:claimId/create-invoice', authenticateUser, 
         }
 
         // Criar item de fatura
-        await stripe.invoiceItems.create({ customer: stripeCustomerId, amount: commissionAmount, currency: 'usd', description: `Comissão de 30% sobre crédito SLA de $${creditFixed} (Claim: ${claimId})` });
+        await stripe.invoiceItems.create({ customer: stripeCustomerId, amount: commissionAmount, currency: 'usd', description: `Comissão de ${(commissionRate * 100).toFixed(0)}% sobre crédito SLA de $${creditFixed} (Claim: ${claimId})` });
 
         // Criar a fatura com metadados para rastrear a claim
         const invoice = await stripe.invoices.create({ customer: stripeCustomerId, collection_method: 'charge_automatically', auto_advance: true, metadata: { claimId: claimId, customerId: customerId } });
@@ -2050,6 +2069,314 @@ app.post('/recommendations/execute', authenticateUser, async (req, res) => {
     } catch (err) {
         console.error('Erro ao executar recomendação:', err);
         res.status(500).json({ message: 'Erro ao executar recomendação' });
+    }
+});
+
+// GET /admin/settings - Configurações admin
+app.get('/admin/settings', authenticateUser, authorizeAdmin, async (req, res) => {
+    try {
+        // Buscar configurações do sistema
+        const settingsCmd = new GetCommand({
+            TableName: process.env.DYNAMODB_TABLE,
+            Key: {
+                id: 'SYSTEM',
+                sk: 'SETTINGS',
+            },
+        });
+        const settingsResult = await dynamoDb.send(settingsCmd);
+        const settings = settingsResult.Item || {
+            commissionRate: 0.30, // 30% padrão
+            promotions: [],
+            coupons: [],
+        };
+
+        // Buscar cupons ativos
+        const couponsCmd = new QueryCommand({
+            TableName: process.env.DYNAMODB_TABLE,
+            KeyConditionExpression: 'id = :id AND begins_with(sk, :prefix)',
+            ExpressionAttributeValues: {
+                ':id': 'SYSTEM',
+                ':prefix': 'COUPON#',
+            },
+        });
+        const couponsResult = await dynamoDb.send(couponsCmd);
+        const coupons = couponsResult.Items || [];
+
+        // Buscar promoções ativas
+        const promotionsCmd = new QueryCommand({
+            TableName: process.env.DYNAMODB_TABLE,
+            KeyConditionExpression: 'id = :id AND begins_with(sk, :prefix)',
+            ExpressionAttributeValues: {
+                ':id': 'SYSTEM',
+                ':prefix': 'PROMOTION#',
+            },
+        });
+        const promotionsResult = await dynamoDb.send(promotionsCmd);
+        const promotions = promotionsResult.Items || [];
+
+        res.json({
+            settings,
+            coupons,
+            promotions,
+        });
+    } catch (err) {
+        console.error('Erro ao buscar configurações:', err);
+        res.status(500).json({ message: 'Erro interno do servidor' });
+    }
+});
+
+// PUT /admin/settings - Atualizar configurações
+app.put('/admin/settings', authenticateUser, authorizeAdmin, async (req, res) => {
+    try {
+        const { commissionRate } = req.body;
+
+        if (typeof commissionRate !== 'number' || commissionRate < 0 || commissionRate > 1) {
+            return res.status(400).json({ message: 'Taxa de comissão deve ser entre 0 e 1' });
+        }
+
+        const updateCmd = new PutCommand({
+            TableName: process.env.DYNAMODB_TABLE,
+            Item: {
+                id: 'SYSTEM',
+                sk: 'SETTINGS',
+                commissionRate,
+                updatedAt: new Date().toISOString(),
+                updatedBy: req.user?.userId,
+            },
+        });
+
+        await dynamoDb.send(updateCmd);
+        res.json({ message: 'Configurações atualizadas com sucesso' });
+    } catch (err) {
+        console.error('Erro ao atualizar configurações:', err);
+        res.status(500).json({ message: 'Erro interno do servidor' });
+    }
+});
+
+// POST /admin/coupons - Criar cupom
+app.post('/admin/coupons', authenticateUser, authorizeAdmin, async (req, res) => {
+    try {
+        const { code, discountType, discountValue, validUntil, maxUses, description } = req.body;
+
+        if (!code || !discountType || !discountValue) {
+            return res.status(400).json({ message: 'Código, tipo e valor do desconto são obrigatórios' });
+        }
+
+        const couponId = `COUPON#${code.toUpperCase()}`;
+        const putCmd = new PutCommand({
+            TableName: process.env.DYNAMODB_TABLE,
+            Item: {
+                id: 'SYSTEM',
+                sk: couponId,
+                code: code.toUpperCase(),
+                discountType, // 'percentage' ou 'fixed'
+                discountValue,
+                validUntil,
+                maxUses: maxUses || null,
+                usedCount: 0,
+                description: description || '',
+                createdAt: new Date().toISOString(),
+                createdBy: req.user?.userId,
+                active: true,
+            },
+            ConditionExpression: 'attribute_not_exists(sk)',
+        });
+
+        await dynamoDb.send(putCmd);
+        res.json({ message: 'Cupom criado com sucesso' });
+    } catch (err) {
+        if (err.name === 'ConditionalCheckFailedException') {
+            return res.status(409).json({ message: 'Cupom com este código já existe' });
+        }
+        console.error('Erro ao criar cupom:', err);
+        res.status(500).json({ message: 'Erro interno do servidor' });
+    }
+});
+
+// DELETE /admin/coupons/:code - Excluir cupom
+app.delete('/admin/coupons/:code', authenticateUser, authorizeAdmin, async (req, res) => {
+    try {
+        const code = req.params.code.toUpperCase();
+        const couponId = `COUPON#${code}`;
+
+        const deleteCmd = new DeleteCommand({
+            TableName: process.env.DYNAMODB_TABLE,
+            Key: {
+                id: 'SYSTEM',
+                sk: couponId,
+            },
+        });
+
+        await dynamoDb.send(deleteCmd);
+        res.json({ message: 'Cupom excluído com sucesso' });
+    } catch (err) {
+        console.error('Erro ao excluir cupom:', err);
+        res.status(500).json({ message: 'Erro interno do servidor' });
+    }
+});
+
+// POST /api/create-checkout-session - Criar sessão de checkout Stripe
+app.post('/api/create-checkout-session', authenticateUser, async (req, res) => {
+    try {
+        const { priceId, successUrl, cancelUrl } = req.body;
+
+        if (!priceId) {
+            return res.status(400).json({ message: 'Price ID é obrigatório' });
+        }
+
+        const stripe = await getStripe();
+
+        // Buscar configuração do usuário
+        const userId = req.user?.userId;
+        const getConfigCmd = new GetCommand({
+            TableName: process.env.DYNAMODB_TABLE,
+            Key: {
+                id: userId,
+                sk: 'CONFIG#ONBOARD',
+            },
+        });
+
+        const configResult = await dynamoDb.send(getConfigCmd);
+        let stripeCustomerId = configResult.Item?.stripeCustomerId;
+
+        // Criar customer se não existir
+        if (!stripeCustomerId) {
+            const customer = await stripe.customers.create({
+                email: req.user?.email,
+                metadata: {
+                    userId: userId,
+                },
+            });
+            stripeCustomerId = customer.id;
+
+            // Salvar no DynamoDB
+            const updateConfigCmd = new UpdateCommand({
+                TableName: process.env.DYNAMODB_TABLE,
+                Key: {
+                    id: userId,
+                    sk: 'CONFIG#ONBOARD',
+                },
+                UpdateExpression: 'SET stripeCustomerId = :sid',
+                ExpressionAttributeValues: {
+                    ':sid': stripeCustomerId,
+                },
+            });
+            await dynamoDb.send(updateConfigCmd);
+        }
+
+        // Criar sessão de checkout
+        const session = await stripe.checkout.sessions.create({
+            customer: stripeCustomerId,
+            payment_method_types: ['card'],
+            line_items: [
+                {
+                    price: priceId,
+                    quantity: 1,
+                },
+            ],
+            mode: 'subscription', // Para upgrade recorrente
+            success_url: successUrl || `${process.env.FRONTEND_URL || 'https://awscostguardian.com'}/dashboard?success=true`,
+            cancel_url: cancelUrl || `${process.env.FRONTEND_URL || 'https://awscostguardian.com'}/billing?canceled=true`,
+            metadata: {
+                costGuardianCustomerId: userId,
+            },
+        });
+
+        res.json({ sessionId: session.id, url: session.url });
+    } catch (err) {
+        console.error('Erro ao criar sessão de checkout:', err);
+        res.status(500).json({ message: 'Erro interno do servidor' });
+    }
+});
+
+// GET /api/customer-portal - Criar sessão do portal do cliente
+app.get('/api/customer-portal', authenticateUser, async (req, res) => {
+    try {
+        const userId = req.user?.userId;
+        const stripe = await getStripe();
+
+        // Buscar stripeCustomerId
+        const getConfigCmd = new GetCommand({
+            TableName: process.env.DYNAMODB_TABLE,
+            Key: {
+                id: userId,
+                sk: 'CONFIG#ONBOARD',
+            },
+        });
+
+        const configResult = await dynamoDb.send(getConfigCmd);
+        const stripeCustomerId = configResult.Item?.stripeCustomerId;
+
+        if (!stripeCustomerId) {
+            return res.status(400).json({ message: 'Cliente Stripe não encontrado' });
+        }
+
+        // Criar sessão do portal
+        const session = await stripe.billingPortal.sessions.create({
+            customer: stripeCustomerId,
+            return_url: `${process.env.FRONTEND_URL || 'https://awscostguardian.com'}/billing`,
+        });
+
+        res.json({ url: session.url });
+    } catch (err) {
+        console.error('Erro ao criar sessão do portal:', err);
+        res.status(500).json({ message: 'Erro interno do servidor' });
+    }
+});
+
+// POST /admin/promotions - Criar promoção
+app.post('/admin/promotions', authenticateUser, authorizeAdmin, async (req, res) => {
+    try {
+        const { name, discountType, discountValue, validUntil, targetCustomers, description } = req.body;
+
+        if (!name || !discountType || !discountValue) {
+            return res.status(400).json({ message: 'Nome, tipo e valor do desconto são obrigatórios' });
+        }
+
+        const promotionId = `PROMOTION#${Date.now()}`;
+        const putCmd = new PutCommand({
+            TableName: process.env.DYNAMODB_TABLE,
+            Item: {
+                id: 'SYSTEM',
+                sk: promotionId,
+                name,
+                discountType, // 'percentage' ou 'fixed'
+                discountValue,
+                validUntil,
+                targetCustomers: targetCustomers || 'all', // 'all', 'trial', 'active'
+                description: description || '',
+                createdAt: new Date().toISOString(),
+                createdBy: req.user?.userId,
+                active: true,
+            },
+        });
+
+        await dynamoDb.send(putCmd);
+        res.json({ message: 'Promoção criada com sucesso' });
+    } catch (err) {
+        console.error('Erro ao criar promoção:', err);
+        res.status(500).json({ message: 'Erro interno do servidor' });
+    }
+});
+
+// DELETE /admin/promotions/:id - Excluir promoção
+app.delete('/admin/promotions/:id', authenticateUser, authorizeAdmin, async (req, res) => {
+    try {
+        const promotionId = `PROMOTION#${req.params.id}`;
+
+        const deleteCmd = new DeleteCommand({
+            TableName: process.env.DYNAMODB_TABLE,
+            Key: {
+                id: 'SYSTEM',
+                sk: promotionId,
+            },
+        });
+
+        await dynamoDb.send(deleteCmd);
+        res.json({ message: 'Promoção excluída com sucesso' });
+    } catch (err) {
+        console.error('Erro ao excluir promoção:', err);
+        res.status(500).json({ message: 'Erro interno do servidor' });
     }
 });
 

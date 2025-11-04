@@ -299,10 +299,12 @@ exports.generateReport = async (event) => {
   let invoiceId = null;
   const hasActivePlan = config?.subscriptionStatus === 'active';
 
-  // Criar a Fatura (Invoice) no Stripe para a comissão de 30% apenas se NÃO for plano Pro
+  // Criar a Fatura (Invoice) no Stripe para a comissão configurável apenas se NÃO for plano Pro
   if (!hasActivePlan) {
     try {
-      const commissionAmount = Math.round(credit * 0.30 * 100); // Em centavos (30% de comissão)
+      // TODO: Buscar taxa de comissão do DynamoDB SYSTEM#SETTINGS
+      const commissionRate = 0.30; // Valor padrão até implementação
+      const commissionAmount = Math.round(credit * commissionRate * 100); // Em centavos
       
       if (commissionAmount > 50) { // Stripe tem um valor mínimo de cobrança (ex: $0.50)
         // Obter ou criar o ID do cliente no Stripe
@@ -328,7 +330,7 @@ exports.generateReport = async (event) => {
           customer: stripeCustomerId,
           amount: commissionAmount,
           currency: 'usd',
-          description: `Comissão de 30% sobre crédito SLA de $${credit.toFixed(2)} (Incidente: ${incidentId})`,
+          description: `Comissão de ${(commissionRate * 100).toFixed(0)}% sobre crédito SLA de $${credit.toFixed(2)} (Incidente: ${incidentId})`,
         });
 
         // Criar e finalizar a fatura
@@ -387,7 +389,7 @@ exports.generateReport = async (event) => {
   //       customer: stripeCustomerId, // Usa o ID correto do Stripe
   //       amount: commissionAmount,
   //       currency: 'usd',
-  //       description: `Comissão de 30% sobre crédito SLA de $${credit.toFixed(2)} (Incidente: ${incidentId})`,
+  //       description: `Comissão de ${(commissionRate * 100).toFixed(0)}% sobre crédito SLA de $${credit.toFixed(2)} (Incidente: ${incidentId})`,
   //     });
 
   //     // Etapa 2: Criar a fatura a partir do item e finalizá-la

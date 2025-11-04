@@ -239,6 +239,13 @@ export class CostGuardianStack extends cdk.Stack {
       nonKeyAttributes: ['id'],
     });
 
+    // GSI para Stripe customer lookup (webhooks)
+    table.addGlobalSecondaryIndex({
+      indexName: 'StripeCustomerIndex',
+      partitionKey: { name: 'stripeCustomerId', type: dynamodb.AttributeType.STRING },
+      projectionType: dynamodb.ProjectionType.KEYS_ONLY,
+    });
+
     // RecommendationsIndex removido - era redundante com CustomerDataIndex
 
     // S3 Bucket para hospedar o template do CloudFormation

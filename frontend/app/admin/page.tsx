@@ -2,11 +2,15 @@
 
 import { useEffect, useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
 import { PageAnimator } from '@/components/layout/PageAnimator';
-import { ProtectedRoute } from '@/components/auth/ProtectedRoute';
+import { AdminRoute } from '@/components/auth/AdminRoute';
 import { apiFetch } from '@/lib/api';
-import { Users, TrendingUp, DollarSign, Activity, AlertCircle } from 'lucide-react';
+import { Users, TrendingUp, DollarSign, Activity, AlertCircle, Settings, Tag, Gift, Trash2, Plus } from 'lucide-react';
 import { toast } from 'sonner';
 
 interface AdminMetrics {
@@ -38,12 +42,70 @@ interface AdminMetrics {
   };
 }
 
+interface AdminSettings {
+  commissionRate: number;
+  updatedAt?: string;
+  updatedBy?: string;
+}
+
+interface Coupon {
+  code: string;
+  discountType: 'percentage' | 'fixed';
+  discountValue: number;
+  validUntil: string;
+  maxUses?: number;
+  usedCount: number;
+  description: string;
+  active: boolean;
+  createdAt: string;
+}
+
+interface Promotion {
+  name: string;
+  discountType: 'percentage' | 'fixed';
+  discountValue: number;
+  validUntil: string;
+  targetCustomers: 'all' | 'trial' | 'active';
+  description: string;
+  active: boolean;
+  createdAt: string;
+  sk?: string; // DynamoDB sort key
+}
+
 function AdminContent() {
   const [metrics, setMetrics] = useState<AdminMetrics | null>(null);
   const [loading, setLoading] = useState(true);
 
+  // Settings state
+  const [settings, setSettings] = useState<AdminSettings>({ commissionRate: 0.30 });
+  const [coupons, setCoupons] = useState<Coupon[]>([]);
+  const [promotions, setPromotions] = useState<Promotion[]>([]);
+  const [settingsLoading, setSettingsLoading] = useState(false);
+
+
+
+  // Form states
+  const [commissionRateInput, setCommissionRateInput] = useState('30');
+  const [newCoupon, setNewCoupon] = useState({
+    code: '',
+    discountType: 'percentage' as 'percentage' | 'fixed',
+    discountValue: '',
+    validUntil: '',
+    maxUses: '',
+    description: ''
+  });
+  const [newPromotion, setNewPromotion] = useState({
+    name: '',
+    discountType: 'percentage' as 'percentage' | 'fixed',
+    discountValue: '',
+    validUntil: '',
+    targetCustomers: 'all' as 'all' | 'trial' | 'active',
+    description: ''
+  });
+
   useEffect(() => {
     loadMetrics();
+    loadSettings();
   }, []);
 
   const loadMetrics = async () => {
@@ -59,20 +121,145 @@ function AdminContent() {
     }
   };
 
+  const loadSettings = async () => {
+    try {
+      const data = await apiFetch('/api/admin/settings');
+      setSettings(data.settings);
+      setCoupons(data.coupons);
+      setPromotions(data.promotions);
+      setCommissionRateInput((data.settings.commissionRate * 100).toString());
+    } catch (err: any) {
+      console.error('Erro ao carregar configurações:', err);
+      toast.error('Erro ao carregar configurações');
+    }
+  };
+
+  const updateCommissionRate = async () => {
+    try {
+      setSettingsLoading(true);
+      const rate = parseFloat(commissionRateInput) / 100;
+      if (isNaN(rate) || rate < 0 || rate > 1) {
+        toast.error('Taxa deve ser entre 0 e 100');
+        return;
+      }
+
+      await apiFetch('/api/admin/settings', {
+        method: 'PUT',
+        body: JSON.stringify({ commissionRate: rate })
+      });
+
+      toast.success('Taxa de comissão atualizada');
+      loadSettings();
+    } catch (err: any) {
+      console.error('Erro ao atualizar comissão:', err);
+      toast.error('Erro ao atualizar taxa de comissão');
+    } finally {
+      setSettingsLoading(false);
+    }
+  };
+
+  const createCoupon = async () => {
+    try {
+      await apiFetch('/api/admin/coupons', {
+        method: 'POST',
+        body: JSON.stringify({
+          ...newCoupon,
+          discountValue: parseFloat(newCoupon.discountValue),
+          maxUses: newCoupon.maxUses ? parseInt(newCoupon.maxUses) : undefined
+        })
+      });
+
+      toast.success('Cupom criado com sucesso');
+      setNewCoupon({
+        code: '',
+        discountType: 'percentage',
+        discountValue: '',
+        validUntil: '',
+        maxUses: '',
+        description: ''
+      });
+      loadSettings();
+    } catch (err: any) {
+      console.error('Erro ao criar cupom:', err);
+      toast.error(err.message || 'Erro ao criar cupom');
+    }
+  };
+
+  const deleteCoupon = async (code: string) => {
+    if (!confirm('Tem certeza que deseja excluir este cupom?')) return;
+
+    try {
+      await apiFetch(`/api/admin/coupons/${code}`, {
+        method: 'DELETE'
+      });
+
+      toast.success('Cupom excluído');
+      loadSettings();
+    } catch (err: any) {
+      console.error('Erro ao excluir cupom:', err);
+      toast.error('Erro ao excluir cupom');
+    }
+  };
+
+  const createPromotion = async () => {
+    try {
+      await apiFetch('/api/admin/promotions', {
+        method: 'POST',
+        body: JSON.stringify({
+          ...newPromotion,
+          discountValue: parseFloat(newPromotion.discountValue)
+        })
+      });
+
+      toast.success('Promoção criada com sucesso');
+      setNewPromotion({
+        name: '',
+        discountType: 'percentage',
+        discountValue: '',
+        validUntil: '',
+        targetCustomers: 'all',
+        description: ''
+      });
+      loadSettings();
+    } catch (err: any) {
+      console.error('Erro ao criar promoção:', err);
+      toast.error(err.message || 'Erro ao criar promoção');
+    }
+  };
+
+  const deletePromotion = async (promotion: Promotion) => {
+    if (!confirm('Tem certeza que deseja excluir esta promoção?')) return;
+
+    try {
+      // Usar createdAt como identificador único (timestamp)
+      const id = new Date(promotion.createdAt).getTime().toString();
+
+      await apiFetch(`/api/admin/promotions/${id}`, {
+        method: 'DELETE'
+      });
+
+      toast.success('Promoção excluída');
+      loadSettings();
+    } catch (err: any) {
+      console.error('Erro ao excluir promoção:', err);
+      toast.error('Erro ao excluir promoção');
+    }
+  };
+
   if (loading) {
     return (
-      <ProtectedRoute>
+      <AdminRoute>
         <PageAnimator>
           <div className="flex justify-center py-12">
             <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
           </div>
         </PageAnimator>
-      </ProtectedRoute>
+      </AdminRoute>
     );
   }
 
   return (
-    <ProtectedRoute>
+    <AdminRoute>
       <PageAnimator>
         <div className="space-y-6">
         {/* KPIs Principais */}
@@ -229,16 +416,220 @@ function AdminContent() {
             </CardContent>
           </Card>
         )}
+
+        {/* Configurações do Sistema */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Settings className="w-5 h-5" />
+              Configurações do Sistema
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-6">
+            {/* Taxa de Comissão */}
+            <div className="space-y-2">
+              <Label htmlFor="commissionRate">Taxa de Comissão (%)</Label>
+              <div className="flex gap-2">
+                <Input
+                  id="commissionRate"
+                  type="number"
+                  min="0"
+                  max="100"
+                  step="0.1"
+                  value={commissionRateInput}
+                  onChange={(e) => setCommissionRateInput(e.target.value)}
+                  placeholder="30"
+                />
+                <Button
+                  onClick={updateCommissionRate}
+                  disabled={settingsLoading}
+                >
+                  {settingsLoading ? 'Salvando...' : 'Atualizar'}
+                </Button>
+              </div>
+              <p className="text-sm text-muted-foreground">
+                Taxa atual: {(settings.commissionRate * 100).toFixed(1)}%
+                {settings.updatedAt && ` (atualizado em ${new Date(settings.updatedAt).toLocaleString()})`}
+              </p>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Cupons de Desconto */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Tag className="w-5 h-5" />
+              Cupons de Desconto
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <Input
+                placeholder="Código do cupom"
+                value={newCoupon.code}
+                onChange={(e) => setNewCoupon({...newCoupon, code: e.target.value.toUpperCase()})}
+              />
+              <Select value={newCoupon.discountType} onValueChange={(value) => setNewCoupon({...newCoupon, discountType: value as 'percentage' | 'fixed'})}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="percentage">Porcentagem</SelectItem>
+                  <SelectItem value="fixed">Valor Fixo</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <Input
+                type="number"
+                placeholder="Valor"
+                value={newCoupon.discountValue}
+                onChange={(e) => setNewCoupon({...newCoupon, discountValue: e.target.value})}
+              />
+              <Input
+                type="datetime-local"
+                value={newCoupon.validUntil}
+                onChange={(e) => setNewCoupon({...newCoupon, validUntil: e.target.value})}
+              />
+              <Input
+                placeholder="Descrição"
+                value={newCoupon.description}
+                onChange={(e) => setNewCoupon({...newCoupon, description: e.target.value})}
+              />
+            </div>
+            <Button onClick={createCoupon}>
+              <Plus className="w-4 h-4 mr-2" />
+              Criar Cupom
+            </Button>
+
+            <div className="mt-6">
+              <h4 className="font-medium mb-3">Cupons Ativos</h4>
+              <div className="space-y-2">
+                {coupons.map((coupon) => (
+                  <div key={coupon.code} className="flex items-center justify-between p-3 border rounded">
+                    <div>
+                      <span className="font-medium">{coupon.code}</span>
+                      <span className="ml-2 text-sm text-muted-foreground">
+                        {coupon.discountValue}{coupon.discountType === 'percentage' ? '%' : '$'}
+                      </span>
+                    </div>
+                    <Button
+                      variant="destructive"
+                      size="sm"
+                      onClick={() => deleteCoupon(coupon.code)}
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </Button>
+                  </div>
+                ))}
+                {coupons.length === 0 && (
+                  <p className="text-center text-muted-foreground py-4">
+                    Nenhum cupom criado ainda
+                  </p>
+                )}
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Promoções */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Gift className="w-5 h-5" />
+              Promoções
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <Input
+                placeholder="Nome da promoção"
+                value={newPromotion.name}
+                onChange={(e) => setNewPromotion({...newPromotion, name: e.target.value})}
+              />
+              <Select value={newPromotion.discountType} onValueChange={(value) => setNewPromotion({...newPromotion, discountType: value as 'percentage' | 'fixed'})}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="percentage">Porcentagem</SelectItem>
+                  <SelectItem value="fixed">Valor Fixo</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <Input
+                type="number"
+                placeholder="Valor"
+                value={newPromotion.discountValue}
+                onChange={(e) => setNewPromotion({...newPromotion, discountValue: e.target.value})}
+              />
+              <Input
+                type="datetime-local"
+                value={newPromotion.validUntil}
+                onChange={(e) => setNewPromotion({...newPromotion, validUntil: e.target.value})}
+              />
+              <Select value={newPromotion.targetCustomers} onValueChange={(value) => setNewPromotion({...newPromotion, targetCustomers: value as 'all' | 'trial' | 'active'})}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Todos</SelectItem>
+                  <SelectItem value="trial">Apenas Trial</SelectItem>
+                  <SelectItem value="active">Apenas Active</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <Input
+              placeholder="Descrição"
+              value={newPromotion.description}
+              onChange={(e) => setNewPromotion({...newPromotion, description: e.target.value})}
+            />
+            <Button onClick={createPromotion}>
+              <Plus className="w-4 h-4 mr-2" />
+              Criar Promoção
+            </Button>
+
+            <div className="mt-6">
+              <h4 className="font-medium mb-3">Promoções Ativas</h4>
+              <div className="space-y-2">
+                {promotions.map((promotion, index) => (
+                  <div key={index} className="flex items-center justify-between p-3 border rounded">
+                    <div>
+                      <span className="font-medium">{promotion.name}</span>
+                      <span className="ml-2 text-sm text-muted-foreground">
+                        {promotion.discountValue}{promotion.discountType === 'percentage' ? '%' : '$'}
+                      </span>
+                    </div>
+                    <Button
+                      variant="destructive"
+                      size="sm"
+                      onClick={() => deletePromotion(promotion)}
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </Button>
+                  </div>
+                ))}
+                {promotions.length === 0 && (
+                  <p className="text-center text-muted-foreground py-4">
+                    Nenhuma promoção criada ainda
+                  </p>
+                )}
+              </div>
+            </div>
+          </CardContent>
+        </Card>
       </div>
       </PageAnimator>
-    </ProtectedRoute>
+    </AdminRoute>
   );
 }
 
 export default function AdminPage() {
   return (
-    <ProtectedRoute>
+    <AdminRoute>
       <AdminContent />
-    </ProtectedRoute>
+    </AdminRoute>
   );
 }

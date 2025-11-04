@@ -10,6 +10,24 @@ const sts = new STSClient({});
 
 const DYNAMODB_TABLE = process.env.DYNAMODB_TABLE;
 
+// Helper function to get commission rate from settings
+const getCommissionRate = async () => {
+    try {
+        const settingsCmd = new GetCommand({
+            TableName: DYNAMODB_TABLE,
+            Key: {
+                id: 'SYSTEM',
+                sk: 'SETTINGS',
+            },
+        });
+        const settingsResult = await dynamoDb.send(settingsCmd);
+        return settingsResult.Item?.commissionRate || 0.30; // Default 30%
+    } catch (err) {
+        console.error('Erro ao buscar taxa de comissão:', err);
+        return 0.30; // Fallback
+    }
+};
+
 async function getAssumedClients(roleArn, externalId, region = 'us-east-1') {
   if (!externalId) throw new Error('ExternalId is required for AssumeRole');
   try {
@@ -242,10 +260,14 @@ async function trackSavings(customerId, monthKey, savingType, amount, recommenda
           '#key': breakdownKey,
           '#items': 'items'
         },
+        // Get dynamic commission rate
+        const commissionRate = await getCommissionRate();
+        const totalCommission = newTotal * commissionRate;
+
         ExpressionAttributeValues: {
           ':newTotal': newTotal,
           ':newBreakdown': (currentBreakdown[breakdownKey] || 0) + amount,
-          ':commission': newTotal * 0.30,
+          ':commission': totalCommission,
           ':now': new Date().toISOString(),
           ':emptyList': [],
           ':newItem': [{
@@ -271,8 +293,8 @@ async function trackSavings(customerId, monthKey, savingType, amount, recommenda
           automated: amount,
           manual: 0
         },
-        commission: amount * 0.30,
-        commissionRate: 0.30,
+        commission: amount * commissionRate,
+        commissionRate: commissionRate,
         items: [{
           type: savingType,
           recommendationId: recommendationId,

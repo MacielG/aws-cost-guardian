@@ -6,10 +6,11 @@ import { apiClient } from '@/lib/api';
 import { useNotify } from '@/hooks/useNotify';
 import { PageHeader } from '@/components/layout/PageHeader';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import AnimatedCounter from '@/components/ui/AnimatedCounter';
-import { DollarSign, TrendingUp, ShieldCheck, Info } from 'lucide-react';
+import { DollarSign, TrendingUp, ShieldCheck, Info, Crown, ExternalLink, CheckCircle } from 'lucide-react';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 
 
@@ -52,6 +53,40 @@ export default function BillingPage() {
     };
     fetchData();
   }, [notify]);
+
+  const handleUpgrade = async (priceId: string) => {
+    try {
+      const response = await apiClient.post('/api/create-checkout-session', {
+        priceId,
+        successUrl: `${window.location.origin}/dashboard?upgrade=success`,
+        cancelUrl: `${window.location.origin}/billing?canceled=true`
+      });
+
+      if (response.data?.url) {
+        window.location.href = response.data.url;
+      } else {
+        notify.error('Erro ao iniciar checkout');
+      }
+    } catch (error) {
+      console.error('Erro no upgrade:', error);
+      notify.error('Erro ao processar upgrade. Tente novamente.');
+    }
+  };
+
+  const handleCustomerPortal = async () => {
+    try {
+      const response = await apiClient.get('/api/customer-portal');
+
+      if (response.data?.url) {
+        window.open(response.data.url, '_blank');
+      } else {
+        notify.error('Erro ao abrir portal de pagamentos');
+      }
+    } catch (error) {
+      console.error('Erro no portal:', error);
+      notify.error('Erro ao acessar portal de pagamentos');
+    }
+  };
 
   if (loading) {
     return (
@@ -169,6 +204,81 @@ export default function BillingPage() {
               )}
             </TableBody>
           </Table>
+        </CardContent>
+      </Card>
+
+      {/* Upgrade e Gerenciamento de Pagamentos */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Crown className="w-5 h-5" />
+            Plano e Pagamentos
+          </CardTitle>
+          <CardDescription>
+            Gerencie sua assinatura e métodos de pagamento
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="flex items-center justify-between p-4 border rounded-lg">
+            <div>
+              <h3 className="font-medium">Plano Atual</h3>
+              <p className="text-sm text-muted-foreground">
+                Trial Gratuito - Acesso limitado a recomendações
+              </p>
+            </div>
+            <Badge variant="outline">TRIAL</Badge>
+          </div>
+
+          <div className="border-t pt-4">
+            <h3 className="font-medium mb-3">Upgrade para Active</h3>
+            <div className="grid md:grid-cols-2 gap-4">
+              <Card className="border-primary">
+                <CardHeader>
+                  <CardTitle className="text-lg">Plano Professional</CardTitle>
+                  <CardDescription>$99/mês</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <ul className="space-y-2 text-sm">
+                    <li className="flex items-center gap-2">
+                      <CheckCircle className="w-4 h-4 text-green-500" />
+                      Recomendações ilimitadas
+                    </li>
+                    <li className="flex items-center gap-2">
+                      <CheckCircle className="w-4 h-4 text-green-500" />
+                      Execução automática
+                    </li>
+                    <li className="flex items-center gap-2">
+                      <CheckCircle className="w-4 h-4 text-green-500" />
+                      SLA Claims prioritários
+                    </li>
+                    <li className="flex items-center gap-2">
+                      <CheckCircle className="w-4 h-4 text-green-500" />
+                      Suporte premium
+                    </li>
+                  </ul>
+                  <Button className="w-full mt-4" onClick={() => handleUpgrade('price_123456789')}>
+                    Upgrade Now
+                  </Button>
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardHeader>
+                  <CardTitle className="text-lg">Gerenciar Pagamentos</CardTitle>
+                  <CardDescription>Stripe Customer Portal</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <p className="text-sm text-muted-foreground mb-4">
+                    Atualize cartão de crédito, veja faturas, cancele assinatura
+                  </p>
+                  <Button variant="outline" className="w-full" onClick={handleCustomerPortal}>
+                    <ExternalLink className="w-4 h-4 mr-2" />
+                    Abrir Portal de Pagamentos
+                  </Button>
+                </CardContent>
+              </Card>
+            </div>
+          </div>
         </CardContent>
       </Card>
     </>
