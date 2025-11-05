@@ -10,8 +10,8 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Cloud, CheckCircle, ArrowRight, FileText, ShieldCheck, BarChart2 } from 'lucide-react';
 import { useAuth } from '@/components/auth/AuthProvider';
-// utilitário para juntar URLs de forma segura
-const { joinUrl } = require('@/lib/url');
+import { apiClient } from '@/lib/api';
+import { joinUrl } from '@/lib/url';
 
 const steps = [
   {
@@ -45,7 +45,7 @@ export default function Onboard() {
     const router = useRouter();
     const searchParams = useSearchParams();
     const mode = searchParams.get('mode');
-    const { user, session } = useAuth();
+    const { user } = useAuth();
 
     const handleNext = () => {
         setStep((prev) => Math.min(prev + 1, steps.length + 1));
@@ -53,60 +53,40 @@ export default function Onboard() {
 
     const checkOnboardingStatus = useCallback(async (signal?: AbortSignal) => {
         try {
-            const headers: Record<string, string> = {};
-            if (user && session?.tokens?.idToken) {
-                headers['Authorization'] = `Bearer ${session.tokens.idToken.toString()}`;
+            const config = await apiClient.get('/onboard-init', { signal });
+            // Se o usuário ainda não aceitou os termos, redireciona para a página de termos
+            if (config.termsAccepted === false) {
+                router.push('/terms');
+                return;
             }
-            const response = await fetch('/api/onboard-init', { signal, headers }); // Este endpoint agora retorna o status
-            if (response.ok) {
-                const config = await response.json();
-                // Se o usuário ainda não aceitou os termos, redireciona para a página de termos
-                if (config.termsAccepted === false) {
-                    router.push('/terms');
-                    return;
-                }
-                setOnboardingStatus(config.status);
-                if (config.status === 'COMPLETED') {
-                    router.push('/dashboard');
-                }
+            setOnboardingStatus(config.status);
+            if (config.status === 'COMPLETED') {
+                router.push('/dashboard');
             }
         } catch (e: any) {
             if (e.name === 'AbortError') return;
+            console.error('Erro ao verificar status de onboarding:', e.message);
         }
-    }, [router, user, session]);
+    }, [router]);
 
     const fetchOnboardConfig = useCallback(async (signal?: AbortSignal) => {
         setLoading(true);
         const query = mode ? `?mode=${mode}` : '';
         try {
-            const headers: Record<string, string> = {};
-            if (user && session?.tokens?.idToken) {
-                headers['Authorization'] = `Bearer ${session.tokens.idToken.toString()}`;
-            }
-            const response = await fetch(`/api/onboard-init${query}`, {
-                signal,
-                headers,
-            });
-
-            if (response.ok) {
-                const config = await response.json();
-                // Constrói o link do CloudFormation dinamicamente
-                const templateUrl = config.templateUrl || process.env.NEXT_PUBLIC_CFN_TEMPLATE_URL;
-                setOnboardingStatus(config.status);
-                const callbackUrl = joinUrl(process.env.NEXT_PUBLIC_API_URL || '', 'onboard');
-                const link = `https://console.aws.amazon.com/cloudformation/home?region=us-east-1#/stacks/create/review?templateURL=${templateUrl}&stackName=CostGuardianStack&param_ExternalId=${config.externalId}&param_PlatformAccountId=${config.platformAccountId}&param_CallbackUrl=${encodeURIComponent(callbackUrl)}`;
-                setCfnLink(link);
-            } else {
-                notify.error('Erro ao buscar configuração de onboarding.');
-                console.error('Erro ao buscar configuração de onboarding.'); // Adicionado para o teste
-            }
+            const config = await apiClient.get(`/onboard-init${query}`, { signal });
+            // Constrói o link do CloudFormation dinamicamente
+            const templateUrl = config.templateUrl || process.env.NEXT_PUBLIC_CFN_TEMPLATE_URL;
+            setOnboardingStatus(config.status);
+            const callbackUrl = joinUrl(process.env.NEXT_PUBLIC_API_URL || '', 'onboard');
+            const link = `https://console.aws.amazon.com/cloudformation/home?region=us-east-1#/stacks/create/review?templateURL=${templateUrl}&stackName=CostGuardianStack&param_ExternalId=${config.externalId}&param_PlatformAccountId=${config.platformAccountId}&param_CallbackUrl=${encodeURIComponent(callbackUrl)}`;
+            setCfnLink(link);
         } catch (e: any) {
             if (e.name === 'AbortError') return;
             notify.error('Erro ao buscar configuração de onboarding.');
-            console.error('Erro ao buscar configuração de onboarding.'); // Adicionado para o teste
+            console.error('Erro ao buscar configuração de onboarding:', e.message);
         }
         setLoading(false);
-    }, [mode, notify, user, session]);
+    }, [mode, notify]);
 
     // Buscar o ExternalId seguro no backend
     useEffect(() => {
