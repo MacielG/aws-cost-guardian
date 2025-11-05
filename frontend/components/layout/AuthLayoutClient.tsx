@@ -2,12 +2,10 @@
 
 import React from "react";
 import { useAuth } from "@/components/auth/AuthProvider";
-import { useAuthenticator } from "@aws-amplify/ui-react";
 import AppLayout from "./AppLayout";
 
 export default function AuthLayoutClient({ children }: { children: React.ReactNode }) {
   const { user, isLoadingAuth } = useAuth();
-  const { authStatus } = useAuthenticator((context) => [context.authStatus]);
 
   if (isLoadingAuth) {
     return (
