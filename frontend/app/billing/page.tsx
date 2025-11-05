@@ -23,7 +23,7 @@ const StatCard = ({ title, value, icon: Icon, color, prefix = "R$ ", decimals = 
     </CardHeader>
     <CardContent>
       <div className="text-2xl font-bold">
-        <AnimatedCounter value={value} formatValue={(v) => `${prefix}${v.toFixed(decimals)}`} />
+        {prefix}{value.toFixed(decimals)}
       </div>
     </CardContent>
   </Card>
@@ -52,7 +52,7 @@ export default function BillingPage() {
       }
     };
     fetchData();
-  }, [notify]);
+  }, []);
 
   const handleUpgrade = async (priceId: string) => {
     try {

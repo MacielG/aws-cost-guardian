@@ -30,14 +30,14 @@ const StatCard = ({ title, value, icon: Icon, color, prefix = "R$ ", decimals = 
   <Card>
     <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
       <CardTitle className="text-sm font-medium text-muted-foreground">{title}</CardTitle>
-      <Icon className={`w-5 h-5 ${color}`} />
-    </CardHeader>
-    <CardContent>
+    <Icon className={`w-5 h-5 ${color}`} />
+</CardHeader>
+  <CardContent>
       <div className="text-2xl font-bold">
-        <AnimatedCounter value={value} formatValue={(v) => `${prefix}${v.toFixed(decimals)}`} />
+      {prefix}{value.toFixed(decimals)}
       </div>
-    </CardContent>
-  </Card>
+</CardContent>
+</Card>
 );
 
 const DashboardSkeleton = () => (

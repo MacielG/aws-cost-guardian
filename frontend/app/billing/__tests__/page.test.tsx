@@ -105,13 +105,11 @@ const TestWrapper: React.FC<{ children: React.ReactNode }> = ({ children }) => (
 
 describe('BillingPage', () => {
   const mockSummary = {
-    summary: {
-      totalValue: 1500.50,
-      yourSavings: 1050.35,
-      ourCommission: 450.15,
-      recommendations: { executed: 12 },
-      sla: { totalCredits: 300.00 },
-    },
+  totalValue: 1500.50,
+  yourSavings: 1050.35,
+  ourCommission: 450.15,
+  recommendations: { executed: 12 },
+  sla: { totalCredits: 300.00 },
   };
 
   const mockHistory = {
@@ -462,13 +460,11 @@ describe('BillingPage', () => {
 
     test('handles API response structure variations', async () => {
       const minimalSummary = {
-        summary: {
-          totalValue: 100,
-          yourSavings: 70,
-          ourCommission: 30,
-          recommendations: { executed: 1 },
-          sla: { totalCredits: 0 },
-        },
+      totalValue: 100,
+      yourSavings: 70,
+      ourCommission: 30,
+      recommendations: { executed: 1 },
+      sla: { totalCredits: 0 },
       };
 
       const emptyHistory = { history: null };

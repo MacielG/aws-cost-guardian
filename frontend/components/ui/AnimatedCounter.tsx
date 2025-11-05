@@ -16,56 +16,35 @@ interface AnimatedCounterProps {
 }
 
 const AnimatedCounter = ({
-  value,
-  animationOptions,
-  formatValue,
-  className,
+value,
+animationOptions,
+formatValue,
+className,
 }: AnimatedCounterProps) => {
-  const [isMounted, setIsMounted] = useState(false);
+const [displayValue, setDisplayValue] = useState(() =>
+    formatValue ? formatValue(0) : '0'
+);
 
-  /* CORREÇÃO: Mova todas as chamadas de Hooks (useSpring, useTransform, useEffect)
-    para o topo do componente, ANTES do 'return' condicional.
-  */
+useEffect(() => {
   const spring = useSpring(0, {
-    to: value,
-    mass: 1,
-    tension: 20,
-    friction: 10,
-    ...animationOptions,
+  to: value,
+  mass: 1,
+  tension: 20,
+  friction: 10,
+  ...animationOptions,
   });
 
-  const displayValue = useTransform(spring, (currentValue) => {
-    return formatValue
-      ? formatValue(currentValue)
-      : Math.round(currentValue).toLocaleString();
-  });
+  const unsubscribe = spring.onChange((currentValue) => {
+  const formatted = formatValue
+  ? formatValue(currentValue)
+  : Math.round(currentValue).toLocaleString();
+    setDisplayValue(formatted);
+    });
 
-  useEffect(() => {
-    setIsMounted(true);
-  }, []);
+return unsubscribe;
+}, [value, formatValue, animationOptions]);
 
-  useEffect(() => {
-    const controls = animate(spring, value);
-    return () => controls.stop();
-  }, [value, spring]);
-
-
-  /* Agora o 'return' condicional pode ser usado sem problemas */
-  if (!isMounted) {
-    /* Opcionalmente, você pode querer que o valor inicial seja formatado 
-      mesmo antes da montagem, se 'formatValue' for fornecido.
-    */
-    const initialDisplay = formatValue
-      ? formatValue(value)
-      : value.toLocaleString();
-    return <span className={className}>{initialDisplay}</span>;
-  }
-
-  return (
-    <motion.span className={className} {...animationOptions}>
-      {displayValue}
-    </motion.span>
-  );
+return <span className={className}>{displayValue}</span>;
 };
 
 export default AnimatedCounter;
