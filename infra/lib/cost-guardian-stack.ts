@@ -146,19 +146,26 @@ export class CostGuardianStack extends cdk.Stack {
 
 
 
-    // DynamoDB (Mantido, mas adicionando stream para eficiência futura)
+    // Enhanced DynamoDB with production optimizations
     const table = new dynamodb.Table(this, 'CostGuardianTable', {
       tableName: 'CostGuardianTable',
-      partitionKey: { name: 'id', type: dynamodb.AttributeType.STRING }, // Chave primária para usuários, claims, etc.
-      sortKey: { name: 'sk', type: dynamodb.AttributeType.STRING }, // Chave de classificação para modelagem flexível
+      partitionKey: { name: 'id', type: dynamodb.AttributeType.STRING },
+      sortKey: { name: 'sk', type: dynamodb.AttributeType.STRING },
       billingMode: dynamodb.BillingMode.PAY_PER_REQUEST,
-      removalPolicy: cdk.RemovalPolicy.DESTROY,
-      stream: dynamodb.StreamViewType.NEW_AND_OLD_IMAGES, // Habilitar stream
+      removalPolicy: props.isTestEnvironment ? cdk.RemovalPolicy.DESTROY : cdk.RemovalPolicy.RETAIN,
+      stream: dynamodb.StreamViewType.NEW_AND_OLD_IMAGES,
       pointInTimeRecoverySpecification: {
-        pointInTimeRecoveryEnabled: true
+        pointInTimeRecoveryEnabled: !props.isTestEnvironment // PITR apenas em produção
       },
-      encryption: dynamodb.TableEncryption.CUSTOMER_MANAGED, // Usar KMS para maior segurança (Task 3)
+      encryption: dynamodb.TableEncryption.CUSTOMER_MANAGED,
       encryptionKey: dynamoKmsKey,
+      // Enhanced configuration for production
+      ...(props.isTestEnvironment ? {} : {
+        contributorInsightsSpecification: {
+          enabled: true // Contributor Insights para análise de performance
+        },
+        tableClass: dynamodb.TableClass.STANDARD_INFREQUENT_ACCESS, // Otimização de custos para tabelas com acesso esporádico
+      })
     });
 
     // Adicionar tags à tabela DynamoDB usando addPropertyOverride
@@ -410,16 +417,15 @@ export class CostGuardianStack extends cdk.Stack {
       const { NodejsFunction } = require('aws-cdk-lib/aws-lambda-nodejs');
       apiHandlerLambda = new NodejsFunction(this, 'ApiHandler', {
         entry: path.join(backendPath, 'handler.js'),
-        handler: 'app', // export do express + serverless é exposto como 'app' no handler.js
+        handler: 'app',
         runtime: lambda.Runtime.NODEJS_18_X,
         bundling: {
           externalModules: [], // Bundla tudo (inclui @aws-sdk v3)
-          minify: false,
+          minify: true, // Minificar para produção
           sourceMap: true,
-          // opcional: usar depsLockFilePath se fornecido
           depsLockFilePath: props.depsLockFilePath,
         },
-  memorySize: 1024,
+        memorySize: 2048, // Aumentado para melhor performance
         timeout: cdk.Duration.seconds(29),
         environment: {
           LOG_LEVEL: props.isTestEnvironment ? 'DEBUG' : 'INFO',
@@ -431,10 +437,47 @@ export class CostGuardianStack extends cdk.Stack {
           PLATFORM_ACCOUNT_ID: this.account || process.env.CDK_DEFAULT_ACCOUNT,
           TRIAL_TEMPLATE_URL: trialTemplateUrl,
           FULL_TEMPLATE_URL: fullTemplateUrl,
+          // Performance optimization
+          NODE_OPTIONS: '--enable-source-maps',
+          AWS_XRAY_TRACING_MODE: 'ACTIVE',
         },
         reservedConcurrentExecutions: 0,
-
+        // Provisioned concurrency para reduzir cold starts (apenas em produção)
+        ...(props.isTestEnvironment ? {} : {
+          provisionedConcurrentExecutions: 2,
+        }),
+        // Enable X-Ray tracing
+        tracing: lambda.Tracing.ACTIVE,
       });
+
+      // Auto-scaling baseado em utilização (apenas em produção)
+      if (!props.isTestEnvironment) {
+        const alias = new lambda.Alias(this, 'ApiHandlerAlias', {
+          aliasName: 'live',
+          version: apiHandlerLambda.currentVersion,
+          provisionedConcurrentExecutions: 2,
+        });
+
+        // Target tracking scaling
+        const scaling = alias.addAutoScaling({
+          minCapacity: 2,
+          maxCapacity: 20,
+        });
+
+        scaling.scaleOnUtilization({
+          utilizationTarget: 0.7, // 70% utilization
+        });
+
+        scaling.scaleOnSchedule('ScaleUpMorning', {
+          schedule: events.Schedule.cron({ hour: '9', minute: '0' }),
+          minCapacity: 5,
+        });
+
+        scaling.scaleOnSchedule('ScaleDownEvening', {
+          schedule: events.Schedule.cron({ hour: '18', minute: '0' }),
+          maxCapacity: 10,
+        });
+      }
     }
 
     // Refinar permissões do ApiHandler para DynamoDB (Task 4)
@@ -1059,18 +1102,21 @@ export class CostGuardianStack extends cdk.Stack {
     // Permissão para o Lambda iniciar a State Machine
     sfn.grantStartExecution(healthEventHandlerLambda);
 
-    // API Gateway (Usando o 'apiHandlerLambda' correto)
+    // Enhanced API Gateway with performance optimizations
     const cloudwatch_actions = cdk.aws_cloudwatch_actions;
     const api = new apigw.RestApi(this, 'CostGuardianAPI', {
-      restApiName: 'CostGuardianApi', // Nome sem espaços para facilitar a correspondência
+      restApiName: 'CostGuardianApi',
+      description: 'Cost Guardian API Gateway',
       defaultCorsPreflightOptions: {
-      allowOrigins: [
-      'http://localhost:3000',
-      'http://127.0.0.1:3000',
-      'http://127.0.0.1:5500',
-        'https://awscostguardian.com',
-            'https://www.awscostguardian.com'
-          ],
+        allowOrigins: [
+          'http://localhost:3000',
+          'http://127.0.0.1:3000',
+          'http://127.0.0.1:5500',
+          'https://awscostguardian.com',
+          'https://www.awscostguardian.com',
+          props.isTestEnvironment ? undefined : `https://${domainName}`,
+          props.isTestEnvironment ? undefined : `https://www.${domainName}`
+        ].filter(Boolean),
         allowMethods: apigw.Cors.ALL_METHODS,
         allowHeaders: [
           'Content-Type',
@@ -1085,16 +1131,54 @@ export class CostGuardianStack extends cdk.Stack {
       },
       deployOptions: {
         tracingEnabled: true,
-        stageName: 'prod', // (Task 9)
-        throttlingRateLimit: 100, // (Task 9)
-        throttlingBurstLimit: 50, // (Task 9)
+        stageName: props.isTestEnvironment ? 'dev' : 'prod',
+        throttlingRateLimit: props.isTestEnvironment ? 1000 : 1000, // Aumentado para produção
+        throttlingBurstLimit: props.isTestEnvironment ? 500 : 2000, // Burst maior para produção
         methodOptions: {
-          '/*/*': { // Aplica a todos os métodos em todos os recursos
-            throttlingBurstLimit: 50, // (Task 9)
+          '/*/*': {
+            throttlingBurstLimit: props.isTestEnvironment ? 500 : 2000,
+            // Cache para endpoints GET públicos
+            cachingEnabled: true,
+            cacheTtl: cdk.Duration.minutes(5),
           },
         },
+        // Performance optimizations
+        dataTraceEnabled: !props.isTestEnvironment, // Logs detalhados apenas em dev
+        loggingLevel: props.isTestEnvironment ? apigw.MethodLoggingLevel.INFO : apigw.MethodLoggingLevel.ERROR,
+        metricsEnabled: true,
       },
-    }); // (Task 9)
+      // API Key for rate limiting (optional)
+      apiKeySourceType: apigw.ApiKeySourceType.HEADER,
+    });
+
+    // Create usage plan for better throttling control
+    if (!props.isTestEnvironment) {
+      const usagePlan = new apigw.UsagePlan(this, 'ApiUsagePlan', {
+        name: 'CostGuardianUsagePlan',
+        description: 'Usage plan for Cost Guardian API',
+        throttle: {
+          rateLimit: 1000,
+          burstLimit: 2000,
+        },
+        quota: {
+          limit: 1000000, // 1M requests per month
+          period: apigw.Period.MONTH,
+          offset: 0,
+        },
+      });
+
+      usagePlan.addApiStage({
+        stage: api.deploymentStage,
+      });
+
+      // API Key for monitoring
+      const apiKey = new apigw.ApiKey(this, 'CostGuardianApiKey', {
+        apiKeyName: 'CostGuardian-Key',
+        description: 'API Key for Cost Guardian',
+      });
+
+      usagePlan.addApiKey(apiKey);
+    }
 
     // GatewayResponses para adicionar CORS em erros 4xx/5xx
     // GatewayResponses removidos - CORS é tratado apenas pelo Express
@@ -1181,25 +1265,36 @@ export class CostGuardianStack extends cdk.Stack {
     });
 
     if (!props.isTestEnvironment) {
-      // CloudWatch Alarms para produção (Task 10)
+      // Enhanced CloudWatch Alarms para produção
       const alarmTopic = new sns.Topic(this, 'AlarmTopic', {
         displayName: 'CostGuardian Alarms',
+        topicName: 'CostGuardian-Alerts',
       });
 
+      // API Gateway Alarms
       const api5xxAlarm = new cloudwatch.Alarm(this, 'Api5xxAlarm', {
         metric: api.metricServerError(),
-        threshold: 5, // Ajustado para produção: alarme apenas se 5+ erros 5xx em 1 período
-        evaluationPeriods: 1,
-        alarmDescription: 'Alarm when API Gateway has 5+ 5XX errors',
+        threshold: 5,
+        evaluationPeriods: 2, // 2 períodos para reduzir falsos positivos
+        alarmDescription: 'Alarm when API Gateway has 5+ 5XX errors in 2 consecutive periods',
         actionsEnabled: true,
       });
       api5xxAlarm.addAlarmAction(new cloudwatch_actions.SnsAction(alarmTopic));
 
+      const api4xxAlarm = new cloudwatch.Alarm(this, 'Api4xxAlarm', {
+        metric: api.metricClientError(),
+        threshold: 50, // Alarme se muitos erros 4xx (possível ataque ou problema)
+        evaluationPeriods: 1,
+        alarmDescription: 'Alarm when API Gateway has high 4XX errors (>50)',
+        actionsEnabled: true,
+      });
+      api4xxAlarm.addAlarmAction(new cloudwatch_actions.SnsAction(alarmTopic));
+
       const apiLatencyAlarm = new cloudwatch.Alarm(this, 'ApiLatencyAlarm', {
         metric: api.metricLatency(),
-        threshold: 1000, // 1 segundo
-        evaluationPeriods: 1,
-        alarmDescription: 'Alarm when API Gateway latency is high (>1s)',
+        threshold: 2000, // 2 segundos - mais tolerante
+        evaluationPeriods: 2,
+        alarmDescription: 'Alarm when API Gateway latency is high (>2s for 2 periods)',
         actionsEnabled: true,
       });
       apiLatencyAlarm.addAlarmAction(new cloudwatch_actions.SnsAction(alarmTopic));
@@ -1213,12 +1308,101 @@ export class CostGuardianStack extends cdk.Stack {
             FunctionName: apiHandlerLambda.functionName,
           },
         }),
-        threshold: 3, // Ajustado para produção: alarme se 3+ erros Lambda em 1 período
-        evaluationPeriods: 1,
-        alarmDescription: 'Alarm when API Handler Lambda has 3+ errors',
+        threshold: 5,
+        evaluationPeriods: 2,
+        alarmDescription: 'Alarm when API Handler Lambda has 5+ errors in 2 periods',
         actionsEnabled: true,
       });
       apiHandlerErrors.addAlarmAction(new cloudwatch_actions.SnsAction(alarmTopic));
+
+      // Lambda Duration Alarm
+      const apiHandlerDuration = new cloudwatch.Alarm(this, 'ApiHandlerDuration', {
+        metric: new cloudwatch.Metric({
+          namespace: 'AWS/Lambda',
+          metricName: 'Duration',
+          dimensionsMap: {
+            FunctionName: apiHandlerLambda.functionName,
+          },
+        }),
+        threshold: 25000, // 25 segundos (próximo do limite de 29s)
+        evaluationPeriods: 1,
+        alarmDescription: 'Alarm when API Handler Lambda duration exceeds 25s',
+        actionsEnabled: true,
+        comparisonOperator: cloudwatch.ComparisonOperator.GREATER_THAN_THRESHOLD,
+      });
+      apiHandlerDuration.addAlarmAction(new cloudwatch_actions.SnsAction(alarmTopic));
+
+      // DynamoDB Throttling Alarm
+      const dynamoThrottleAlarm = new cloudwatch.Alarm(this, 'DynamoThrottleAlarm', {
+        metric: table.metricThrottledRequests(),
+        threshold: 10,
+        evaluationPeriods: 1,
+        alarmDescription: 'Alarm when DynamoDB has throttled requests',
+        actionsEnabled: true,
+      });
+      dynamoThrottleAlarm.addAlarmAction(new cloudwatch_actions.SnsAction(alarmTopic));
+
+      // Create Dashboard
+      const dashboard = new cloudwatch.Dashboard(this, 'CostGuardianDashboard', {
+        dashboardName: 'CostGuardian-Monitoring',
+      });
+
+      // API Metrics
+      dashboard.addWidgets(
+        new cloudwatch.GraphWidget({
+          title: 'API Gateway - Request Count',
+          left: [api.metricCount()],
+          width: 12,
+        }),
+        new cloudwatch.GraphWidget({
+          title: 'API Gateway - Error Rates',
+          left: [api.metricServerError(), api.metricClientError()],
+          width: 12,
+        }),
+        new cloudwatch.GraphWidget({
+          title: 'API Gateway - Latency',
+          left: [api.metricLatency()],
+          width: 12,
+        })
+      );
+
+      // Lambda Metrics
+      dashboard.addWidgets(
+        new cloudwatch.GraphWidget({
+          title: 'Lambda - Invocations',
+          left: [apiHandlerLambda.metricInvocations()],
+          width: 12,
+        }),
+        new cloudwatch.GraphWidget({
+          title: 'Lambda - Errors & Duration',
+          left: [apiHandlerLambda.metricErrors(), apiHandlerLambda.metricDuration()],
+          width: 12,
+        })
+      );
+
+      // DynamoDB Metrics
+      dashboard.addWidgets(
+        new cloudwatch.GraphWidget({
+          title: 'DynamoDB - Throttled Requests',
+          left: [table.metricThrottledRequests()],
+          width: 12,
+        }),
+        new cloudwatch.GraphWidget({
+          title: 'DynamoDB - Consumed Read/Write Units',
+          left: [table.metricConsumedReadCapacityUnits(), table.metricConsumedWriteCapacityUnits()],
+          width: 12,
+        })
+      );
+
+      // Add X-Ray tracing to API Gateway and Lambda
+      const xrayAspect = new cdk.Aspects();
+      cdk.Aspects.of(this).add({
+        visit: (node) => {
+          if (node instanceof lambda.Function) {
+            (node as lambda.Function).addEnvironment('AWS_XRAY_TRACING_MODE', 'ACTIVE');
+          }
+        }
+      });
     }
 
     // --- SEÇÃO DO FRONTEND (AMPLIFY APP AUTOMATIZADO) ---

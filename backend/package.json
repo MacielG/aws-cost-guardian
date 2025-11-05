@@ -6,7 +6,12 @@
   "main": "handler.js",
   "scripts": {
     "test": "jest --runInBand",
-    "dev": "serverless offline start --httpPort 3001"
+    "dev": "serverless offline start --httpPort 3001",
+    "load-test": "node load-test.js",
+    "health-check": "node ../scripts/health-monitor.js",
+    "deploy": "serverless deploy",
+    "logs": "serverless logs -f api --startTime 10m",
+    "metrics": "serverless metrics"
   },
   "dependencies": {
     "@aws-sdk/client-cloudwatch": "^3.585.0",

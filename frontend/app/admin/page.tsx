@@ -227,7 +227,7 @@ function AdminContent() {
     }
   };
 
-  const deletePromotion = async (promotion: Promotion) => {
+  const deletePromotion = async (promotion: Promotion, index: number) => {
     if (!confirm('Tem certeza que deseja excluir esta promoção?')) return;
 
     try {
@@ -605,7 +605,7 @@ function AdminContent() {
                     <Button
                       variant="destructive"
                       size="sm"
-                      onClick={() => deletePromotion(promotion)}
+                      onClick={() => deletePromotion(promotion, index)}
                     >
                       <Trash2 className="w-4 h-4" />
                     </Button>

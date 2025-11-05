@@ -115,9 +115,9 @@ Abra: http://localhost:3000
 ## 🎉 Pronto!
 
 Seu aplicativo está rodando em:
-- **Produção:** https://awscostguardian.com
-- **API:** https://[ID].execute-api.us-east-1.amazonaws.com/prod/
-- **Local:** http://localhost:3000
+- **Produção:** https://awscostguardian.com ✅ **ATIVO**
+- **API:** https://0s4kvds1a2.execute-api.us-east-1.amazonaws.com/prod/ ✅
+- **Local:** http://localhost:3000 (para desenvolvimento)
 
 ---
 

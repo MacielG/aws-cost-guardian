@@ -1,0 +1,34 @@
+{
+  "welcome": "Welcome",
+  "dashboard": "Dashboard",
+  "loading": "Loading...",
+  "error": "Error",
+  "common": {
+    "error": "Error",
+    "success": "Success"
+  },
+  "dashboard": {
+    "totalEarnings": "Total Earnings",
+    "totalCost": "Total Cost",
+    "activeIncidents": "Active Incidents",
+    "fromLastMonth": "from last month",
+    "detected": "detected"
+  },
+  "adminClaims": {
+    "title": "Claims Management (Admin)",
+    "description": "View and manage all SLA credit claims in the system.",
+    "searchPlaceholder": "Search by ID, incident, AWS account...",
+    "filterByStatus": "Filter by Status",
+    "noClaims": "No claims found with the applied filters."
+  },
+  "statuses": {
+    "READY_TO_SUBMIT": "Ready to Submit",
+    "SUBMITTED": "Submitted",
+    "SUBMISSION_FAILED": "Submission Failed",
+    "PAID": "Paid",
+    "REFUNDED": "Refunded",
+    "NO_VIOLATION": "No Violation",
+    "NO_RESOURCES_LISTED": "No Resources Listed",
+    "REPORT_FAILED": "Report Failed"
+  }
+}

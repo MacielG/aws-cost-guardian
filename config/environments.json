@@ -1,0 +1,105 @@
+{
+  "development": {
+    "name": "Development",
+    "apiUrl": "https://0zf1mthfa8.execute-api.us-east-1.amazonaws.com/dev",
+    "region": "us-east-1",
+    "stage": "dev",
+    "cognito": {
+      "userPoolId": "us-east-1_DEV_POOL",
+      "userPoolClientId": "DEV_CLIENT_ID",
+      "region": "us-east-1"
+    },
+    "dynamodb": {
+      "tableName": "CostGuardianTable",
+      "pitRecovery": false
+    },
+    "stripe": {
+      "enabled": false,
+      "priceId": "price_dev_123"
+    },
+    "monitoring": {
+      "enabled": true,
+      "alerts": false,
+      "tracing": true
+    },
+    "features": {
+      "adminPanel": true,
+      "analytics": false,
+      "notifications": false
+    }
+  },
+  "staging": {
+    "name": "Staging",
+    "apiUrl": "https://0zf1mthfa8.execute-api.us-east-1.amazonaws.com/staging",
+    "region": "us-east-1",
+    "stage": "staging",
+    "cognito": {
+      "userPoolId": "us-east-1_STAGING_POOL",
+      "userPoolClientId": "STAGING_CLIENT_ID",
+      "region": "us-east-1"
+    },
+    "dynamodb": {
+      "tableName": "CostGuardianStagingTable",
+      "pitRecovery": true
+    },
+    "stripe": {
+      "enabled": true,
+      "priceId": "price_staging_456",
+      "webhookSecret": "whsec_staging_..."
+    },
+    "monitoring": {
+      "enabled": true,
+      "alerts": true,
+      "tracing": true
+    },
+    "features": {
+      "adminPanel": true,
+      "analytics": true,
+      "notifications": true
+    }
+  },
+  "production": {
+    "name": "Production",
+    "apiUrl": "https://api.costguardian.com/prod",
+    "region": "us-east-1",
+    "stage": "prod",
+    "cognito": {
+      "userPoolId": "us-east-1_PROD_POOL",
+      "userPoolClientId": "PROD_CLIENT_ID",
+      "region": "us-east-1"
+    },
+    "dynamodb": {
+      "tableName": "CostGuardianProdTable",
+      "pitRecovery": true,
+      "backupRetention": 35
+    },
+    "stripe": {
+      "enabled": true,
+      "priceId": "price_prod_789",
+      "webhookSecret": "whsec_prod_..."
+    },
+    "monitoring": {
+      "enabled": true,
+      "alerts": true,
+      "tracing": true,
+      "logRetention": 90
+    },
+    "features": {
+      "adminPanel": true,
+      "analytics": true,
+      "notifications": true,
+      "advancedSecurity": true
+    },
+    "scaling": {
+      "minConcurrency": 5,
+      "maxConcurrency": 50,
+      "targetUtilization": 0.7
+    },
+    "security": {
+      "wafEnabled": true,
+      "apiKeysRequired": true,
+      "rateLimitPerMinute": 1000
+    }
+  }
+}</content>
+</xai:function_call">Successfully created file /g:/aws-cost-guardian/config/environments.json

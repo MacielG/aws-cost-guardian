@@ -10,6 +10,17 @@ provider:
   runtime: nodejs18.x
   region: ${env:AWS_REGION, 'us-east-1'}
   stage: ${opt:stage, 'dev'}
+  iamRoleStatements:
+    - Effect: Allow
+      Action:
+        - dynamodb:GetItem
+        - dynamodb:PutItem
+        - dynamodb:UpdateItem
+        - dynamodb:Query
+        - dynamodb:Scan
+      Resource:
+        - arn:aws:dynamodb:${self:provider.region}:*:table/${self:provider.environment.DYNAMODB_TABLE}
+        - arn:aws:dynamodb:${self:provider.region}:*:table/${self:provider.environment.DYNAMODB_TABLE}/index/*
   environment:
     DYNAMODB_TABLE: ${env:DYNAMODB_TABLE, 'aws-cost-guardian-dev'}
     USER_POOL_ID: ${env:USER_POOL_ID, ''}
@@ -27,7 +38,7 @@ provider:
 
 functions:
   api:
-    handler: handler.app
+    handler: handler-simple.app
     events:
       - http:
           path: /{proxy+}
@@ -67,3 +78,11 @@ functions:
 
   slaWorkflow:
     handler: functions/sla-workflow.handler
+
+  testFunction:
+    handler: test-handler.testHandler
+    events:
+      - http:
+          path: /test
+          method: GET
+          cors: true

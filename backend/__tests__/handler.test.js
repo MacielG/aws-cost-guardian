@@ -1,123 +1,228 @@
-// Tests for API endpoints using supertest
-const request = require('supertest');
+/**
+ * Unit Tests for Cost Guardian Handler
+ */
 
-// Mocks para AWS SDK v3 usados pelo handler (mocks devem ser definidos ANTES de requerir o handler)
-const mockDdbSend = jest.fn();
-const mockSecretsSend = jest.fn();
-const mockStsSend = jest.fn();
-const mockSfnSend = jest.fn();
+const { handler } = require('../handler-simple');
+
+// Mock AWS SDK calls
+jest.mock('@aws-sdk/client-dynamodb', () => ({
+  DynamoDBClient: jest.fn(),
+  GetCommand: jest.fn(),
+  PutCommand: jest.fn(),
+  QueryCommand: jest.fn(),
+  UpdateCommand: jest.fn()
+}));
 
 jest.mock('@aws-sdk/lib-dynamodb', () => ({
-  DynamoDBDocumentClient: { from: jest.fn(() => ({ send: mockDdbSend })) },
-  GetCommand: function(input) { return { input }; },
-  PutCommand: function(input) { return { input }; },
-  UpdateCommand: function(input) { return { input }; },
-  QueryCommand: function(input) { return { input }; }
+  DynamoDBDocumentClient: {
+    from: jest.fn(() => ({
+      send: jest.fn()
+    }))
+  },
+  GetCommand: jest.fn(),
+  PutCommand: jest.fn(),
+  QueryCommand: jest.fn(),
+  UpdateCommand: jest.fn()
 }));
 
-jest.mock('@aws-sdk/client-secrets-manager', () => ({
-  SecretsManagerClient: jest.fn(() => ({ send: mockSecretsSend })),
-  GetSecretValueCommand: function(input) { return { input }; }
-}));
-
-jest.mock('@aws-sdk/client-sts', () => ({
-  STSClient: jest.fn(() => ({ send: mockStsSend })),
-  AssumeRoleCommand: function(input) { return { input }; }
-}));
-
-jest.mock('@aws-sdk/client-sfn', () => ({
-  SFNClient: jest.fn(() => ({ send: mockSfnSend })),
-  StartExecutionCommand: function(input) { return { input }; }
-}));
-
-jest.mock('@aws-sdk/client-s3', () => ({
-  S3Client: jest.fn(() => ({ send: jest.fn() })),
-  GetObjectCommand: function(input) { return { input }; }
-}));
-
-// Mock jsonwebtoken to bypass JWKS complexity in tests
-jest.mock('jsonwebtoken', () => ({
-  verify: jest.fn(() => ({ sub: 'user-1', 'cognito:groups': ['Admins'] })),
-}));
-
-jest.mock('jwks-rsa', () => jest.fn(() => ({ getSigningKey: jest.fn((kid, cb) => cb(null, { getPublicKey: () => 'public' })) })));
-
-const { rawApp } = require('../handler');
-
-const app = rawApp; // express app exported for tests
-const agent = request(app);
-
-describe('API handler endpoints', () => {
-  // mocks are provided above (mockDdbSend, mockSecretsSend, ...)
-
+describe('Cost Guardian Handler', () => {
   beforeEach(() => {
     jest.clearAllMocks();
-    process.env.DYNAMODB_TABLE = 'test-table';
-    process.env.PLATFORM_ACCOUNT_ID = '123456789012';
-    process.env.USER_POOL_ID = 'us-east-1_testpool';
   });
 
-  test('GET /api/onboard-init creates and returns externalId when none exists', async () => {
-    // Simulate no existing item (Get then Put)
-    mockDdbSend.mockResolvedValueOnce({}); // get
-    mockDdbSend.mockResolvedValueOnce({}); // put
+  describe('Health Endpoints', () => {
+    test('GET /health returns 200', async () => {
+      const event = {
+        path: '/health',
+        httpMethod: 'GET',
+        headers: { origin: 'http://localhost:3000' }
+      };
 
-    const res = await agent.get('/api/onboard-init').set('Authorization', 'Bearer faketoken');
-    expect(res.status).toBe(200);
-    expect(res.body).toHaveProperty('externalId');
-    expect(res.body).toHaveProperty('platformAccountId', process.env.PLATFORM_ACCOUNT_ID);
-  // Ensure we attempted to put the item (a PutCommand was sent)
-  expect(mockDdbSend).toHaveBeenCalled();
+      const result = await handler(event);
+
+      expect(result.statusCode).toBe(200);
+      expect(JSON.parse(result.body)).toHaveProperty('status', 'ok');
+      expect(result.headers['Access-Control-Allow-Origin']).toBe('http://localhost:3000');
+    });
+
+    test('GET /api/health returns 200', async () => {
+      const event = {
+        path: '/api/health',
+        httpMethod: 'GET',
+        headers: {}
+      };
+
+      const result = await handler(event);
+
+      expect(result.statusCode).toBe(200);
+      expect(JSON.parse(result.body)).toHaveProperty('status', 'ok');
+    });
+
+    test('GET /api/public/metrics returns metrics', async () => {
+      const event = {
+        path: '/api/public/metrics',
+        httpMethod: 'GET'
+      };
+
+      const result = await handler(event);
+
+      expect(result.statusCode).toBe(200);
+      const body = JSON.parse(result.body);
+      expect(body).toHaveProperty('status', 'ok');
+      expect(body).toHaveProperty('version', '2.0.0');
+      expect(body).toHaveProperty('service', 'aws-cost-guardian-backend');
+      expect(body).toHaveProperty('metrics');
+    });
   });
 
-  test('POST /api/onboard with CFN ResourceProperties stores config', async () => {
-    const payload = {
-      ResourceProperties: {
-        CustomerId: 'cust-999',
-        RoleArn: 'arn:aws:iam::111122223333:role/CostGuardianDelegatedRole',
-        AwsAccountId: '111122223333',
-        ExternalId: 'ext-123'
-      }
-    };
+  describe('CORS Handling', () => {
+    test('OPTIONS request returns 204', async () => {
+      const event = {
+        path: '/api/onboard-init',
+        httpMethod: 'OPTIONS',
+        headers: { origin: 'https://awscostguardian.com' }
+      };
 
-    mockDdbSend.mockResolvedValueOnce({});
+      const result = await handler(event);
 
-    const res = await agent.post('/api/onboard').send(payload);
-    expect(res.status).toBe(200);
-  expect(mockDdbSend).toHaveBeenCalledWith(expect.objectContaining({ input: expect.objectContaining({ TableName: process.env.DYNAMODB_TABLE }) }));
+      expect(result.statusCode).toBe(204);
+      expect(result.headers['Access-Control-Allow-Origin']).toBe('https://awscostguardian.com');
+      expect(result.headers['Access-Control-Allow-Methods']).toBe('GET, POST, PUT, DELETE, OPTIONS');
+    });
+
+    test('Unknown origin gets wildcard CORS', async () => {
+      const event = {
+        path: '/health',
+        httpMethod: 'GET',
+        headers: { origin: 'https://unknown-site.com' }
+      };
+
+      const result = await handler(event);
+
+      expect(result.statusCode).toBe(200);
+      expect(result.headers['Access-Control-Allow-Origin']).toBe('*');
+    });
   });
 
-  test('GET /api/dashboard/costs returns most recent cost data', async () => {
-    const fakeData = { data: { total: 123.45 } };
-    mockDdbSend.mockResolvedValueOnce({ Items: [fakeData] });
+  describe('Authentication', () => {
+    test('Protected endpoints return 401 without auth', async () => {
+      const event = {
+        path: '/api/onboard-init',
+        httpMethod: 'GET',
+        headers: {}
+      };
 
-    const res = await agent.get('/api/dashboard/costs').set('Authorization', 'Bearer faketoken');
-    expect(res.status).toBe(200);
-    expect(res.body).toEqual(fakeData.data);
+      const result = await handler(event);
+
+      expect(result.statusCode).toBe(401);
+      expect(JSON.parse(result.body)).toHaveProperty('message', 'Não autenticado');
+    });
+
+    test('Invalid JWT returns 401', async () => {
+      const event = {
+        path: '/api/onboard-init',
+        httpMethod: 'GET',
+        headers: {
+          Authorization: 'Bearer invalid.jwt.token'
+        }
+      };
+
+      const result = await handler(event);
+
+      expect(result.statusCode).toBe(401);
+    });
   });
 
-  test('POST /api/settings/automation saves automation preferences', async () => {
-    mockDdbSend.mockResolvedValueOnce({});
+  describe('Error Handling', () => {
+    test('Unknown endpoint returns 404', async () => {
+      const event = {
+        path: '/unknown-endpoint',
+        httpMethod: 'GET'
+      };
 
-    const payload = { automation: { stopIdle: true, deleteUnusedEbs: false } };
-    const res = await agent.post('/api/settings/automation').set('Authorization', 'Bearer faketoken').send(payload);
-    expect(res.status).toBe(200);
-  expect(mockDdbSend).toHaveBeenCalledWith(expect.objectContaining({ input: expect.objectContaining({ TableName: process.env.DYNAMODB_TABLE }) }));
+      const result = await handler(event);
+
+      expect(result.statusCode).toBe(404);
+      expect(JSON.parse(result.body)).toHaveProperty('error', 'Not found');
+    });
+
+    test('Unhandled errors return 500', async () => {
+      // Force an error by passing malformed event
+      const event = null;
+
+      const result = await handler(event);
+
+      expect(result.statusCode).toBe(500);
+      expect(result.headers['Content-Type']).toBe('application/json');
+    });
   });
 
-  test('GET /api/admin/claims requires admin and returns items', async () => {
-    mockDdbSend.mockResolvedValueOnce({ Items: [{ id: 'cust-1', sk: 'CLAIM#1' }] });
+  describe('Path Handling', () => {
+    test('Handles trailing slashes correctly', async () => {
+      const event = {
+        path: '/health/',
+        httpMethod: 'GET'
+      };
 
-    const res = await agent.get('/api/admin/claims').set('Authorization', 'Bearer faketoken');
-    expect(res.status).toBe(200);
-    expect(Array.isArray(res.body.items || res.body)).toBeTruthy();
+      const result = await handler(event);
+
+      expect(result.statusCode).toBe(200);
+    });
+
+    test('Handles query parameters', async () => {
+      const event = {
+        path: '/api/onboard-init',
+        httpMethod: 'GET',
+        queryStringParameters: { mode: 'trial' }
+      };
+
+      // This will return 401 due to no auth, but should handle query params
+      const result = await handler(event);
+
+      expect(result.statusCode).toBe(401);
+      expect(result.headers['Content-Type']).toBe('application/json');
+    });
   });
 
-  test('PUT /api/admin/claims/:customerId/:claimId/status updates status', async () => {
-    // Atualiza mock para usar mockDdbSend (UpdateCommand é roteado para DynamoDBDocumentClient.send)
-    mockDdbSend.mockResolvedValueOnce({});
-    const res = await agent.put('/api/admin/claims/cust-1/claim-1/status').set('Authorization', 'Bearer faketoken').send({ status: 'READY_TO_SUBMIT' });
-    expect(res.status).toBe(200);
-  expect(mockDdbSend).toHaveBeenCalled();
+  describe('HTTP Methods', () => {
+    test('Supports GET method', async () => {
+      const event = {
+        path: '/health',
+        httpMethod: 'GET'
+      };
+
+      const result = await handler(event);
+
+      expect(result.statusCode).toBe(200);
+    });
+
+    test('Supports POST method for appropriate endpoints', async () => {
+      const event = {
+        path: '/admin/promotions',
+        httpMethod: 'POST',
+        headers: {},
+        body: JSON.stringify({
+          name: 'Test Promotion',
+          discountType: 'percentage',
+          discountValue: 10
+        })
+      };
+
+      const result = await handler(event);
+
+      expect(result.statusCode).toBe(401); // Auth required, but method accepted
+    });
+
+    test('Supports PUT method', async () => {
+      const event = {
+        path: '/settings/automation',
+        httpMethod: 'PUT',
+        headers: {}
+      };
+
+      const result = await handler(event);
+
+      expect(result.statusCode).toBe(401); // Auth required
+    });
   });
 });

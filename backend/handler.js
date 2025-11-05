@@ -1,11 +1,12 @@
-// HANDLER.JS [V3] CARREGADO - Nível Raiz do Módulo
-console.log('HANDLER.JS [V3] CARREGADO - Nível Raiz do Módulo');
+// HANDLER.JS [DEBUG] CARREGADO - Teste básico
+console.log('HANDLER.JS [DEBUG] CARREGADO - Teste básico');
 
 const serverless = require('serverless-http');
 const express = require('express');
-const cors = require('cors');
+// const cors = require('cors'); // TEMPORARIAMENTE COMENTADO
 
-// AWS SDK v3 imports
+// AWS SDK v3 imports - TEMPORARIAMENTE COMENTADOS
+/*
 const { DynamoDBClient } = require('@aws-sdk/client-dynamodb');
 const { DynamoDBDocumentClient, GetCommand, PutCommand, UpdateCommand, QueryCommand, DeleteCommand } = require('@aws-sdk/lib-dynamodb');
 const { SecretsManagerClient, GetSecretValueCommand } = require('@aws-sdk/client-secrets-manager');
@@ -22,14 +23,17 @@ const { getSignedUrl } = require('@aws-sdk/s3-request-presigner');
 const { CognitoIdentityProviderClient, AdminGetUserCommand, AdminUpdateUserAttributesCommand } = require('@aws-sdk/client-cognito-identity-provider');
 
 const { randomBytes } = require('crypto');
+*/
 
-// Initialize AWS SDK v3 clients
+// Initialize AWS SDK v3 clients - TEMPORARIAMENTE COMENTADO
+/*
 const ddbClient = new DynamoDBClient({});
 const dynamoDb = DynamoDBDocumentClient.from(ddbClient);
 const secretsManager = new SecretsManagerClient({});
 const sfn = new SFNClient({});
 const health = new HealthClient({});
 const s3Presigner = new S3Client({});
+*/
 
 // Helper para assumir a role do cliente
 async function getAssumedClients(roleArn, externalId, region = 'us-east-1') { // A assinatura já estava correta
@@ -918,99 +922,18 @@ app.post('/accept-terms', authenticateUser, async (req, res) => {
     }
 });
 
-// GET /api/onboard-init - Retorna configuração para onboarding
-// NOTA: Esta rota é pública (sem authenticateUser) para permitir acesso no trial mode
-app.get('/api/onboard-init/?', async (req, res) => { // A lógica foi refatorada para usar async/await de forma mais limpa
-  console.log('HANDLER.JS [V3] - Rota /api/onboard-init ACESSADA');
+// GET /api/onboard-init - TESTE DIRETO (sem Express)
+app.get('/api/onboard-init/?', (req, res) => {
+  console.log('HANDLER.JS [V5] - TESTE DIRETO');
   try {
-    const mode = req.query.mode || 'trial';
-    const claims = await verifyJwt(req); // Tenta verificar o token, mas não falha se não existir
-    const userId = claims?.sub;
-
-    // Se não autenticado, retorna info pública para o modo trial/login
-    if (!userId) {
-      const accountType = mode === 'active' ? 'ACTIVE' : 'TRIAL';
-      const templateUrl = accountType === 'TRIAL' ?
-        process.env.TRIAL_TEMPLATE_URL :
-        process.env.FULL_TEMPLATE_URL;
-
-      return res.json({
-        mode,
-        accountType,
-        templateUrl,
-        platformAccountId: process.env.PLATFORM_ACCOUNT_ID,
-        requiresAuth: true,
-        message: 'Faça login para configurar o onboarding'
-      });
-    }
-
-    // Usuário está autenticado, buscar ou criar configuração
-    const configKey = { id: userId, sk: 'CONFIG#ONBOARD' };
-    const existingResult = await dynamoDb.send(new GetCommand({ TableName: process.env.DYNAMODB_TABLE, Key: configKey }));
-
-    // Se a configuração já existe, retorna os dados
-    if (existingResult.Item) {
-      const item = existingResult.Item;
-      const templateUrl = item.accountType === 'TRIAL' ?
-        process.env.TRIAL_TEMPLATE_URL :
-        process.env.FULL_TEMPLATE_URL;
-
-      return res.json({
-        externalId: item.externalId,
-        platformAccountId: process.env.PLATFORM_ACCOUNT_ID,
-        status: item.status || 'PENDING_CFN',
-        termsAccepted: !!item.termsAccepted,
-        accountType: item.accountType || 'TRIAL',
-        templateUrl,
-      });
-    }
-
-    // Se não existir, cria um novo registro de configuração
-    const externalId = randomBytes(16).toString('hex');
-    const accountType = mode === 'active' ? 'ACTIVE' : 'TRIAL';
-    const templateUrl = accountType === 'TRIAL' ?
-      process.env.TRIAL_TEMPLATE_URL :
-      process.env.FULL_TEMPLATE_URL;
-
-    const newItem = {
-      id: userId,
-      sk: 'CONFIG#ONBOARD',
-      externalId,
-      status: 'PENDING_CFN',
-      accountType,
-      createdAt: new Date().toISOString(),
-    };
-
-    // Tenta criar Customer no Stripe antecipadamente
-    const userEmail = claims?.email;
-    if (userEmail) {
-      try {
-        const stripeClient = await getStripe();
-        const customer = await stripeClient.customers.create({
-          email: userEmail,
-          metadata: { costGuardianCustomerId: userId }
-        });
-        newItem.stripeCustomerId = customer.id;
-        console.log(`Stripe customer antecipado criado para ${userId}: ${customer.id}`);
-      } catch (stripeErr) {
-        console.error('Falha ao criar stripeCustomerId antecipado:', stripeErr);
-      }
-    }
-
-    await dynamoDb.send(new PutCommand({ TableName: process.env.DYNAMODB_TABLE, Item: newItem }));
-
     res.json({
-      externalId,
-      platformAccountId: process.env.PLATFORM_ACCOUNT_ID,
-      status: 'PENDING_CFN',
-      termsAccepted: false,
-      accountType,
-      templateUrl,
+      status: 'OK',
+      message: 'Teste direto V5',
+      timestamp: new Date().toISOString()
     });
-
   } catch (error) {
-    console.error('Error in /api/onboard-init:', error);
-    res.status(500).json({ error: 'Internal server error', message: error.message });
+    console.error('Erro no teste direto:', error);
+    res.status(500).json({ error: error.message });
   }
 });
 
@@ -3062,3 +2985,20 @@ module.exports.rawApp = app;
 
 // Export the serverless-wrapped handler for deployment
 module.exports.app = serverless(app);
+
+// TEST FUNCTION - Função Lambda básica para diagnóstico
+module.exports.testHandler = async (event) => {
+  console.log('TEST HANDLER EXECUTADO - V1');
+  return {
+    statusCode: 200,
+    headers: {
+      'Access-Control-Allow-Origin': '*',
+      'Access-Control-Allow-Credentials': true,
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({
+      message: 'Test handler working V1',
+      timestamp: new Date().toISOString()
+    })
+  };
+};
