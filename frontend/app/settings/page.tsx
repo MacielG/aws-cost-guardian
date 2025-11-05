@@ -14,6 +14,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 import { useNotify } from '@/hooks/useNotify';
 import { apiClient } from '@/lib/api';
+import { useAuth } from '@/components/auth/AuthProvider';
 import { Cloud, User, Bell, CreditCard, Bot, Trash2, Link as LinkIcon, PlusCircle, RefreshCw, AlertCircle } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 import Link from 'next/link';
@@ -34,6 +35,7 @@ const statusVariant: { [key: string]: "success" | "secondary" | "destructive" } 
 
 export default function SettingsPage() {
   const notify = useNotify();
+  const { user, isAuthenticated } = useAuth();
   // Estado real - será carregado das APIs
   const [profile, setProfile] = useState({ name: '', email: '' });
   const [automation, setAutomation] = useState({ enabled: true, threshold: 80 });
@@ -42,6 +44,8 @@ export default function SettingsPage() {
 
   useEffect(() => {
     const loadData = async () => {
+      if (!isAuthenticated || !user) return; // Só carregar se autenticado
+
       try {
         // Carregar perfil do usuário
         const profileResponse = await apiClient.get('/api/profile');

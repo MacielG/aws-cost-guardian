@@ -283,7 +283,7 @@ app.get('/api/health', (req, res) => {
 });
 
 // Public metrics endpoint (não requer autenticação)
-app.get('/api/public/metrics', (req, res) => {
+app.get('/api/public/metrics/?', (req, res) => {
     res.json({
         status: 'ok',
         timestamp: new Date().toISOString(),
@@ -2882,7 +2882,7 @@ app.get('/api/system-status/aws', authenticateUser, async (req, res) => {
 });
 
 // GET /api/onboard-init - Buscar configuração inicial de onboarding
-app.get('/api/onboard-init', authenticateUser, async (req, res) => {
+app.get('/api/onboard-init/?', authenticateUser, async (req, res) => {
     try {
         const userId = req.user.sub;
         const mode = req.query.mode; // 'trial' or other modes
