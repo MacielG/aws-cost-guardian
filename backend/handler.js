@@ -1,3 +1,6 @@
+// HANDLER.JS [V3] CARREGADO - Nível Raiz do Módulo
+console.log('HANDLER.JS [V3] CARREGADO - Nível Raiz do Módulo');
+
 const serverless = require('serverless-http');
 const express = require('express');
 const cors = require('cors');
@@ -284,6 +287,7 @@ app.get('/api/health', (req, res) => {
 
 // Public metrics endpoint (não requer autenticação)
 app.get('/api/public/metrics/?', (req, res) => {
+    console.log('HANDLER.JS [V3] - Rota /api/public/metrics ACESSADA');
     res.json({
         status: 'ok',
         timestamp: new Date().toISOString(),
@@ -916,7 +920,8 @@ app.post('/accept-terms', authenticateUser, async (req, res) => {
 
 // GET /api/onboard-init - Retorna configuração para onboarding
 // NOTA: Esta rota é pública (sem authenticateUser) para permitir acesso no trial mode
-app.get('/api/onboard-init', async (req, res) => { // A lógica foi refatorada para usar async/await de forma mais limpa
+app.get('/api/onboard-init/?', async (req, res) => { // A lógica foi refatorada para usar async/await de forma mais limpa
+  console.log('HANDLER.JS [V3] - Rota /api/onboard-init ACESSADA');
   try {
     const mode = req.query.mode || 'trial';
     const claims = await verifyJwt(req); // Tenta verificar o token, mas não falha se não existir
