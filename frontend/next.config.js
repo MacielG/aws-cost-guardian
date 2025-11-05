@@ -4,7 +4,7 @@
 require('dotenv').config({ path: './.env.local' });
 
 const nextConfig = {
-  // Suas outras configurações do Next.js podem vir aqui
+  output: 'export', // Configuração para exportação estática
 };
 
 module.exports = nextConfig;
