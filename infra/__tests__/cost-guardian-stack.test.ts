@@ -7,6 +7,16 @@ import * as fs from 'fs';
 import * as path from 'path';
 
 // V-- Mock the specific part causing issues V--
+jest.mock('aws-cdk-lib/aws-lambda', () => {
+  const actual = jest.requireActual('aws-cdk-lib/aws-lambda');
+  return {
+    ...actual,
+    Code: {
+      ...actual.Code,
+      fromAsset: jest.fn(() => actual.Code.fromInline('mock code')),
+    },
+  };
+});
 jest.mock('aws-cdk-lib/aws-s3-deployment', () => {
   const actual = jest.requireActual('aws-cdk-lib/aws-s3-deployment');
   return {

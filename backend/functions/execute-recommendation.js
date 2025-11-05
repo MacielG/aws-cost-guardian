@@ -231,7 +231,7 @@ exports.handler = async (event) => {
 async function trackSavings(customerId, monthKey, savingType, amount, recommendationId) {
   try {
     const savingsSk = `SAVINGS#REALIZED#${monthKey}`;
-    
+
     const getCommand = new GetCommand({
       TableName: DYNAMODB_TABLE,
       Key: { id: customerId, sk: savingsSk }
@@ -247,11 +247,15 @@ async function trackSavings(customerId, monthKey, savingType, amount, recommenda
     };
     const breakdownKey = typeMap[savingType] || 'other';
 
+    // Get dynamic commission rate
+    const commissionRate = await getCommissionRate();
+
     if (existing) {
       const currentBreakdown = existing.breakdown || {};
       const currentTotal = existing.totalSavings || 0;
       const newTotal = currentTotal + amount;
-      
+      const totalCommission = newTotal * commissionRate;
+
       const updateCommand = new UpdateCommand({
         TableName: DYNAMODB_TABLE,
         Key: { id: customerId, sk: savingsSk },
@@ -260,10 +264,6 @@ async function trackSavings(customerId, monthKey, savingType, amount, recommenda
           '#key': breakdownKey,
           '#items': 'items'
         },
-        // Get dynamic commission rate
-        const commissionRate = await getCommissionRate();
-        const totalCommission = newTotal * commissionRate;
-
         ExpressionAttributeValues: {
           ':newTotal': newTotal,
           ':newBreakdown': (currentBreakdown[breakdownKey] || 0) + amount,

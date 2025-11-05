@@ -22,27 +22,28 @@ formatValue,
 className,
 }: AnimatedCounterProps) => {
 const [displayValue, setDisplayValue] = useState(() =>
-    formatValue ? formatValue(0) : '0'
+formatValue ? formatValue(0) : '0'
 );
 
-useEffect(() => {
-  const spring = useSpring(0, {
-  to: value,
-  mass: 1,
-  tension: 20,
-  friction: 10,
-  ...animationOptions,
-  });
+const spring = useSpring(0, {
+mass: 1,
+tension: 20,
+friction: 10,
+...animationOptions,
+});
 
-  const unsubscribe = spring.onChange((currentValue) => {
-  const formatted = formatValue
-  ? formatValue(currentValue)
-  : Math.round(currentValue).toLocaleString();
-    setDisplayValue(formatted);
+useEffect(() => {
+  spring.set(value);
+
+const unsubscribe = spring.onChange((currentValue) => {
+const formatted = formatValue
+? formatValue(currentValue)
+: Math.round(currentValue).toLocaleString();
+setDisplayValue(formatted);
     });
 
 return unsubscribe;
-}, [value, formatValue, animationOptions]);
+}, [value, formatValue, animationOptions, spring]);
 
 return <span className={className}>{displayValue}</span>;
 };
