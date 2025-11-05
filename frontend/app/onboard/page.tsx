@@ -9,8 +9,7 @@ import { useNotify } from '@/hooks/useNotify';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Cloud, CheckCircle, ArrowRight, FileText, ShieldCheck, BarChart2 } from 'lucide-react';
-// Assuma que existe um hook ou contexto para obter o token de autenticação
-// import { useAuth } from '@/context/AuthContext'; 
+import { useAuth } from '@/components/auth/AuthProvider';
 // utilitário para juntar URLs de forma segura
 const { joinUrl } = require('@/lib/url');
 
@@ -46,15 +45,19 @@ export default function Onboard() {
     const router = useRouter();
     const searchParams = useSearchParams();
     const mode = searchParams.get('mode');
+    const { user, session } = useAuth();
 
     const handleNext = () => {
         setStep((prev) => Math.min(prev + 1, steps.length + 1));
     };
 
     const checkOnboardingStatus = useCallback(async (signal?: AbortSignal) => {
-        // const token = await getToken();
         try {
-            const response = await fetch('/api/onboard-init', { signal }); // Este endpoint agora retorna o status
+            const headers: Record<string, string> = {};
+            if (user && session?.tokens?.idToken) {
+                headers['Authorization'] = `Bearer ${session.tokens.idToken.toString()}`;
+            }
+            const response = await fetch('/api/onboard-init', { signal, headers }); // Este endpoint agora retorna o status
             if (response.ok) {
                 const config = await response.json();
                 // Se o usuário ainda não aceitou os termos, redireciona para a página de termos
@@ -70,18 +73,19 @@ export default function Onboard() {
         } catch (e: any) {
             if (e.name === 'AbortError') return;
         }
-    }, [router]);
+    }, [router, user, session]);
 
     const fetchOnboardConfig = useCallback(async (signal?: AbortSignal) => {
-        // const token = await getToken(); // Obter token do Cognito
         setLoading(true);
         const query = mode ? `?mode=${mode}` : '';
         try {
+            const headers: Record<string, string> = {};
+            if (user && session?.tokens?.idToken) {
+                headers['Authorization'] = `Bearer ${session.tokens.idToken.toString()}`;
+            }
             const response = await fetch(`/api/onboard-init${query}`, {
                 signal,
-                headers: {
-                    // 'Authorization': `Bearer ${token}`, // Enviar o token
-                },
+                headers,
             });
 
             if (response.ok) {
@@ -102,7 +106,7 @@ export default function Onboard() {
             console.error('Erro ao buscar configuração de onboarding.'); // Adicionado para o teste
         }
         setLoading(false);
-    }, [mode, notify]);
+    }, [mode, notify, user, session]);
 
     // Buscar o ExternalId seguro no backend
     useEffect(() => {

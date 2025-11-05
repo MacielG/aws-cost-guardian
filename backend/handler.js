@@ -282,6 +282,21 @@ app.get('/api/health', (req, res) => {
     });
 });
 
+// Public metrics endpoint (não requer autenticação)
+app.get('/api/public/metrics', (req, res) => {
+    res.json({
+        status: 'ok',
+        timestamp: new Date().toISOString(),
+        version: '2.0.0',
+        service: 'aws-cost-guardian-backend',
+        metrics: {
+            uptime: process.uptime(),
+            memoryUsage: process.memoryUsage(),
+            nodeVersion: process.version
+        }
+    });
+});
+
 
 // Rota para criar sessão de checkout do Stripe
 app.post('/billing/create-checkout-session', authenticateUser, async (req, res) => {
@@ -2863,6 +2878,59 @@ app.get('/api/system-status/aws', authenticateUser, async (req, res) => {
             services: {},
             totalIncidents: 0
         });
+    }
+});
+
+// GET /api/onboard-init - Buscar configuração inicial de onboarding
+app.get('/api/onboard-init', authenticateUser, async (req, res) => {
+    try {
+        const userId = req.user.sub;
+        const mode = req.query.mode; // 'trial' or other modes
+
+        // Buscar configuração de onboarding existente
+        const getConfigCmd = new GetCommand({
+            TableName: process.env.DYNAMODB_TABLE,
+            Key: {
+                id: userId,
+                sk: 'CONFIG#ONBOARD',
+            },
+        });
+
+        const configResult = await dynamoDb.send(getConfigCmd);
+        let onboardingConfig = configResult.Item;
+
+        // Se não existir, criar configuração padrão
+        if (!onboardingConfig) {
+            onboardingConfig = {
+                id: userId,
+                sk: 'CONFIG#ONBOARD',
+                status: 'pending_setup',
+                mode: mode || 'trial',
+                accountType: mode === 'trial' ? 'TRIAL' : 'ACTIVE',
+                createdAt: new Date().toISOString(),
+                stripeCustomerId: null,
+                stripeSubscriptionId: null,
+                subscriptionStatus: 'inactive',
+                automationEnabled: false,
+                automationSettings: {},
+            };
+
+            // Salvar no DynamoDB
+            const putConfigCmd = new PutCommand({
+                TableName: process.env.DYNAMODB_TABLE,
+                Item: onboardingConfig,
+            });
+            await dynamoDb.send(putConfigCmd);
+        }
+
+        // Retornar configuração (removendo campos internos se necessário)
+        const responseConfig = { ...onboardingConfig };
+        delete responseConfig.sk; // Não expor chave interna
+
+        res.status(200).json(responseConfig);
+    } catch (error) {
+        console.error('Erro ao buscar configuração de onboarding:', error);
+        res.status(500).json({ error: 'Erro interno do servidor' });
     }
 });
 
