@@ -9,6 +9,7 @@ import { toast } from 'sonner';
 import { PageAnimator } from '@/components/layout/PageAnimator';
 import { PageHeader } from '@/components/layout/PageHeader';
 import { Skeleton } from '@/components/ui/skeleton';
+import { apiClient } from '@/lib/api';
 
 interface PublicMetrics {
   monthlySavings: number;
@@ -27,25 +28,11 @@ export default function Home() {
   useEffect(() => {
     const loadMetrics = async () => {
       try {
-        const response = await fetch('/api/public/metrics');
-        if (response.ok) {
-          const data = await response.json();
-          setMetrics(data);
-        } else {
-          // Fallback para dados estáticos se a API falhar
-          setMetrics({
-            monthlySavings: 47832,
-            slaCreditsRecovered: 12450,
-            accountsManaged: 247,
-            monthlyGrowth: 37,
-            activeUsers: 180,
-            trialUsers: 67,
-            commissionRate: 0.30,
-          });
-        }
+        const data = await apiClient.get('/public/metrics');
+        setMetrics(data);
       } catch (err) {
         console.error('Erro ao carregar métricas:', err);
-        // Fallback para dados estáticos
+        // Fallback para dados estáticos se a API falhar
         setMetrics({
           monthlySavings: 47832,
           slaCreditsRecovered: 12450,
