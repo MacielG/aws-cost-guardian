@@ -60,7 +60,7 @@ const deployManifestConfig = {
     {
       name: 'default',
       entrypoint: 'server.js',
-      runtime: 'nodejs18.x',
+      runtime: 'nodejs20.x',
     },
   ],
   framework: {
