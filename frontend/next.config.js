@@ -1,10 +1,14 @@
-/** @type {import('next').NextConfig} */
-
-// Carrega as variáveis de ambiente do .env.local para o processo do Next.js
+// Carrega as variáveis de ambiente
 require('dotenv').config({ path: './.env.local' });
 
+// Importa o adapter oficial (CommonJS)
+const { withAmplifyAdapter } = require('@aws-amplify/adapter-nextjs');
+
+/** @type {import('next').NextConfig} */
 const nextConfig = {
-  // Configurações do Next.js
+  output: 'standalone',
+  // ...outras configurações do Next.js podem estar aqui
 };
 
-module.exports = nextConfig;
+// Envolve a configuração com o adapter
+module.exports = withAmplifyAdapter(nextConfig);
