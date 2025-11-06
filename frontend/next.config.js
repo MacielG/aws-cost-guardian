@@ -4,7 +4,7 @@
 require('dotenv').config({ path: './.env.local' });
 
 const nextConfig = {
-  output: 'export', // Configuração para exportação estática
+  // output: 'export', // Removido para habilitar SSR no Amplify
 };
 
 module.exports = nextConfig;
