@@ -1,0 +1,172 @@
+2025-11-06T20:14:20.644Z [INFO]: # Build environment configured with Standard build compute type: 8GiB Memory, 4vCPUs, 128GB Disk Space
+2025-11-06T20:14:21.103Z [INFO]: # Cloning repository: git@github.com:MacielG/aws-cost-guardian.git
+2025-11-06T20:14:32.207Z [INFO]: 
+2025-11-06T20:14:32.296Z [INFO]: Cloning into 'aws-cost-guardian'...
+2025-11-06T20:14:32.304Z [INFO]: # Switching to commit: 96fa1b94741e580c7d42d9d616b92ef1d16ee84e
+2025-11-06T20:14:32.390Z [INFO]: Note: switching to '96fa1b94741e580c7d42d9d616b92ef1d16ee84e'.
+                                 You are in 'detached HEAD' state. You can look around, make experimental
+                                 changes and commit them, and you can discard any commits you make in this
+                                 state without impacting any branches by switching back to a branch.
+                                 If you want to create a new branch to retain commits you create, you may
+                                 do so (now or later) by using -c with the switch command. Example:
+                                 git switch -c <new-branch-name>
+                                 Or undo this operation with:
+                                 git switch -
+                                 Turn off this advice by setting config variable advice.detachedHead to false
+                                 HEAD is now at 96fa1b9 Create buildspec.yml
+2025-11-06T20:14:32.427Z [INFO]: Successfully cleaned up Git credentials
+2025-11-06T20:14:32.427Z [INFO]: # Checking for Git submodules at: /codebuild/output/src469726381/src/aws-cost-guardian/.gitmodules
+2025-11-06T20:14:32.434Z [INFO]: # Retrieving environment cache...
+2025-11-06T20:14:32.491Z [WARNING]: ! Unable to write cache: {"code":"ERR_BAD_REQUEST","message":"Request failed with status code 404"})}
+2025-11-06T20:14:32.492Z [INFO]: ---- Setting Up SSM Secrets ----
+2025-11-06T20:14:32.492Z [INFO]: SSM params {"Path":"/amplify/d1w4m8xpy3lj36/main/","WithDecryption":true}
+2025-11-06T20:14:32.535Z [WARNING]: !Failed to set up process.env.secrets
+2025-11-06T20:14:33.307Z [INFO]: # No package override configuration found.
+2025-11-06T20:14:33.321Z [INFO]: # Retrieving cache...
+2025-11-06T20:14:33.450Z [INFO]: # Extracting cache...
+2025-11-06T20:14:33.455Z [INFO]: # Extraction completed
+2025-11-06T20:14:33.455Z [INFO]: # Retrieved cache
+2025-11-06T20:14:38.135Z [INFO]: ## Starting Backend Build
+                                 ## Checking for associated backend environment...
+                                 ## No backend environment association found, continuing...
+                                 ## Completed Backend Build
+2025-11-06T20:14:38.140Z [INFO]: {"backendDuration": 0}
+                                 ## Starting Frontend Build
+                                 # Starting phase: preBuild
+                                 # Executing command: cd frontend
+2025-11-06T20:14:38.150Z [INFO]: # Executing command: npm ci
+2025-11-06T20:14:59.887Z [WARNING]: npm warn deprecated inflight@1.0.6: This module is not supported, and leaks memory. Do not use it. Check out lru-cache if you want a good and tested way to coalesce async requests by a key value, which is much more comprehensive and powerful.
+2025-11-06T20:15:00.515Z [WARNING]: npm warn deprecated glob@7.1.7: Glob versions prior to v9 are no longer supported
+2025-11-06T20:15:00.569Z [WARNING]: npm warn deprecated @humanwhocodes/config-array@0.13.0: Use @eslint/config-array instead
+2025-11-06T20:15:00.569Z [WARNING]: npm warn deprecated @humanwhocodes/object-schema@2.0.3: Use @eslint/object-schema instead
+2025-11-06T20:15:00.578Z [WARNING]: npm warn deprecated rimraf@3.0.2: Rimraf versions prior to v4 are no longer supported
+2025-11-06T20:15:06.940Z [WARNING]: npm warn deprecated eslint@8.57.1: This version is no longer supported. Please see https://eslint.org/version-support for other options.
+2025-11-06T20:15:27.371Z [INFO]: added 1399 packages, and audited 1401 packages in 44s
+2025-11-06T20:15:27.375Z [INFO]: 219 packages are looking for funding
+                                 run `npm fund` for details
+                                 found 0 vulnerabilities
+2025-11-06T20:15:27.399Z [INFO]: # Completed phase: preBuild
+                                 # Starting phase: build
+                                 # Executing command: npm run build
+2025-11-06T20:15:27.516Z [INFO]: > aws-cost-guardian-frontend@0.1.0 build
+                                 > next build
+2025-11-06T20:15:28.086Z [INFO]: ⚠ No build cache found. Please configure build caching for faster rebuilds. Read more: https://nextjs.org/docs/messages/no-cache
+2025-11-06T20:15:28.091Z [INFO]: Attention: Next.js now collects completely anonymous telemetry regarding usage.
+2025-11-06T20:15:28.091Z [INFO]: This information is used to shape Next.js' roadmap and prioritize features.
+                                 You can learn more, including how to opt-out if you'd not like to participate in this anonymous program, by visiting the following URL:
+                                 https://nextjs.org/telemetry
+2025-11-06T20:15:28.146Z [INFO]: ▲ Next.js 14.2.33
+2025-11-06T20:15:28.146Z [INFO]: 
+2025-11-06T20:15:28.217Z [INFO]: Creating an optimized production build ...
+2025-11-06T20:15:55.381Z [INFO]: ✓ Compiled successfully
+2025-11-06T20:15:55.387Z [INFO]: Linting and checking validity of types ...
+2025-11-06T20:16:04.319Z [INFO]: ./app/__tests__/page.test.tsx
+                                 2:26  Warning: 'fireEvent' is defined but never used.  @typescript-eslint/no-unused-vars
+                                 2:37  Warning: 'waitFor' is defined but never used.  @typescript-eslint/no-unused-vars
+                                 ./app/admin/page.tsx
+                                 230:56  Warning: 'index' is defined but never used. Allowed unused args must match /^_/u.  @typescript-eslint/no-unused-vars
+                                 ./app/billing/page.tsx
+                                 12:8  Warning: 'AnimatedCounter' is defined but never used.  @typescript-eslint/no-unused-vars
+                                 55:6  Warning: React Hook useEffect has a missing dependency: 'notify'. Either include it or remove the dependency array.  react-hooks/exhaustive-deps
+                                 ./app/dashboard/__tests__/page.test.tsx
+                                 498:19  Warning: 'totalCost' is assigned a value but never used.  @typescript-eslint/no-unused-vars
+                                 686:40  Warning: 'url' is defined but never used. Allowed unused args must match /^_/u.  @typescript-eslint/no-unused-vars
+                                 ./app/dashboard/page.tsx
+                                 15:8  Warning: 'AnimatedCounter' is defined but never used.  @typescript-eslint/no-unused-vars
+                                 162:22  Warning: '_e' is defined but never used.  @typescript-eslint/no-unused-vars
+                                 182:26  Warning: '_e' is defined but never used.  @typescript-eslint/no-unused-vars
+                                 ./app/onboard/page-new.tsx
+                                 44:6  Warning: React Hook useCallback has an unnecessary dependency: 'notify'. Either exclude it or remove the dependency array.  react-hooks/exhaustive-deps
+                                 ./app/onboard/page.tsx
+                                 48:13  Warning: 'user' is assigned a value but never used.  @typescript-eslint/no-unused-vars
+                                 ./app/page.tsx
+                                 6:67  Warning: 'Loader2' is defined but never used.  @typescript-eslint/no-unused-vars
+                                 12:10  Warning: 'apiClient' is defined but never used.  @typescript-eslint/no-unused-vars
+                                 ./app/settings/connections/page.tsx
+                                 7:8  Warning: 'Link' is defined but never used.  @typescript-eslint/no-unused-vars
+                                 ./app/settings/page.tsx
+                                 18:62  Warning: 'LinkIcon' is defined but never used.  @typescript-eslint/no-unused-vars
+                                 74:6  Warning: React Hook useEffect has missing dependencies: 'isAuthenticated' and 'user'. Either include them or remove the dependency array.  react-hooks/exhaustive-deps
+                                 ./app/sla-claims/page.tsx
+                                 6:58  Warning: 'FileText' is defined but never used.  @typescript-eslint/no-unused-vars
+                                 61:14  Warning: 'err' is defined but never used.  @typescript-eslint/no-unused-vars
+                                 ./app/status/page.tsx
+                                 181:16  Warning: 'awsErr' is defined but never used.  @typescript-eslint/no-unused-vars
+                                 ./components/ThemeProvider.tsx
+                                 38:6  Warning: React Hook useEffect has a missing dependency: 'storageKey'. Either include it or remove the dependency array.  react-hooks/exhaustive-deps
+                                 ./components/auth/AuthProvider.tsx
+                                 4:71  Warning: 'FetchUserAttributesOutput' is defined but never used.  @typescript-eslint/no-unused-vars
+                                 ./components/layout/Header.tsx
+                                 5:10  Warning: 'Menu' is defined but never used.  @typescript-eslint/no-unused-vars
+                                 5:75  Warning: 'LifeBuoy' is defined but never used.  @typescript-eslint/no-unused-vars
+                                 5:109  Warning: 'BarChart3' is defined but never used.  @typescript-eslint/no-unused-vars
+                                 8:8  Warning: 'Link' is defined but never used.  @typescript-eslint/no-unused-vars
+                                 11:11  Warning: 'HeaderProps' is defined but never used.  @typescript-eslint/no-unused-vars
+                                 15:7  Warning: 'navItems' is assigned a value but never used.  @typescript-eslint/no-unused-vars
+                                 ./components/layout/UnfoldAnimator.tsx
+                                 11:44  Warning: 'delay' is assigned a value but never used. Allowed unused args must match /^_/u.  @typescript-eslint/no-unused-vars
+                                 ./components/ui/AnimatedCounter.tsx
+                                 4:3  Warning: 'motion' is defined but never used.  @typescript-eslint/no-unused-vars
+                                 6:3  Warning: 'useTransform' is defined but never used.  @typescript-eslint/no-unused-vars
+                                 7:3  Warning: 'MotionValue' is defined but never used.  @typescript-eslint/no-unused-vars
+                                 8:3  Warning: 'animate' is defined but never used.  @typescript-eslint/no-unused-vars
+                                 ./components/ui/dropdown-menu.tsx
+                                 5:10  Warning: 'Check' is defined but never used.  @typescript-eslint/no-unused-vars
+                                 5:31  Warning: 'Circle' is defined but never used.  @typescript-eslint/no-unused-vars
+                                 ./components/ui/header.tsx
+                                 4:40  Warning: 'LayoutDashboard' is defined but never used.  @typescript-eslint/no-unused-vars
+                                 16:26  Warning: 'title' is defined but never used. Allowed unused args must match /^_/u.  @typescript-eslint/no-unused-vars
+                                 ./components/ui/tags-input.tsx
+                                 4:10  Warning: 'Button' is defined but never used.  @typescript-eslint/no-unused-vars
+                                 ./lib/api.ts
+                                 33:14  Warning: '_' is defined but never used.  @typescript-eslint/no-unused-vars
+                                 37:18  Warning: 'e' is defined but never used.  @typescript-eslint/no-unused-vars
+                                 87:14  Warning: 'e' is defined but never used.  @typescript-eslint/no-unused-vars
+                                 169:14  Warning: 'e' is defined but never used.  @typescript-eslint/no-unused-vars
+                                 info  - Need to disable some ESLint rules? Learn more here: https://nextjs.org/docs/basic-features/eslint#disabling-rules
+2025-11-06T20:16:04.543Z [INFO]: Collecting page data ...
+2025-11-06T20:16:05.530Z [INFO]: Generating static pages (0/20) ...
+2025-11-06T20:16:06.161Z [INFO]: Generating static pages (5/20)
+2025-11-06T20:16:06.953Z [INFO]: Generating static pages (10/20)
+2025-11-06T20:16:07.008Z [INFO]: Generating static pages (15/20)
+2025-11-06T20:16:07.058Z [INFO]: ✓ Generating static pages (20/20)
+2025-11-06T20:16:07.269Z [INFO]: Finalizing page optimization ...
+2025-11-06T20:16:07.269Z [INFO]: Collecting build traces ...
+2025-11-06T20:16:12.234Z [INFO]: 
+2025-11-06T20:16:12.246Z [INFO]: Route (app)                              Size     First Load JS
+                                 ┌ ○ /                                    4.78 kB         157 kB
+                                 ├ ○ /_not-found                          143 B          87.9 kB
+                                 ├ ○ /admin                               7.14 kB         179 kB
+                                 ├ ○ /alerts                              2.72 kB         135 kB
+                                 ├ ○ /billing                             5.74 kB         120 kB
+                                 ├ ○ /claims                              6.79 kB         151 kB
+                                 ├ ○ /dashboard                           103 kB          273 kB
+                                 ├ ○ /login                               1.27 kB         237 kB
+                                 ├ ○ /onboard                             7.29 kB         169 kB
+                                 ├ ○ /profile                             7.88 kB         166 kB
+                                 ├ ○ /recommendations                     7.58 kB         171 kB
+                                 ├ ○ /settings                            9.73 kB         196 kB
+                                 ├ ○ /settings/automation                 7.13 kB         118 kB
+                                 ├ ○ /settings/connections                2.92 kB         153 kB
+                                 ├ ○ /sla-claims                          7.98 kB         162 kB
+                                 ├ ○ /status                              5.32 kB         156 kB
+                                 ├ ○ /terms                               3.64 kB        99.8 kB
+                                 └ ○ /trial                               25 kB           203 kB
+                                 + First Load JS shared by all            87.7 kB
+                                 ├ chunks/2364-38774b6375cb0dc8.js      32 kB
+                                 ├ chunks/618f8807-4aae5ad74e354715.js  53.6 kB
+                                 └ other shared chunks (total)          2.06 kB
+2025-11-06T20:16:12.246Z [INFO]: ○  (Static)  prerendered as static content
+2025-11-06T20:16:12.268Z [INFO]: # Completed phase: build
+                                 ## Completed Frontend Build
+2025-11-06T20:16:12.328Z [INFO]: ## Build completed successfully
+2025-11-06T20:16:12.330Z [INFO]: # Starting caching...
+2025-11-06T20:16:12.333Z [INFO]: # Creating cache artifact...
+2025-11-06T20:16:12.340Z [INFO]: # Created cache artifact
+2025-11-06T20:16:12.341Z [INFO]: # Uploading cache artifact...
+2025-11-06T20:16:12.519Z [INFO]: # Uploaded cache artifact
+2025-11-06T20:16:12.519Z [INFO]: # Caching completed
+2025-11-06T20:16:12.523Z [ERROR]: !!! CustomerError: Failed to find the deploy-manifest.json file in the build output. Please verify that it exists within the "baseDirectory" specified in your buildSpec. If it's not there, we will also check the .amplify-hosting directory as a fallback. When using a framework adapter for hosting on Amplify, double-check that the adapter settings are correct.
+2025-11-06T20:16:12.523Z [INFO]: # Starting environment caching...
+2025-11-06T20:16:12.523Z [INFO]: # Environment caching completed
+
