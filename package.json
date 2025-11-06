@@ -39,5 +39,8 @@
   "overrides": {
     "react": "^18",
     "react-dom": "^18"
+  },
+  "dependencies": {
+  "react-hook-form": "^7.43.0"
   }
 }
