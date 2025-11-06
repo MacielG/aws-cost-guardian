@@ -4,6 +4,10 @@ require('dotenv').config({ path: './.env.local' });
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   output: 'export',
+  trailingSlash: true,
+  images: {
+    unoptimized: true,
+  },
   // Suas outras configurações do Next.js aqui...
 };
 
