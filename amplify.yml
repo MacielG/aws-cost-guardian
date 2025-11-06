@@ -6,10 +6,10 @@ frontend:
         - cd frontend
         - npm ci
     build:
-    commands:
-    - cd frontend # Garantir que estamos no diretório correto
-         - npm run build
-         - node amplify.mjs # Executar o script que cria o manifest
+      commands:
+        - cd frontend
+        - npm run build
+        - node amplify.mjs
   artifacts:
     baseDirectory: frontend/.amplify-hosting
     files:
