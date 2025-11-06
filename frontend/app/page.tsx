@@ -29,7 +29,7 @@ export default function Home() {
     const loadMetrics = async () => {
       try {
         // Use apiFetch with skipAuth=true for public endpoints
-        const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || ''}public/metrics`, {
+        const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || ''}/api/public/metrics`, {
           method: 'GET',
           headers: {
             'Content-Type': 'application/json',

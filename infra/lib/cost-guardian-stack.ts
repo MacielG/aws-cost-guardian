@@ -416,7 +416,7 @@ export class CostGuardianStack extends cdk.Stack {
       // eslint-disable-next-line @typescript-eslint/no-var-requires
       const { NodejsFunction } = require('aws-cdk-lib/aws-lambda-nodejs');
       apiHandlerLambda = new NodejsFunction(this, 'ApiHandler', {
-        entry: path.join(backendPath, 'handler.js'),
+        entry: path.join(backendPath, 'handler-simple.js'),
         handler: 'app',
         runtime: lambda.Runtime.NODEJS_18_X,
         bundling: {
@@ -441,43 +441,10 @@ export class CostGuardianStack extends cdk.Stack {
           NODE_OPTIONS: '--enable-source-maps',
           AWS_XRAY_TRACING_MODE: 'ACTIVE',
         },
-        reservedConcurrentExecutions: 0,
-        // Provisioned concurrency para reduzir cold starts (apenas em produção)
-        ...(props.isTestEnvironment ? {} : {
-          provisionedConcurrentExecutions: 2,
-        }),
+        reservedConcurrentExecutions: 10,
         // Enable X-Ray tracing
         tracing: lambda.Tracing.ACTIVE,
       });
-
-      // Auto-scaling baseado em utilização (apenas em produção)
-      if (!props.isTestEnvironment) {
-        const alias = new lambda.Alias(this, 'ApiHandlerAlias', {
-          aliasName: 'live',
-          version: apiHandlerLambda.currentVersion,
-          provisionedConcurrentExecutions: 2,
-        });
-
-        // Target tracking scaling
-        const scaling = alias.addAutoScaling({
-          minCapacity: 2,
-          maxCapacity: 20,
-        });
-
-        scaling.scaleOnUtilization({
-          utilizationTarget: 0.7, // 70% utilization
-        });
-
-        scaling.scaleOnSchedule('ScaleUpMorning', {
-          schedule: events.Schedule.cron({ hour: '9', minute: '0' }),
-          minCapacity: 5,
-        });
-
-        scaling.scaleOnSchedule('ScaleDownEvening', {
-          schedule: events.Schedule.cron({ hour: '18', minute: '0' }),
-          maxCapacity: 10,
-        });
-      }
     }
 
     // Refinar permissões do ApiHandler para DynamoDB (Task 4)
@@ -1114,9 +1081,10 @@ export class CostGuardianStack extends cdk.Stack {
           'http://127.0.0.1:5500',
           'https://awscostguardian.com',
           'https://www.awscostguardian.com',
+          'https://main.d1w4m8xpy3lj36.amplifyapp.com',
           props.isTestEnvironment ? undefined : `https://${domainName}`,
           props.isTestEnvironment ? undefined : `https://www.${domainName}`
-        ].filter(Boolean),
+        ].filter((x): x is string => Boolean(x)),
         allowMethods: apigw.Cors.ALL_METHODS,
         allowHeaders: [
           'Content-Type',
@@ -1395,7 +1363,6 @@ export class CostGuardianStack extends cdk.Stack {
       );
 
       // Add X-Ray tracing to API Gateway and Lambda
-      const xrayAspect = new cdk.Aspects();
       cdk.Aspects.of(this).add({
         visit: (node) => {
           if (node instanceof lambda.Function) {

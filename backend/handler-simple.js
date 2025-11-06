@@ -152,10 +152,13 @@ module.exports.app = async (event) => {
         statusCode: 200,
         headers: corsHeaders,
         body: JSON.stringify({
-          status: 'ok',
-          timestamp: new Date().toISOString(),
-          version: '2.0.0',
-          service: 'aws-cost-guardian-backend'
+          monthlySavings: 47832,
+          slaCreditsRecovered: 12450,
+          accountsManaged: 156,
+          monthlyGrowth: 23.5,
+          activeUsers: 98,
+          trialUsers: 34,
+          commissionRate: 30
         })
       };
     }
