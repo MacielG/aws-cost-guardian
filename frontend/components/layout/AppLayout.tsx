@@ -4,8 +4,8 @@ import { useRouter } from 'next/navigation';
 import { useEffect } from 'react';
 // Importe seu componente de spinner
 import { LoadingSpinner } from '@/components/ui/LoadingSpinner';
-import Sidebar from '@/components/layout/Sidebar';
-import Header from '@/components/layout/Header';
+import { Sidebar } from '@/components/layout/Sidebar';
+import { Header } from '@/components/layout/Header';
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {
   // 1. Obter 'isLoadingAuth'
