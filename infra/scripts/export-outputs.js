@@ -8,17 +8,14 @@
 const fs = require('fs');
 const path = require('path');
 
-// Parse CLI arguments
 const args = process.argv.slice(2);
 const force = args.includes('--force');
 const merge = args.includes('--merge');
 const skipIfExists = args.includes('--skip-if-exists');
 const production = args.includes('--production');
 
-// Default to force if no option specified
 const defaultBehavior = !merge && !skipIfExists ? 'force' : (merge ? 'merge' : (skipIfExists ? 'skip' : 'force'));
 
-// Determine env file path
 const ENV_FILE_NAME = production ? '.env.production' : '.env.local';
 const REGION = 'us-east-1';
 const ENV_FILE_PATH = path.join(__dirname, '../../frontend', ENV_FILE_NAME);
@@ -47,30 +44,60 @@ function areEnvsEqual(existing, newEnv) {
 }
 
 async function exportOutputs() {
-  console.log('🔍 Configurando variáveis de ambiente para Serverless Framework (produção)...\n');
+  console.log('🔍 Configurando variáveis de ambiente para Serverless Framework...\n');
 
-  // Para Serverless Framework, usamos valores hardcoded baseados no deployment atual
   const envVars = {};
+  const isProduction = process.env.NODE_ENV === 'production';
 
-  console.log('📦 Usando configuração Serverless Framework (produção)\n');
+  console.log('📦 Usando configuração Serverless Framework\n');
 
-  // Valores baseados no deployment atual do Serverless Framework
-  envVars['NEXT_PUBLIC_API_URL'] = 'https://zyynk8o2a1.execute-api.us-east-1.amazonaws.com/prod/';
-  envVars['NEXT_PUBLIC_COGNITO_USER_POOL_ID'] = 'us-east-1_1c1vqVeqC';
-  envVars['NEXT_PUBLIC_COGNITO_USER_POOL_CLIENT_ID'] = '5gt250n7bsc96j3ac5qfq5s890';
-  envVars['NEXT_PUBLIC_COGNITO_IDENTITY_POOL_ID'] = 'us-east-1:3e6edff0-0192-4cae-886f-29ad864a06a0';
-  envVars['NEXT_PUBLIC_CFN_TEMPLATE_URL'] = 'http://costguardianstack-cfntemplatebucket4840c65e-gqmdl89vh3hn.s3-website-us-east-1.amazonaws.com/template.yaml';
+  // Read from environment variables or local config file
+  // Priority: env vars > config.local.js > defaults
+  let localConfig = {};
+  try {
+    const configPath = path.join(__dirname, '../../config.local.js');
+    if (fs.existsSync(configPath)) {
+      localConfig = require(configPath);
+      console.log('✓ Carregando configuração de config.local.js');
+    } else {
+      console.warn('⚠️  config.local.js não encontrado. Usando variáveis de ambiente ou valores padrão.');
+    }
+  } catch (error) {
+    console.warn('⚠️  Erro ao carregar config.local.js:', error.message);
+  }
+
+  envVars['NEXT_PUBLIC_API_URL'] = process.env.NEXT_PUBLIC_API_URL ||
+    localConfig.SERVERLESS_API_URL ||
+    'https://your-api-id.execute-api.us-east-1.amazonaws.com/prod/';
+
+  envVars['NEXT_PUBLIC_COGNITO_USER_POOL_ID'] = process.env.NEXT_PUBLIC_COGNITO_USER_POOL_ID ||
+    localConfig.COGNITO_USER_POOL_ID ||
+    'us-east-1_XXXXXXXXX';
+
+  envVars['NEXT_PUBLIC_COGNITO_USER_POOL_CLIENT_ID'] = process.env.NEXT_PUBLIC_COGNITO_USER_POOL_CLIENT_ID ||
+    localConfig.COGNITO_USER_POOL_CLIENT_ID ||
+    'XXXXXXXXXXXXXXXXXXXXXXXXXX';
+
+  envVars['NEXT_PUBLIC_COGNITO_IDENTITY_POOL_ID'] = process.env.NEXT_PUBLIC_COGNITO_IDENTITY_POOL_ID ||
+    localConfig.COGNITO_IDENTITY_POOL_ID ||
+    'us-east-1:xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx';
+
+  envVars['NEXT_PUBLIC_CFN_TEMPLATE_URL'] = process.env.NEXT_PUBLIC_CFN_TEMPLATE_URL ||
+    localConfig.CFN_TEMPLATE_URL ||
+    'https://your-bucket.s3.amazonaws.com/template.yaml';
+
   envVars['NEXT_PUBLIC_AWS_REGION'] = REGION;
   envVars['NEXT_PUBLIC_AMPLIFY_REGION'] = REGION;
 
-  console.log('✓ API URL configurada');
-  console.log('✓ Cognito User Pool configurado');
-  console.log('✓ Cognito Client configurado');
-  console.log('✓ Identity Pool configurado');
-  console.log('✓ CloudFormation Template URL configurada');
-  console.log('✓ Região configurada\n');
+  // Validate that NEXT_PUBLIC_API_URL exists before requesting
+  if (!envVars['NEXT_PUBLIC_API_URL']) {
+    const msg = 'NEXT_PUBLIC_API_URL is missing. Set it via environment variable or SERVERLESS_API_URL.';
+    console.error(`\n❌ ${msg}`);
+    console.error('Example: export NEXT_PUBLIC_API_URL=https://your-api-id.execute-api.us-east-1.amazonaws.com/prod/');
+    process.exit(1);
+  }
 
-  // Validação básica: testar se a API está respondendo
+  // Enhanced health check with better error logging
   try {
     const https = require('https');
     const url = new URL(envVars['NEXT_PUBLIC_API_URL']);
@@ -95,22 +122,29 @@ async function exportOutputs() {
       req.end();
     });
   } catch (error) {
-    console.warn(`⚠️  Não foi possível validar a API: ${error.message}`);
-    console.log('Continuando mesmo assim...\n');
+    // Log full error details
+    console.error(`❌ Health check failed: ${error.message}`);
+    if (error.stack) {
+      console.error('Stack trace:', error.stack);
+    }
+
+    if (isProduction) {
+      console.error('❌ Failing in production due to API health check failure');
+      process.exit(1);
+    } else {
+      console.warn('⚠️  Continuing despite API health check failure (development mode)');
+    }
   }
 
-  // Normalização da URL da API
   function normalizeApiUrl(raw) {
-  if (!raw || typeof raw !== 'string') return raw;
-  let u = raw.trim();
-  // Garantir que termina com /
-  if (!u.endsWith('/')) {
-  u += '/';
-  }
-  return u;
+    if (!raw || typeof raw !== 'string') return raw;
+    let u = raw.trim();
+    if (!u.endsWith('/')) {
+      u += '/';
+    }
+    return u;
   }
 
-  // Aplicar normalização ao endpoint da API se presente
   if (envVars['NEXT_PUBLIC_API_URL']) {
     const normalized = normalizeApiUrl(envVars['NEXT_PUBLIC_API_URL']);
     const finalUrl = normalized.endsWith('/') ? normalized : normalized + '/';
@@ -121,16 +155,15 @@ async function exportOutputs() {
     }
   }
 
-  // Validar que chaves críticas existem
   const required = ['NEXT_PUBLIC_API_URL', 'NEXT_PUBLIC_COGNITO_USER_POOL_ID', 'NEXT_PUBLIC_COGNITO_USER_POOL_CLIENT_ID'];
   const missing = required.filter(k => !envVars[k]);
   if (missing.length > 0) {
     const msg = `Required environment variables missing: ${missing.join(', ')}.`;
     console.error(`\n❌ ${msg}`);
+    console.error('Set these via environment variables before running this script.');
     process.exit(1);
   }
 
-  // Verificar duplicidades e comportamento
   const existingEnv = loadExistingEnv();
   if (areEnvsEqual(existingEnv, envVars)) {
     console.log('\nℹ️  Nenhuma mudança detectada nos valores. Pulando exportação.');
@@ -143,17 +176,15 @@ async function exportOutputs() {
   }
 
   if (merge) {
-    Object.assign(envVars, existingEnv); // Merge: novos sobrescrevem existentes
+    Object.assign(envVars, existingEnv);
     console.log('\n🔄 Modo merge: Mantendo variáveis existentes e adicionando novas.');
   }
 
-  // Criar backup se arquivo existir
   if (fs.existsSync(ENV_FILE_PATH)) {
     fs.copyFileSync(ENV_FILE_PATH, BACKUP_FILE_PATH);
     console.log(`💾 Backup criado: ${BACKUP_FILE_PATH}`);
   }
 
-  // Criar conteúdo do .env.local
   const envContent = Object.entries(envVars)
     .map(([key, value]) => `${key}=${value}`)
     .join('\n');
@@ -161,6 +192,7 @@ async function exportOutputs() {
   const timestamp = new Date().toISOString();
   const fullContent = `# Auto-generated by export-outputs.js at ${timestamp}
 # Do not edit manually - run 'npm run export-outputs' to update
+# Set environment variables before running: NEXT_PUBLIC_API_URL, NEXT_PUBLIC_COGNITO_USER_POOL_ID, etc.
 
 ${envContent}
 
@@ -168,13 +200,11 @@ ${envContent}
 # NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY=pk_test_...
 `;
 
-  // Escrever arquivo
   fs.writeFileSync(ENV_FILE_PATH, fullContent);
 
   console.log(`\n✅ Arquivo criado: ${ENV_FILE_PATH}`);
   console.log('\n📝 Variáveis exportadas:');
   Object.entries(envVars).forEach(([key, value]) => {
-    // Truncar valores longos para exibição
     const displayValue = value.length > 50 ? value.substring(0, 50) + '...' : value;
     console.log(`   ${key}=${displayValue}`);
   });
@@ -189,5 +219,9 @@ ${envContent}
 
 exportOutputs().catch(error => {
   console.error('\n❌ Erro inesperado:', error);
+  console.error('Detalhes:', error.message);
+  if (error.stack) {
+    console.error('Stack trace:', error.stack);
+  }
   process.exit(1);
 });

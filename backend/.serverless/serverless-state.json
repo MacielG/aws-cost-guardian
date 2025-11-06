@@ -272,7 +272,7 @@
                 "S3Bucket": {
                   "Ref": "ServerlessDeploymentBucket"
                 },
-                "S3Key": "serverless/aws-cost-guardian-backend/prod/1762416577566-2025-11-06T08:09:37.566Z/aws-cost-guardian-backend.zip"
+                "S3Key": "serverless/aws-cost-guardian-backend/prod/1762418638406-2025-11-06T08:43:58.406Z/aws-cost-guardian-backend.zip"
               },
               "Handler": "handler-simple.app",
               "Runtime": "nodejs18.x",
@@ -312,7 +312,7 @@
                 "S3Bucket": {
                   "Ref": "ServerlessDeploymentBucket"
                 },
-                "S3Key": "serverless/aws-cost-guardian-backend/prod/1762416577566-2025-11-06T08:09:37.566Z/aws-cost-guardian-backend.zip"
+                "S3Key": "serverless/aws-cost-guardian-backend/prod/1762418638406-2025-11-06T08:43:58.406Z/aws-cost-guardian-backend.zip"
               },
               "Handler": "functions/correlate-health.handler",
               "Runtime": "nodejs18.x",
@@ -352,7 +352,7 @@
                 "S3Bucket": {
                   "Ref": "ServerlessDeploymentBucket"
                 },
-                "S3Key": "serverless/aws-cost-guardian-backend/prod/1762416577566-2025-11-06T08:09:37.566Z/aws-cost-guardian-backend.zip"
+                "S3Key": "serverless/aws-cost-guardian-backend/prod/1762418638406-2025-11-06T08:43:58.406Z/aws-cost-guardian-backend.zip"
               },
               "Handler": "functions/delete-unused-ebs.handler",
               "Runtime": "nodejs18.x",
@@ -392,7 +392,7 @@
                 "S3Bucket": {
                   "Ref": "ServerlessDeploymentBucket"
                 },
-                "S3Key": "serverless/aws-cost-guardian-backend/prod/1762416577566-2025-11-06T08:09:37.566Z/aws-cost-guardian-backend.zip"
+                "S3Key": "serverless/aws-cost-guardian-backend/prod/1762418638406-2025-11-06T08:43:58.406Z/aws-cost-guardian-backend.zip"
               },
               "Handler": "functions/execute-recommendation.handler",
               "Runtime": "nodejs18.x",
@@ -432,7 +432,7 @@
                 "S3Bucket": {
                   "Ref": "ServerlessDeploymentBucket"
                 },
-                "S3Key": "serverless/aws-cost-guardian-backend/prod/1762416577566-2025-11-06T08:09:37.566Z/aws-cost-guardian-backend.zip"
+                "S3Key": "serverless/aws-cost-guardian-backend/prod/1762418638406-2025-11-06T08:43:58.406Z/aws-cost-guardian-backend.zip"
               },
               "Handler": "functions/ingest-costs.handler",
               "Runtime": "nodejs18.x",
@@ -472,7 +472,7 @@
                 "S3Bucket": {
                   "Ref": "ServerlessDeploymentBucket"
                 },
-                "S3Key": "serverless/aws-cost-guardian-backend/prod/1762416577566-2025-11-06T08:09:37.566Z/aws-cost-guardian-backend.zip"
+                "S3Key": "serverless/aws-cost-guardian-backend/prod/1762418638406-2025-11-06T08:43:58.406Z/aws-cost-guardian-backend.zip"
               },
               "Handler": "functions/marketplace-metering.handler",
               "Runtime": "nodejs18.x",
@@ -512,7 +512,7 @@
                 "S3Bucket": {
                   "Ref": "ServerlessDeploymentBucket"
                 },
-                "S3Key": "serverless/aws-cost-guardian-backend/prod/1762416577566-2025-11-06T08:09:37.566Z/aws-cost-guardian-backend.zip"
+                "S3Key": "serverless/aws-cost-guardian-backend/prod/1762418638406-2025-11-06T08:43:58.406Z/aws-cost-guardian-backend.zip"
               },
               "Handler": "functions/recommend-idle-instances.handler",
               "Runtime": "nodejs18.x",
@@ -552,7 +552,7 @@
                 "S3Bucket": {
                   "Ref": "ServerlessDeploymentBucket"
                 },
-                "S3Key": "serverless/aws-cost-guardian-backend/prod/1762416577566-2025-11-06T08:09:37.566Z/aws-cost-guardian-backend.zip"
+                "S3Key": "serverless/aws-cost-guardian-backend/prod/1762418638406-2025-11-06T08:43:58.406Z/aws-cost-guardian-backend.zip"
               },
               "Handler": "functions/recommend-rds-idle.handler",
               "Runtime": "nodejs18.x",
@@ -592,7 +592,7 @@
                 "S3Bucket": {
                   "Ref": "ServerlessDeploymentBucket"
                 },
-                "S3Key": "serverless/aws-cost-guardian-backend/prod/1762416577566-2025-11-06T08:09:37.566Z/aws-cost-guardian-backend.zip"
+                "S3Key": "serverless/aws-cost-guardian-backend/prod/1762418638406-2025-11-06T08:43:58.406Z/aws-cost-guardian-backend.zip"
               },
               "Handler": "functions/sla-generate-pdf.handler",
               "Runtime": "nodejs18.x",
@@ -632,7 +632,7 @@
                 "S3Bucket": {
                   "Ref": "ServerlessDeploymentBucket"
                 },
-                "S3Key": "serverless/aws-cost-guardian-backend/prod/1762416577566-2025-11-06T08:09:37.566Z/aws-cost-guardian-backend.zip"
+                "S3Key": "serverless/aws-cost-guardian-backend/prod/1762418638406-2025-11-06T08:43:58.406Z/aws-cost-guardian-backend.zip"
               },
               "Handler": "functions/sla-submit-ticket.handler",
               "Runtime": "nodejs18.x",
@@ -672,7 +672,7 @@
                 "S3Bucket": {
                   "Ref": "ServerlessDeploymentBucket"
                 },
-                "S3Key": "serverless/aws-cost-guardian-backend/prod/1762416577566-2025-11-06T08:09:37.566Z/aws-cost-guardian-backend.zip"
+                "S3Key": "serverless/aws-cost-guardian-backend/prod/1762418638406-2025-11-06T08:43:58.406Z/aws-cost-guardian-backend.zip"
               },
               "Handler": "functions/sla-workflow.handler",
               "Runtime": "nodejs18.x",
@@ -712,7 +712,7 @@
                 "S3Bucket": {
                   "Ref": "ServerlessDeploymentBucket"
                 },
-                "S3Key": "serverless/aws-cost-guardian-backend/prod/1762416577566-2025-11-06T08:09:37.566Z/aws-cost-guardian-backend.zip"
+                "S3Key": "serverless/aws-cost-guardian-backend/prod/1762418638406-2025-11-06T08:43:58.406Z/aws-cost-guardian-backend.zip"
               },
               "Handler": "test-handler.testHandler",
               "Runtime": "nodejs18.x",
@@ -745,124 +745,124 @@
               "TestFunctionLogGroup"
             ]
           },
-          "ApiLambdaVersionV9yfmAzFdWILZWMUPnj9i3hEIXhFil0BY3PMqw0n7gQ": {
+          "ApiLambdaVersionkJcP0CMlsmhTmGFOONFJAYCdDA7e4nd2LtfBvr0OQUw": {
             "Type": "AWS::Lambda::Version",
             "DeletionPolicy": "Retain",
             "Properties": {
               "FunctionName": {
                 "Ref": "ApiLambdaFunction"
               },
-              "CodeSha256": "N4SyCvbIePC9tZGMtpwlDhZQghHWmsa3Uu1BqC4t02M="
+              "CodeSha256": "hKfxokDGcei+ASIdBhNeyCTqNpjIrCy+vdwdrwEP2SU="
             }
           },
-          "CorrelateHealthLambdaVersionJzS4aT8fmLdE0ppG047a2AzseXIo4RE7uVseX9FEPg": {
+          "CorrelateHealthLambdaVersionp2SJD8lVgg3LdzTkTTfmRbO2Taq8PL3nEt4EJp0UI": {
             "Type": "AWS::Lambda::Version",
             "DeletionPolicy": "Retain",
             "Properties": {
               "FunctionName": {
                 "Ref": "CorrelateHealthLambdaFunction"
               },
-              "CodeSha256": "N4SyCvbIePC9tZGMtpwlDhZQghHWmsa3Uu1BqC4t02M="
+              "CodeSha256": "hKfxokDGcei+ASIdBhNeyCTqNpjIrCy+vdwdrwEP2SU="
             }
           },
-          "DeleteUnusedEbsLambdaVersionrQAeM8K73d9SBiGz0fEb3BTuumwagjthhzAD4kr64": {
+          "DeleteUnusedEbsLambdaVersionQnk5cGnlwQNJy39A1zbgRiooTKMvZtHKtfBVjPVLA": {
             "Type": "AWS::Lambda::Version",
             "DeletionPolicy": "Retain",
             "Properties": {
               "FunctionName": {
                 "Ref": "DeleteUnusedEbsLambdaFunction"
               },
-              "CodeSha256": "N4SyCvbIePC9tZGMtpwlDhZQghHWmsa3Uu1BqC4t02M="
+              "CodeSha256": "hKfxokDGcei+ASIdBhNeyCTqNpjIrCy+vdwdrwEP2SU="
             }
           },
-          "ExecuteRecommendationLambdaVersionvmTVBJ2rHBR1tX8vsDmqzDoQg94RQlmreQQRH3yXMQ": {
+          "ExecuteRecommendationLambdaVersion2nnTeVs6xmhNlNN36huw4yogA1CM0J6Xb1RpeeL2M": {
             "Type": "AWS::Lambda::Version",
             "DeletionPolicy": "Retain",
             "Properties": {
               "FunctionName": {
                 "Ref": "ExecuteRecommendationLambdaFunction"
               },
-              "CodeSha256": "N4SyCvbIePC9tZGMtpwlDhZQghHWmsa3Uu1BqC4t02M="
+              "CodeSha256": "hKfxokDGcei+ASIdBhNeyCTqNpjIrCy+vdwdrwEP2SU="
             }
           },
-          "IngestCostsLambdaVersionLAXyuKCYnIufYGs2qMFLxotcGanfF2BX8rZvSNPZZ0": {
+          "IngestCostsLambdaVersionA1IHMbhAwsCXkaqWrDE3cBXaQgOQiDKJac9HHw": {
             "Type": "AWS::Lambda::Version",
             "DeletionPolicy": "Retain",
             "Properties": {
               "FunctionName": {
                 "Ref": "IngestCostsLambdaFunction"
               },
-              "CodeSha256": "N4SyCvbIePC9tZGMtpwlDhZQghHWmsa3Uu1BqC4t02M="
+              "CodeSha256": "hKfxokDGcei+ASIdBhNeyCTqNpjIrCy+vdwdrwEP2SU="
             }
           },
-          "MarketplaceMeteringLambdaVersionWGpr68w3jL3G8693NbJJumdMgq4u2FSB68zeS8snDe8": {
+          "MarketplaceMeteringLambdaVersioniYYIXXoQDQK5Lb2Vpji9OQggDkfpqMhBUxIBHzcUiM": {
             "Type": "AWS::Lambda::Version",
             "DeletionPolicy": "Retain",
             "Properties": {
               "FunctionName": {
                 "Ref": "MarketplaceMeteringLambdaFunction"
               },
-              "CodeSha256": "N4SyCvbIePC9tZGMtpwlDhZQghHWmsa3Uu1BqC4t02M="
+              "CodeSha256": "hKfxokDGcei+ASIdBhNeyCTqNpjIrCy+vdwdrwEP2SU="
             }
           },
-          "RecommendIdleInstancesLambdaVersionXVTb5VuABCkDkA3FU8bjqjUtn92RTVTq6aHS7YWCs": {
+          "RecommendIdleInstancesLambdaVersionbnYWJjRq6xFRy6MhfXPORlVeyPiA4Iy7V6BKpXCmk": {
             "Type": "AWS::Lambda::Version",
             "DeletionPolicy": "Retain",
             "Properties": {
               "FunctionName": {
                 "Ref": "RecommendIdleInstancesLambdaFunction"
               },
-              "CodeSha256": "N4SyCvbIePC9tZGMtpwlDhZQghHWmsa3Uu1BqC4t02M="
+              "CodeSha256": "hKfxokDGcei+ASIdBhNeyCTqNpjIrCy+vdwdrwEP2SU="
             }
           },
-          "RecommendRdsIdleLambdaVersion6wR4wLqOMHZevCJxjwkt2TfzN6pTGGfPlr0Qv5m1A": {
+          "RecommendRdsIdleLambdaVersionDUl80SsgmX48fz5pcHelTTlQ3Q7QcGSjZcAUieFBc": {
             "Type": "AWS::Lambda::Version",
             "DeletionPolicy": "Retain",
             "Properties": {
               "FunctionName": {
                 "Ref": "RecommendRdsIdleLambdaFunction"
               },
-              "CodeSha256": "N4SyCvbIePC9tZGMtpwlDhZQghHWmsa3Uu1BqC4t02M="
+              "CodeSha256": "hKfxokDGcei+ASIdBhNeyCTqNpjIrCy+vdwdrwEP2SU="
             }
           },
-          "SlaGeneratePdfLambdaVersionlhyTIULcvznfrCx2bxswG9MYkSFI9hcuafUKhtqgOM": {
+          "SlaGeneratePdfLambdaVersion2EVBNWFkoCupCuTXpcKzVK4IyF43uNzaElJySiEVw": {
             "Type": "AWS::Lambda::Version",
             "DeletionPolicy": "Retain",
             "Properties": {
               "FunctionName": {
                 "Ref": "SlaGeneratePdfLambdaFunction"
               },
-              "CodeSha256": "N4SyCvbIePC9tZGMtpwlDhZQghHWmsa3Uu1BqC4t02M="
+              "CodeSha256": "hKfxokDGcei+ASIdBhNeyCTqNpjIrCy+vdwdrwEP2SU="
             }
           },
-          "SlaSubmitTicketLambdaVersion2tOgrZ5MX3Svmyv7vFcX9nLnSU9VljORUpHQO36eG2Q": {
+          "SlaSubmitTicketLambdaVersionrCaTWcuf9qA2hySNcfioSLRioPSRdOXgGah9NQ": {
             "Type": "AWS::Lambda::Version",
             "DeletionPolicy": "Retain",
             "Properties": {
               "FunctionName": {
                 "Ref": "SlaSubmitTicketLambdaFunction"
               },
-              "CodeSha256": "N4SyCvbIePC9tZGMtpwlDhZQghHWmsa3Uu1BqC4t02M="
+              "CodeSha256": "hKfxokDGcei+ASIdBhNeyCTqNpjIrCy+vdwdrwEP2SU="
             }
           },
-          "SlaWorkflowLambdaVersionzXgHUZIDOMOKVbn8HkfiIlNl6g8PqnOAZ7nEOdAJA5w": {
+          "SlaWorkflowLambdaVersionsxntVllx6GdEGHy1Z3ybIVT45Rc4ptyWVYS2ntrkJw": {
             "Type": "AWS::Lambda::Version",
             "DeletionPolicy": "Retain",
             "Properties": {
               "FunctionName": {
                 "Ref": "SlaWorkflowLambdaFunction"
               },
-              "CodeSha256": "N4SyCvbIePC9tZGMtpwlDhZQghHWmsa3Uu1BqC4t02M="
+              "CodeSha256": "hKfxokDGcei+ASIdBhNeyCTqNpjIrCy+vdwdrwEP2SU="
             }
           },
-          "TestFunctionLambdaVersionn6OD6iKS1pANjqEvYGbySAJivaToscKvHX5T7TOrBo": {
+          "TestFunctionLambdaVersionHRk8eIfgdsdq0hDzcspfRNozQK3dws5d4StN6WB8": {
             "Type": "AWS::Lambda::Version",
             "DeletionPolicy": "Retain",
             "Properties": {
               "FunctionName": {
                 "Ref": "TestFunctionLambdaFunction"
               },
-              "CodeSha256": "N4SyCvbIePC9tZGMtpwlDhZQghHWmsa3Uu1BqC4t02M="
+              "CodeSha256": "hKfxokDGcei+ASIdBhNeyCTqNpjIrCy+vdwdrwEP2SU="
             }
           },
           "ApiGatewayRestApi": {
@@ -1044,7 +1044,7 @@
               "TestFunctionLambdaPermissionApiGateway"
             ]
           },
-          "ApiGatewayDeployment1762416509768": {
+          "ApiGatewayDeployment1762418553543": {
             "Type": "AWS::ApiGateway::Deployment",
             "Properties": {
               "RestApiId": {
@@ -1145,7 +1145,7 @@
           "ApiLambdaFunctionQualifiedArn": {
             "Description": "Current Lambda function version",
             "Value": {
-              "Ref": "ApiLambdaVersionV9yfmAzFdWILZWMUPnj9i3hEIXhFil0BY3PMqw0n7gQ"
+              "Ref": "ApiLambdaVersionkJcP0CMlsmhTmGFOONFJAYCdDA7e4nd2LtfBvr0OQUw"
             },
             "Export": {
               "Name": "sls-aws-cost-guardian-backend-prod-ApiLambdaFunctionQualifiedArn"
@@ -1154,7 +1154,7 @@
           "CorrelateHealthLambdaFunctionQualifiedArn": {
             "Description": "Current Lambda function version",
             "Value": {
-              "Ref": "CorrelateHealthLambdaVersionJzS4aT8fmLdE0ppG047a2AzseXIo4RE7uVseX9FEPg"
+              "Ref": "CorrelateHealthLambdaVersionp2SJD8lVgg3LdzTkTTfmRbO2Taq8PL3nEt4EJp0UI"
             },
             "Export": {
               "Name": "sls-aws-cost-guardian-backend-prod-CorrelateHealthLambdaFunctionQualifiedArn"
@@ -1163,7 +1163,7 @@
           "DeleteUnusedEbsLambdaFunctionQualifiedArn": {
             "Description": "Current Lambda function version",
             "Value": {
-              "Ref": "DeleteUnusedEbsLambdaVersionrQAeM8K73d9SBiGz0fEb3BTuumwagjthhzAD4kr64"
+              "Ref": "DeleteUnusedEbsLambdaVersionQnk5cGnlwQNJy39A1zbgRiooTKMvZtHKtfBVjPVLA"
             },
             "Export": {
               "Name": "sls-aws-cost-guardian-backend-prod-DeleteUnusedEbsLambdaFunctionQualifiedArn"
@@ -1172,7 +1172,7 @@
           "ExecuteRecommendationLambdaFunctionQualifiedArn": {
             "Description": "Current Lambda function version",
             "Value": {
-              "Ref": "ExecuteRecommendationLambdaVersionvmTVBJ2rHBR1tX8vsDmqzDoQg94RQlmreQQRH3yXMQ"
+              "Ref": "ExecuteRecommendationLambdaVersion2nnTeVs6xmhNlNN36huw4yogA1CM0J6Xb1RpeeL2M"
             },
             "Export": {
               "Name": "sls-aws-cost-guardian-backend-prod-ExecuteRecommendationLambdaFunctionQualifiedArn"
@@ -1181,7 +1181,7 @@
           "IngestCostsLambdaFunctionQualifiedArn": {
             "Description": "Current Lambda function version",
             "Value": {
-              "Ref": "IngestCostsLambdaVersionLAXyuKCYnIufYGs2qMFLxotcGanfF2BX8rZvSNPZZ0"
+              "Ref": "IngestCostsLambdaVersionA1IHMbhAwsCXkaqWrDE3cBXaQgOQiDKJac9HHw"
             },
             "Export": {
               "Name": "sls-aws-cost-guardian-backend-prod-IngestCostsLambdaFunctionQualifiedArn"
@@ -1190,7 +1190,7 @@
           "MarketplaceMeteringLambdaFunctionQualifiedArn": {
             "Description": "Current Lambda function version",
             "Value": {
-              "Ref": "MarketplaceMeteringLambdaVersionWGpr68w3jL3G8693NbJJumdMgq4u2FSB68zeS8snDe8"
+              "Ref": "MarketplaceMeteringLambdaVersioniYYIXXoQDQK5Lb2Vpji9OQggDkfpqMhBUxIBHzcUiM"
             },
             "Export": {
               "Name": "sls-aws-cost-guardian-backend-prod-MarketplaceMeteringLambdaFunctionQualifiedArn"
@@ -1199,7 +1199,7 @@
           "RecommendIdleInstancesLambdaFunctionQualifiedArn": {
             "Description": "Current Lambda function version",
             "Value": {
-              "Ref": "RecommendIdleInstancesLambdaVersionXVTb5VuABCkDkA3FU8bjqjUtn92RTVTq6aHS7YWCs"
+              "Ref": "RecommendIdleInstancesLambdaVersionbnYWJjRq6xFRy6MhfXPORlVeyPiA4Iy7V6BKpXCmk"
             },
             "Export": {
               "Name": "sls-aws-cost-guardian-backend-prod-RecommendIdleInstancesLambdaFunctionQualifiedArn"
@@ -1208,7 +1208,7 @@
           "RecommendRdsIdleLambdaFunctionQualifiedArn": {
             "Description": "Current Lambda function version",
             "Value": {
-              "Ref": "RecommendRdsIdleLambdaVersion6wR4wLqOMHZevCJxjwkt2TfzN6pTGGfPlr0Qv5m1A"
+              "Ref": "RecommendRdsIdleLambdaVersionDUl80SsgmX48fz5pcHelTTlQ3Q7QcGSjZcAUieFBc"
             },
             "Export": {
               "Name": "sls-aws-cost-guardian-backend-prod-RecommendRdsIdleLambdaFunctionQualifiedArn"
@@ -1217,7 +1217,7 @@
           "SlaGeneratePdfLambdaFunctionQualifiedArn": {
             "Description": "Current Lambda function version",
             "Value": {
-              "Ref": "SlaGeneratePdfLambdaVersionlhyTIULcvznfrCx2bxswG9MYkSFI9hcuafUKhtqgOM"
+              "Ref": "SlaGeneratePdfLambdaVersion2EVBNWFkoCupCuTXpcKzVK4IyF43uNzaElJySiEVw"
             },
             "Export": {
               "Name": "sls-aws-cost-guardian-backend-prod-SlaGeneratePdfLambdaFunctionQualifiedArn"
@@ -1226,7 +1226,7 @@
           "SlaSubmitTicketLambdaFunctionQualifiedArn": {
             "Description": "Current Lambda function version",
             "Value": {
-              "Ref": "SlaSubmitTicketLambdaVersion2tOgrZ5MX3Svmyv7vFcX9nLnSU9VljORUpHQO36eG2Q"
+              "Ref": "SlaSubmitTicketLambdaVersionrCaTWcuf9qA2hySNcfioSLRioPSRdOXgGah9NQ"
             },
             "Export": {
               "Name": "sls-aws-cost-guardian-backend-prod-SlaSubmitTicketLambdaFunctionQualifiedArn"
@@ -1235,7 +1235,7 @@
           "SlaWorkflowLambdaFunctionQualifiedArn": {
             "Description": "Current Lambda function version",
             "Value": {
-              "Ref": "SlaWorkflowLambdaVersionzXgHUZIDOMOKVbn8HkfiIlNl6g8PqnOAZ7nEOdAJA5w"
+              "Ref": "SlaWorkflowLambdaVersionsxntVllx6GdEGHy1Z3ybIVT45Rc4ptyWVYS2ntrkJw"
             },
             "Export": {
               "Name": "sls-aws-cost-guardian-backend-prod-SlaWorkflowLambdaFunctionQualifiedArn"
@@ -1244,7 +1244,7 @@
           "TestFunctionLambdaFunctionQualifiedArn": {
             "Description": "Current Lambda function version",
             "Value": {
-              "Ref": "TestFunctionLambdaVersionn6OD6iKS1pANjqEvYGbySAJivaToscKvHX5T7TOrBo"
+              "Ref": "TestFunctionLambdaVersionHRk8eIfgdsdq0hDzcspfRNozQK3dws5d4StN6WB8"
             },
             "Export": {
               "Name": "sls-aws-cost-guardian-backend-prod-TestFunctionLambdaFunctionQualifiedArn"
@@ -1385,7 +1385,7 @@
         "timeout": 6,
         "runtime": "nodejs18.x",
         "vpc": {},
-        "versionLogicalId": "ApiLambdaVersionV9yfmAzFdWILZWMUPnj9i3hEIXhFil0BY3PMqw0n7gQ"
+        "versionLogicalId": "ApiLambdaVersionkJcP0CMlsmhTmGFOONFJAYCdDA7e4nd2LtfBvr0OQUw"
       },
       "correlateHealth": {
         "handler": "functions/correlate-health.handler",
@@ -1396,7 +1396,7 @@
         "timeout": 6,
         "runtime": "nodejs18.x",
         "vpc": {},
-        "versionLogicalId": "CorrelateHealthLambdaVersionJzS4aT8fmLdE0ppG047a2AzseXIo4RE7uVseX9FEPg"
+        "versionLogicalId": "CorrelateHealthLambdaVersionp2SJD8lVgg3LdzTkTTfmRbO2Taq8PL3nEt4EJp0UI"
       },
       "deleteUnusedEbs": {
         "handler": "functions/delete-unused-ebs.handler",
@@ -1407,7 +1407,7 @@
         "timeout": 6,
         "runtime": "nodejs18.x",
         "vpc": {},
-        "versionLogicalId": "DeleteUnusedEbsLambdaVersionrQAeM8K73d9SBiGz0fEb3BTuumwagjthhzAD4kr64"
+        "versionLogicalId": "DeleteUnusedEbsLambdaVersionQnk5cGnlwQNJy39A1zbgRiooTKMvZtHKtfBVjPVLA"
       },
       "executeRecommendation": {
         "handler": "functions/execute-recommendation.handler",
@@ -1418,7 +1418,7 @@
         "timeout": 6,
         "runtime": "nodejs18.x",
         "vpc": {},
-        "versionLogicalId": "ExecuteRecommendationLambdaVersionvmTVBJ2rHBR1tX8vsDmqzDoQg94RQlmreQQRH3yXMQ"
+        "versionLogicalId": "ExecuteRecommendationLambdaVersion2nnTeVs6xmhNlNN36huw4yogA1CM0J6Xb1RpeeL2M"
       },
       "ingestCosts": {
         "handler": "functions/ingest-costs.handler",
@@ -1429,7 +1429,7 @@
         "timeout": 6,
         "runtime": "nodejs18.x",
         "vpc": {},
-        "versionLogicalId": "IngestCostsLambdaVersionLAXyuKCYnIufYGs2qMFLxotcGanfF2BX8rZvSNPZZ0"
+        "versionLogicalId": "IngestCostsLambdaVersionA1IHMbhAwsCXkaqWrDE3cBXaQgOQiDKJac9HHw"
       },
       "marketplaceMetering": {
         "handler": "functions/marketplace-metering.handler",
@@ -1440,7 +1440,7 @@
         "timeout": 6,
         "runtime": "nodejs18.x",
         "vpc": {},
-        "versionLogicalId": "MarketplaceMeteringLambdaVersionWGpr68w3jL3G8693NbJJumdMgq4u2FSB68zeS8snDe8"
+        "versionLogicalId": "MarketplaceMeteringLambdaVersioniYYIXXoQDQK5Lb2Vpji9OQggDkfpqMhBUxIBHzcUiM"
       },
       "recommendIdleInstances": {
         "handler": "functions/recommend-idle-instances.handler",
@@ -1451,7 +1451,7 @@
         "timeout": 6,
         "runtime": "nodejs18.x",
         "vpc": {},
-        "versionLogicalId": "RecommendIdleInstancesLambdaVersionXVTb5VuABCkDkA3FU8bjqjUtn92RTVTq6aHS7YWCs"
+        "versionLogicalId": "RecommendIdleInstancesLambdaVersionbnYWJjRq6xFRy6MhfXPORlVeyPiA4Iy7V6BKpXCmk"
       },
       "recommendRdsIdle": {
         "handler": "functions/recommend-rds-idle.handler",
@@ -1462,7 +1462,7 @@
         "timeout": 6,
         "runtime": "nodejs18.x",
         "vpc": {},
-        "versionLogicalId": "RecommendRdsIdleLambdaVersion6wR4wLqOMHZevCJxjwkt2TfzN6pTGGfPlr0Qv5m1A"
+        "versionLogicalId": "RecommendRdsIdleLambdaVersionDUl80SsgmX48fz5pcHelTTlQ3Q7QcGSjZcAUieFBc"
       },
       "slaGeneratePdf": {
         "handler": "functions/sla-generate-pdf.handler",
@@ -1473,7 +1473,7 @@
         "timeout": 6,
         "runtime": "nodejs18.x",
         "vpc": {},
-        "versionLogicalId": "SlaGeneratePdfLambdaVersionlhyTIULcvznfrCx2bxswG9MYkSFI9hcuafUKhtqgOM"
+        "versionLogicalId": "SlaGeneratePdfLambdaVersion2EVBNWFkoCupCuTXpcKzVK4IyF43uNzaElJySiEVw"
       },
       "slaSubmitTicket": {
         "handler": "functions/sla-submit-ticket.handler",
@@ -1484,7 +1484,7 @@
         "timeout": 6,
         "runtime": "nodejs18.x",
         "vpc": {},
-        "versionLogicalId": "SlaSubmitTicketLambdaVersion2tOgrZ5MX3Svmyv7vFcX9nLnSU9VljORUpHQO36eG2Q"
+        "versionLogicalId": "SlaSubmitTicketLambdaVersionrCaTWcuf9qA2hySNcfioSLRioPSRdOXgGah9NQ"
       },
       "slaWorkflow": {
         "handler": "functions/sla-workflow.handler",
@@ -1495,7 +1495,7 @@
         "timeout": 6,
         "runtime": "nodejs18.x",
         "vpc": {},
-        "versionLogicalId": "SlaWorkflowLambdaVersionzXgHUZIDOMOKVbn8HkfiIlNl6g8PqnOAZ7nEOdAJA5w"
+        "versionLogicalId": "SlaWorkflowLambdaVersionsxntVllx6GdEGHy1Z3ybIVT45Rc4ptyWVYS2ntrkJw"
       },
       "testFunction": {
         "handler": "test-handler.testHandler",
@@ -1531,7 +1531,7 @@
         "timeout": 6,
         "runtime": "nodejs18.x",
         "vpc": {},
-        "versionLogicalId": "TestFunctionLambdaVersionn6OD6iKS1pANjqEvYGbySAJivaToscKvHX5T7TOrBo"
+        "versionLogicalId": "TestFunctionLambdaVersionHRk8eIfgdsdq0hDzcspfRNozQK3dws5d4StN6WB8"
       }
     },
     "configValidationMode": "warn",
@@ -1554,7 +1554,7 @@
     "artifact": "g:\\aws-cost-guardian\\backend\\.serverless\\aws-cost-guardian-backend.zip"
   },
   "package": {
-    "artifactDirectoryName": "serverless/aws-cost-guardian-backend/prod/1762416577566-2025-11-06T08:09:37.566Z",
+    "artifactDirectoryName": "serverless/aws-cost-guardian-backend/prod/1762418638406-2025-11-06T08:43:58.406Z",
     "artifact": "aws-cost-guardian-backend.zip"
   }
 }

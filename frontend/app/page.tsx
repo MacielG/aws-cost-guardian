@@ -28,7 +28,19 @@ export default function Home() {
   useEffect(() => {
     const loadMetrics = async () => {
       try {
-        const data = await apiClient.get('/public/metrics');
+        // Use apiFetch with skipAuth=true for public endpoints
+        const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || ''}public/metrics`, {
+          method: 'GET',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+        });
+
+        if (!response.ok) {
+          throw new Error(`HTTP error! status: ${response.status}`);
+        }
+
+        const data = await response.json();
         setMetrics(data);
       } catch (err) {
         console.error('Erro ao carregar métricas:', err);

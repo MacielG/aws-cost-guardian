@@ -26,11 +26,13 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           <ToasterProvider>
             <Toaster />
             <ConfigureAmplifyClientSide />
-            <AuthProvider>
-              <I18nClientProvider>
-                <AuthLayoutClient>{children}</AuthLayoutClient>
-              </I18nClientProvider>
-            </AuthProvider>
+            <Authenticator.Provider>
+              <AuthProvider>
+                <I18nClientProvider>
+                  <AuthLayoutClient>{children}</AuthLayoutClient>
+                </I18nClientProvider>
+              </AuthProvider>
+            </Authenticator.Provider>
           </ToasterProvider>
         </ThemeProvider>
       </body>
