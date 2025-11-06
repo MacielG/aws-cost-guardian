@@ -3,7 +3,7 @@ require('dotenv').config({ path: './.env.local' });
 
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  output: 'standalone',
+  output: 'export',
   // Suas outras configurações do Next.js aqui...
 };
 
