@@ -16,28 +16,16 @@ const navItems = [
   { href: "/admin", label: "Admin", icon: Shield },
 ];
 
-interface SidebarProps {
-  isMobileOpen?: boolean;
-}
-
-export function Sidebar({ isMobileOpen = false }: SidebarProps) {
-  const pathname = usePathname();
+export function Sidebar() {
+const pathname = usePathname();
   const { user } = useAuth();
 
   if (!user) return null;
 
-  const isAdmin = user['cognito:groups']?.includes('Admins');
-  // Mobile-only slide-over sidebar. On larger screens the header contains the nav icons.
-  return (
-    <>
-      {isMobileOpen && <div className="fixed inset-0 z-40 bg-black/50 md:hidden" />}
-
-      <aside
-        className={cn(
-          "fixed inset-y-0 left-0 z-50 w-64 flex flex-col border-r border-gray-200 bg-white transition-transform duration-300 ease-in-out md:hidden",
-          isMobileOpen ? "translate-x-0" : "-translate-x-full"
-        )}
-      >
+const isAdmin = user['cognito:groups']?.includes('Admins');
+  // Sidebar always visible in the new layout
+return (
+    <aside className="w-64 flex flex-col border-r border-gray-200 bg-white">
         <div className="flex h-16 items-center gap-2 border-b px-6">
           <Link href="/dashboard" className="flex items-center gap-2 text-lg font-semibold text-gray-900">
             <BarChart3 className="h-6 w-6 text-blue-600" />
@@ -76,7 +64,6 @@ export function Sidebar({ isMobileOpen = false }: SidebarProps) {
             <span>Suporte</span>
           </Link>
         </div>
-      </aside>
-    </>
+    </aside>
   );
 }

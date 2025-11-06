@@ -9,7 +9,7 @@ provider:
   name: aws
   runtime: nodejs18.x
   region: ${env:AWS_REGION, 'us-east-1'}
-  stage: ${opt:stage, 'dev'}
+  stage: ${opt:stage, 'prod'}
   iamRoleStatements:
     - Effect: Allow
       Action:
@@ -22,9 +22,9 @@ provider:
         - arn:aws:dynamodb:${self:provider.region}:*:table/${self:provider.environment.DYNAMODB_TABLE}
         - arn:aws:dynamodb:${self:provider.region}:*:table/${self:provider.environment.DYNAMODB_TABLE}/index/*
   environment:
-    DYNAMODB_TABLE: ${env:DYNAMODB_TABLE, 'aws-cost-guardian-dev'}
-    USER_POOL_ID: ${env:USER_POOL_ID, ''}
-    USER_POOL_CLIENT_ID: ${env:USER_POOL_CLIENT_ID, ''}
+    DYNAMODB_TABLE: ${env:DYNAMODB_TABLE, 'CostGuardianTable'}
+    USER_POOL_ID: ${env:USER_POOL_ID, 'us-east-1_1c1vqVeqC'}
+    USER_POOL_CLIENT_ID: ${env:USER_POOL_CLIENT_ID, '5gt250n7bsc96j3ac5qfq5s890'}
     STRIPE_SECRET_ARN: ${env:STRIPE_SECRET_ARN, ''}
     STRIPE_PRO_PLAN_PRICE_ID: ${env:STRIPE_PRO_PLAN_PRICE_ID, ''}
     FRONTEND_URL: ${env:FRONTEND_URL, 'http://localhost:3000'}

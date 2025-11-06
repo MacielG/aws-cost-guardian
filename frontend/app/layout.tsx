@@ -1,6 +1,7 @@
 import type { Metadata } from 'next';
 import './globals.css';
 import '@aws-amplify/ui-react/styles.css';
+import { Authenticator } from '@aws-amplify/ui-react';
 import ConfigureAmplifyClientSide from '../components/ConfigureAmplifyClientSide';
 import { ToasterProvider } from '../components/ui/toaster';
 import { Toaster } from 'sonner';
