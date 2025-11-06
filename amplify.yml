@@ -8,12 +8,8 @@ frontend:
     build:
       commands:
         - npm run build
-        - node amplify.mjs
   artifacts:
-    # Esta é a correção crucial.
-    # A plataforma WEB_COMPUTE (SSR) gera os artefatos de deploy 
-    # no diretório .amplify-hosting
-    baseDirectory: frontend/.amplify-hosting
+    baseDirectory: frontend/.next
     files:
       - '**/*'
   cache:

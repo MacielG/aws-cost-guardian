@@ -4,7 +4,7 @@
 require('dotenv').config({ path: './.env.local' });
 
 const nextConfig = {
-  output: 'standalone',
+  // Configurações do Next.js
 };
 
 module.exports = nextConfig;
