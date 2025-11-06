@@ -4,7 +4,8 @@ frontend:
     preBuild:
       commands:
         - cd frontend
-        - npm ci --no-cache
+        - rm -rf node_modules
+        - npm ci
     build:
       commands:
         - npm run build
