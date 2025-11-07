@@ -53,8 +53,8 @@ export async function apiFetch(endpoint: string, options: RequestInit = {}, skip
     if (!skipAuth) {
         try {
             const session = await fetchAuthSession();
-            const idToken = session.tokens?.idToken;
-            if (idToken) token = idToken.toString();
+            const accessToken = session.tokens?.accessToken;
+            if (accessToken) token = accessToken.toString();
         } catch (err: any) {
             console.warn('Não foi possível obter sessão de autenticação:', err?.message || err);
         }
@@ -145,7 +145,7 @@ export async function apiFetch(endpoint: string, options: RequestInit = {}, skip
 
     try {
         const session = await fetchAuthSession();
-        token = session.tokens?.idToken?.toString();
+        token = session.tokens?.accessToken?.toString();
     } catch (error) {
         // Permite chamadas não autenticadas — o backend deve rejeitar se necessário
         console.warn('Não foi possível obter sessão do Cognito. Chamada não autenticada.', error);
