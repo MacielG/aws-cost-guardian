@@ -115,7 +115,12 @@ function AdminContent() {
       setMetrics(data);
     } catch (err: any) {
       console.error('Erro ao carregar métricas:', err);
-      toast.error('Erro ao carregar métricas admin');
+      // Se for 401/403, não mostra toast pois AdminRoute já trata
+      if (err?.message?.includes('401') || err?.message?.includes('403')) {
+        console.warn('Acesso negado às métricas admin. Verifique autenticação.');
+      } else {
+        toast.error('Erro ao carregar métricas admin');
+      }
     } finally {
       setLoading(false);
     }
@@ -124,13 +129,16 @@ function AdminContent() {
   const loadSettings = async () => {
     try {
       const data = await apiFetch('/admin/settings');
-      setSettings(data.settings);
-      setCoupons(data.coupons);
-      setPromotions(data.promotions);
-      setCommissionRateInput((data.settings.commissionRate * 100).toString());
+      setSettings(data.settings || { commissionRate: 0.30 });
+      setCoupons(data.coupons || []);
+      setPromotions(data.promotions || []);
+      setCommissionRateInput(((data.settings?.commissionRate || 0.30) * 100).toString());
     } catch (err: any) {
       console.error('Erro ao carregar configurações:', err);
-      toast.error('Erro ao carregar configurações');
+      // Se for 401/403, não mostra toast pois AdminRoute já trata
+      if (!err?.message?.includes('401') && !err?.message?.includes('403')) {
+        toast.error('Erro ao carregar configurações');
+      }
     }
   };
 
@@ -272,9 +280,9 @@ function AdminContent() {
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">{metrics?.customers.total || 0}</div>
+              <div className="text-2xl font-bold">{metrics?.customers?.total || 0}</div>
               <div className="text-xs text-muted-foreground mt-1">
-                {metrics?.customers.active || 0} Active | {metrics?.customers.trial || 0} Trial
+                {metrics?.customers?.active || 0} Active | {metrics?.customers?.trial || 0} Trial
               </div>
             </CardContent>
           </Card>

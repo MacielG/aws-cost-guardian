@@ -58,12 +58,14 @@ return (
           </ul>
         </nav>
 
+        {/* Suporte - Página ainda não implementada
         <div className="mt-auto border-t p-4">
           <Link href="/support" className="group flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 hover:text-gray-900">
             <LifeBuoy className="h-5 w-5 text-gray-400" />
             <span>Suporte</span>
           </Link>
         </div>
+        */}
     </aside>
   );
 }

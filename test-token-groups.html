@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Test Cognito Token Groups</title>
+    <style>
+        body { font-family: monospace; padding: 20px; }
+        .success { color: green; }
+        .error { color: red; }
+        .info { color: blue; }
+        pre { background: #f4f4f4; padding: 10px; overflow-x: auto; }
+    </style>
+</head>
+<body>
+    <h1>🔍 Teste de Token Cognito - Groups</h1>
+    <div id="output"></div>
+    
+    <script>
+        const output = document.getElementById('output');
+        
+        function log(msg, className = '') {
+            const div = document.createElement('div');
+            div.className = className;
+            div.textContent = msg;
+            output.appendChild(div);
+        }
+        
+        function logPre(title, obj) {
+            const h3 = document.createElement('h3');
+            h3.textContent = title;
+            output.appendChild(h3);
+            
+            const pre = document.createElement('pre');
+            pre.textContent = JSON.stringify(obj, null, 2);
+            output.appendChild(pre);
+        }
+        
+        async function testToken() {
+            try {
+                log('Obtendo sessão...', 'info');
+                
+                // Importar Amplify
+                const { fetchAuthSession } = await import('https://cdn.jsdelivr.net/npm/aws-amplify@6/+esm');
+                
+                const session = await fetchAuthSession({ forceRefresh: true });
+                
+                if (!session || !session.tokens) {
+                    log('❌ Sessão não encontrada. Faça login primeiro.', 'error');
+                    return;
+                }
+                
+                log('✅ Sessão obtida', 'success');
+                
+                // Access Token
+                const accessToken = session.tokens.accessToken;
+                if (accessToken) {
+                    const payload = accessToken.payload;
+                    logPre('📄 Access Token Payload:', payload);
+                    
+                    const groups = payload['cognito:groups'];
+                    if (groups) {
+                        log(`✅ cognito:groups encontrado: ${JSON.stringify(groups)}`, 'success');
+                        if (groups.includes('Admins')) {
+                            log('✅ Usuário É ADMIN!', 'success');
+                        }
+                    } else {
+                        log('❌ cognito:groups NÃO está no Access Token', 'error');
+                        log('', '');
+                        log('Possíveis causas:', 'info');
+                        log('1. Usuário não está em nenhum grupo', '');
+                        log('2. Token foi gerado antes do usuário ser adicionado ao grupo', '');
+                        log('3. App Client precisa de configuração (improvável se ReadAttributes=null)', '');
+                        log('', '');
+                        log('Solução:', 'info');
+                        log('1. Faça logout e login novamente', '');
+                        log('2. Ou force refresh: fetchAuthSession({ forceRefresh: true })', '');
+                    }
+                } else {
+                    log('❌ Access Token não disponível', 'error');
+                }
+                
+                // ID Token
+                const idToken = session.tokens.idToken;
+                if (idToken) {
+                    const payload = idToken.payload;
+                    logPre('📄 ID Token Payload:', payload);
+                    
+                    const groups = payload['cognito:groups'];
+                    if (groups) {
+                        log(`ℹ️  cognito:groups também está no ID Token: ${JSON.stringify(groups)}`, 'info');
+                    }
+                }
+                
+            } catch (error) {
+                log(`❌ Erro: ${error.message}`, 'error');
+                console.error(error);
+            }
+        }
+        
+        // Execute automaticamente
+        log('Iniciando teste...', 'info');
+        log('', '');
+        testToken();
+    </script>
+</body>
+</html>

@@ -19,8 +19,9 @@ export default function LoginPage() {
 
   const checkUserRoleAndRedirect = async () => {
     try {
-      const session = await fetchAuthSession();
-      const groups = session.tokens?.idToken?.payload['cognito:groups'] as string[] | undefined;
+      // Force refresh para garantir que o token inclui grupos atualizados
+      const session = await fetchAuthSession({ forceRefresh: true });
+      const groups = session.tokens?.accessToken?.payload['cognito:groups'] as string[] | undefined;
       const isAdmin = groups?.includes('Admins');
 
       if (isAdmin) {
