@@ -53,7 +53,7 @@ export default function Onboard() {
 
     const checkOnboardingStatus = useCallback(async (signal?: AbortSignal) => {
         try {
-            const config = await apiClient.get('/onboard-init', { signal });
+            const config = await apiClient.get('/api/onboard-init', { signal });
             // Se o usuário ainda não aceitou os termos, redireciona para a página de termos
             if (config.termsAccepted === false) {
                 router.push('/terms');
@@ -73,7 +73,7 @@ export default function Onboard() {
         setLoading(true);
         const query = mode ? `?mode=${mode}` : '';
         try {
-            const config = await apiClient.get(`/onboard-init${query}`, { signal });
+            const config = await apiClient.get(`/api/onboard-init${query}`, { signal });
             // Constrói o link do CloudFormation dinamicamente
             const templateUrl = config.templateUrl || process.env.NEXT_PUBLIC_CFN_TEMPLATE_URL;
             setOnboardingStatus(config.status);
