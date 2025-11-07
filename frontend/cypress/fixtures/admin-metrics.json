@@ -1,0 +1,28 @@
+{
+  "customers": {
+    "total": 150,
+    "trial": 45,
+    "active": 105,
+    "churnedThisMonth": 3
+  },
+  "revenue": {
+    "thisMonth": 2500.00,
+    "lastMonth": 2200.00,
+    "growth": 13.6
+  },
+  "leads": {
+    "newThisWeek": 12,
+    "conversionRate": 68.5,
+    "highValueCount": 8
+  },
+  "recommendations": {
+    "totalGenerated": 1250,
+    "executed": 890,
+    "executionRate": 71.2
+  },
+  "sla": {
+    "claimsDetected": 45,
+    "claimsSubmitted": 38,
+    "creditsRecovered": 1250.00
+  }
+}

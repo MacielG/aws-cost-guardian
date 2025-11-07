@@ -111,7 +111,7 @@ function AdminContent() {
   const loadMetrics = async () => {
     try {
       setLoading(true);
-      const data = await apiFetch('/api/admin/metrics');
+      const data = await apiFetch('/admin/metrics');
       setMetrics(data);
     } catch (err: any) {
       console.error('Erro ao carregar métricas:', err);
@@ -123,7 +123,7 @@ function AdminContent() {
 
   const loadSettings = async () => {
     try {
-      const data = await apiFetch('/api/admin/settings');
+      const data = await apiFetch('/admin/settings');
       setSettings(data.settings);
       setCoupons(data.coupons);
       setPromotions(data.promotions);
@@ -143,7 +143,7 @@ function AdminContent() {
         return;
       }
 
-      await apiFetch('/api/admin/settings', {
+      await apiFetch('/admin/settings', {
         method: 'PUT',
         body: JSON.stringify({ commissionRate: rate })
       });
@@ -160,7 +160,7 @@ function AdminContent() {
 
   const createCoupon = async () => {
     try {
-      await apiFetch('/api/admin/coupons', {
+      await apiFetch('/admin/coupons', {
         method: 'POST',
         body: JSON.stringify({
           ...newCoupon,
@@ -189,7 +189,7 @@ function AdminContent() {
     if (!confirm('Tem certeza que deseja excluir este cupom?')) return;
 
     try {
-      await apiFetch(`/api/admin/coupons/${code}`, {
+      await apiFetch(`/admin/coupons/${code}`, {
         method: 'DELETE'
       });
 
@@ -203,7 +203,7 @@ function AdminContent() {
 
   const createPromotion = async () => {
     try {
-      await apiFetch('/api/admin/promotions', {
+      await apiFetch('/admin/promotions', {
         method: 'POST',
         body: JSON.stringify({
           ...newPromotion,
@@ -234,7 +234,7 @@ function AdminContent() {
       // Usar createdAt como identificador único (timestamp)
       const id = new Date(promotion.createdAt).getTime().toString();
 
-      await apiFetch(`/api/admin/promotions/${id}`, {
+      await apiFetch(`/admin/promotions/${id}`, {
         method: 'DELETE'
       });
 

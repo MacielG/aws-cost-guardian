@@ -1,0 +1,151 @@
+{
+  "timestamp": "2025-11-07T01:51:03.686Z",
+  "summary": {
+    "total": 29,
+    "passed": 25,
+    "failed": 2,
+    "successRate": "86.2"
+  },
+  "duration": "6.57s",
+  "results": [
+    {
+      "status": "FAIL",
+      "test": "Cognito Auth (User) - Falhou",
+      "error": "ResourceNotFoundException"
+    },
+    {
+      "status": "FAIL",
+      "test": "Cognito Auth (Admin) - Falhou",
+      "error": "ResourceNotFoundException"
+    },
+    {
+      "status": "PASS",
+      "test": "GET /health - Health check OK",
+      "details": {
+        "status": "ok"
+      }
+    },
+    {
+      "status": "PASS",
+      "test": "GET /api/health - API health check OK",
+      "details": null
+    },
+    {
+      "status": "PASS",
+      "test": "/admin/metrics - Proteção de auth OK (401)",
+      "details": null
+    },
+    {
+      "status": "PASS",
+      "test": "/admin/settings - Proteção de auth OK (401)",
+      "details": null
+    },
+    {
+      "status": "PASS",
+      "test": "/recommendations - Proteção de auth OK (401)",
+      "details": null
+    },
+    {
+      "status": "PASS",
+      "test": "/api/incidents - Proteção de auth OK (401)",
+      "details": null
+    },
+    {
+      "status": "PASS",
+      "test": "Página Home/Landing (/) - OK",
+      "details": null
+    },
+    {
+      "status": "PASS",
+      "test": "  └─ HTML carregado (9.0KB)",
+      "details": null
+    },
+    {
+      "status": "PASS",
+      "test": "Página Login (/login) - Redirect (301)",
+      "details": null
+    },
+    {
+      "status": "PASS",
+      "test": "Página Termos (/terms) - Redirect (301)",
+      "details": null
+    },
+    {
+      "status": "PASS",
+      "test": "Página Onboarding (/onboard) - Redirect (301)",
+      "details": null
+    },
+    {
+      "status": "PASS",
+      "test": "Página Dashboard Cliente (/dashboard) - Redirect (301)",
+      "details": null
+    },
+    {
+      "status": "PASS",
+      "test": "Página Billing (/billing) - Redirect (301)",
+      "details": null
+    },
+    {
+      "status": "PASS",
+      "test": "Página Recommendations (/recommendations) - Redirect (301)",
+      "details": null
+    },
+    {
+      "status": "PASS",
+      "test": "Página Settings (/settings) - Redirect (301)",
+      "details": null
+    },
+    {
+      "status": "PASS",
+      "test": "Página SLA Claims (/sla-claims) - Redirect (301)",
+      "details": null
+    },
+    {
+      "status": "PASS",
+      "test": "Página Profile (/profile) - Redirect (301)",
+      "details": null
+    },
+    {
+      "status": "PASS",
+      "test": "Página Admin Dashboard (/admin) - Redirect (301)",
+      "details": null
+    },
+    {
+      "status": "PASS",
+      "test": "Página Alerts (/alerts) - Redirect (301)",
+      "details": null
+    },
+    {
+      "status": "PASS",
+      "test": "Página Claims (/claims) - Redirect (301)",
+      "details": null
+    },
+    {
+      "status": "PASS",
+      "test": "API Health - 367ms (Bom)",
+      "details": null
+    },
+    {
+      "status": "PASS",
+      "test": "Frontend - 15ms (Excelente)",
+      "details": null
+    },
+    {
+      "status": "PASS",
+      "test": "API - HTTPS ativo",
+      "details": null
+    },
+    {
+      "status": "PASS",
+      "test": "Frontend - HTTPS ativo",
+      "details": null
+    },
+    {
+      "status": "PASS",
+      "test": "CORS - Headers configurados",
+      "details": {
+        "origin": "*"
+      }
+    }
+  ]
+}

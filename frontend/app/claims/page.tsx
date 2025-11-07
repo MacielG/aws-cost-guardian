@@ -10,6 +10,7 @@ import { PageAnimator } from '@/components/layout/PageAnimator';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { toast } from 'sonner'; // Assuming you have sonner for toasts
+import { apiFetch } from '@/lib/api';
 
 interface Claim {
   id: string; // customerId
@@ -62,11 +63,7 @@ export default function AdminClaims() {
     setLoading(true);
     setError(null);
     try {
-      const response = await fetch('/api/admin/claims');
-      if (!response.ok) {
-        throw new Error('Failed to fetch admin claims');
-      }
-      const data: Claim[] = await response.json();
+      const data: Claim[] = await apiFetch('/admin/claims');
       setClaims(data);
       setFilteredClaims(data); // Initialize filtered claims
     } catch (err) {
@@ -108,18 +105,10 @@ export default function AdminClaims() {
     }
 
     try {
-      const response = await fetch(`/api/admin/claims/${customerId}/${claimSk.replace('CLAIM#', '')}/status`, {
+      await apiFetch(`/admin/claims/${customerId}/${claimSk.replace('CLAIM#', '')}/status`, {
         method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-        },
         body: JSON.stringify({ status: newStatus }),
       });
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.message || 'Failed to update claim status');
-      }
 
       toast.success(`Status da reivindicação ${claimSk.replace('CLAIM#', '')} atualizado para ${newStatus}.`);
       fetchClaims(); // Re-fetch claims to update the UI
@@ -249,15 +238,9 @@ const handleMarkAsRefunded = async (customerId: string, claimSk: string) => {
   }
 
   try {
-    const response = await fetch(`/api/admin/claims/${customerId}/${claimId}/create-invoice`, {
+    const data = await apiFetch(`/admin/claims/${customerId}/${claimId}/create-invoice`, {
       method: 'POST',
     });
-
-    if (!response.ok) {
-      const errorData = await response.json();
-      throw new Error(errorData.message || 'Falha ao criar fatura');
-    }
-    const data = await response.json();
     toast.success(`Fatura ${data.invoiceId} criada! Claim marcada como REFUNDED.`);
     // Re-fetch claims to update the UI
     // This assumes fetchClaims is available in the scope, which it is in the component.

@@ -1,0 +1,29 @@
+{
+  "Changes": [
+    {
+      "Action": "CREATE",
+      "ResourceRecordSet": {
+        "Name": "awscostguardian.com",
+        "Type": "A",
+        "AliasTarget": {
+          "DNSName": "d4xcivhlh6kq4.cloudfront.net",
+          "HostedZoneId": "Z2FDTNDATAQYW2",
+          "EvaluateTargetHealth": false
+        }
+      }
+    },
+    {
+      "Action": "UPSERT",
+      "ResourceRecordSet": {
+        "Name": "www.awscostguardian.com",
+        "Type": "CNAME",
+        "TTL": 300,
+        "ResourceRecords": [
+          {
+            "Value": "d4xcivhlh6kq4.cloudfront.net"
+          }
+        ]
+      }
+    }
+  ]
+}

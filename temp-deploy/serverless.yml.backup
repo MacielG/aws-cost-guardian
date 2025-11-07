@@ -1,0 +1,62 @@
+service: aws-cost-guardian-backend
+
+frameworkVersion: '3'
+
+plugins:
+  - serverless-offline
+
+provider:
+  name: aws
+  runtime: nodejs18.x
+  region: ${env:AWS_REGION, 'us-east-1'}
+  stage: ${opt:stage, 'dev'}
+  environment:
+    DYNAMODB_TABLE: ${env:DYNAMODB_TABLE, 'aws-cost-guardian-dev'}
+    USER_POOL_ID: ${env:USER_POOL_ID, ''}
+    USER_POOL_CLIENT_ID: ${env:USER_POOL_CLIENT_ID, ''}
+    STRIPE_SECRET_ARN: ${env:STRIPE_SECRET_ARN, ''}
+    STRIPE_PRO_PLAN_PRICE_ID: ${env:STRIPE_PRO_PLAN_PRICE_ID, ''}
+    FRONTEND_URL: ${env:FRONTEND_URL, 'http://localhost:3000'}
+    EXECUTE_RECOMMENDATION_LAMBDA_ARN: ${env:EXECUTE_RECOMMENDATION_LAMBDA_ARN, ''}
+    EXECUTE_RECOMMENDATION_LAMBDA_NAME: ${env:EXECUTE_RECOMMENDATION_LAMBDA_NAME, ''}
+    SFN_ARN: ${env:SFN_ARN, ''}
+    FULL_TEMPLATE_URL: ${env:FULL_TEMPLATE_URL, ''}
+
+functions:
+  api:
+    handler: handler.app
+    events:
+      - http:
+          method: ANY
+          path: /{proxy+}
+          cors: true
+
+  correlateHealth:
+    handler: functions/correlate-health.handler
+
+  deleteUnusedEbs:
+    handler: functions/delete-unused-ebs.handler
+
+  executeRecommendation:
+    handler: functions/execute-recommendation.handler
+
+  ingestCosts:
+    handler: functions/ingest-costs.handler
+
+  marketplaceMetering:
+    handler: functions/marketplace-metering.handler
+
+  recommendIdleInstances:
+    handler: functions/recommend-idle-instances.handler
+
+  recommendRdsIdle:
+    handler: functions/recommend-rds-idle.handler
+
+  slaGeneratePdf:
+    handler: functions/sla-generate-pdf.handler
+
+  slaSubmitTicket:
+    handler: functions/sla-submit-ticket.handler
+
+  slaWorkflow:
+    handler: functions/sla-workflow.handler
