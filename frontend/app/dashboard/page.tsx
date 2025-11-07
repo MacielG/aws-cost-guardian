@@ -76,6 +76,7 @@ export default function DashboardPage() {
   const [incidents, setIncidents] = useState<any[]>([]);
   const [costs, setCosts] = useState<any | null>(null);
   const [accountType, setAccountType] = useState<string | null>(null);
+  const [hasAwsAccount, setHasAwsAccount] = useState<boolean | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [retryCount, setRetryCount] = useState(0);
@@ -119,50 +120,52 @@ abortControllerRef.current = new AbortController();
       isRequestInProgressRef.current = true;
       isFetchingRef.current = true;
       try {
-        // Removido mock data - sempre usa APIs reais
-
-        // Start all API requests concurrently so they can be aborted and so tests
-        // that simulate slow responses observe multiple in-flight requests.
-        const summaryPromise = apiClient.get('/billing/summary', { signal: abortControllerRef.current!.signal });
-        const recsPromise = apiClient.get('/recommendations?limit=5', { signal: abortControllerRef.current!.signal });
-        // Additional calls used by tests
-        const statusPromise = apiClient.get('/api/user/status', { signal: abortControllerRef.current!.signal });
-        const incidentsPromise = apiClient.get('/api/incidents', { signal: abortControllerRef.current!.signal });
-        const costsPromise = apiClient.get('/api/dashboard/costs', { signal: abortControllerRef.current!.signal });
-
-        // Await the primary ones first (but note all requests already started)
-        const [summaryData, recsData] = await Promise.all([summaryPromise, recsPromise]);
-
-        setSummary(summaryData);
-        // Garantir que recommendations seja sempre um array (defensivo contra mocks ou respostas inesperadas)
-        setRecommendations(Array.isArray(recsData) ? recsData : []);
-
-  // Now await the remaining ones (they were started above). Use
-  // Promise.allSettled to avoid unhandled rejection when tests abort
-  // controllers; if any of the calls failed, rethrow the first error so
-  // the outer catch can handle mapping to user-friendly messages.
-  const settled = await Promise.allSettled([statusPromise, incidentsPromise, costsPromise] as any);
-  const [statusResult, incidentsResult, costsResult] = settled;
-  if (statusResult.status === 'rejected') throw statusResult.reason;
-  if (incidentsResult.status === 'rejected') throw incidentsResult.reason;
-  if (costsResult.status === 'rejected') throw costsResult.reason;
-
-  const userStatus = statusResult.value;
-  const incidentsData = incidentsResult.value;
-  const costsData = costsResult.value;
-
+        // Primeiro, verificar o status do usuário
+        const userStatus = await apiClient.get('/api/user/status', { signal: abortControllerRef.current!.signal });
+        
         setAccountType(userStatus?.accountType ?? null);
+        setHasAwsAccount(userStatus?.hasAwsAccount ?? false);
 
-        // If user is on a TRIAL account, redirect to /trial as tests expect
-        if (userStatus && userStatus.accountType === 'TRIAL') {
-          // navigate to trial
+        // Se o usuário não tem conta AWS vinculada, redirecionar para onboarding
+        if (!userStatus?.hasAwsAccount || !userStatus?.onboardingComplete) {
           try {
-            router.push('/trial');
+            router.push('/onboard');
             return;
-            } catch (_e) {
+          } catch (_e) {
             // ignore in tests if router mock doesn't implement push
           }
         }
+
+        // If user is on a TRIAL account, redirect to /trial as tests expect
+        if (userStatus && userStatus.accountType === 'TRIAL') {
+          try {
+            router.push('/trial');
+            return;
+          } catch (_e) {
+            // ignore in tests if router mock doesn't implement push
+          }
+        }
+
+        // Start all API requests concurrently
+        const summaryPromise = apiClient.get('/billing/summary', { signal: abortControllerRef.current!.signal });
+        const recsPromise = apiClient.get('/recommendations?limit=5', { signal: abortControllerRef.current!.signal });
+        const incidentsPromise = apiClient.get('/api/incidents', { signal: abortControllerRef.current!.signal });
+        const costsPromise = apiClient.get('/api/dashboard/costs', { signal: abortControllerRef.current!.signal });
+
+        // Await the primary ones first
+        const [summaryData, recsData] = await Promise.all([summaryPromise, recsPromise]);
+
+        setSummary(summaryData);
+        setRecommendations(Array.isArray(recsData) ? recsData : []);
+
+        // Await the remaining ones
+        const settled = await Promise.allSettled([incidentsPromise, costsPromise] as any);
+        const [incidentsResult, costsResult] = settled;
+        if (incidentsResult.status === 'rejected') throw incidentsResult.reason;
+        if (costsResult.status === 'rejected') throw costsResult.reason;
+
+        const incidentsData = incidentsResult.value;
+        const costsData = costsResult.value;
 
         // Validate and sanitize incidents data: only keep items with expected shapes.
         const validatedIncidents = Array.isArray(incidentsData)
@@ -257,8 +260,8 @@ abortControllerRef.current = new AbortController();
         <EmptyState
           icon={FileText}
           title="Bem-vindo ao seu Dashboard!"
-          description="Ainda não temos dados para exibir. Conecte sua conta AWS para começar a ver suas economias."
-          action={{ label: 'Conectar Conta AWS', onClick: () => window.location.href = '/onboard' }}
+          description="Ainda não temos dados para exibir. Isso é normal logo após conectar sua conta AWS. Os dados serão carregados em breve."
+          action={{ label: 'Atualizar', onClick: () => window.location.reload() }}
         />
       </PageAnimator>
     )

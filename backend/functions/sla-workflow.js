@@ -134,25 +134,85 @@ exports.calculateImpact = async (event) => {
 
     console.log(`Custo impactado calculado para ${awsAccountId} (Incidente ${incidentId}): $${impactedCost}`);
 
-    // Calculate potential credit using SLA
+    // Calculate potential credit using SLA - MELHORADO COM VALIDAÇÕES
     let potentialCredit = 0;
-    const service = healthEvent.service.toUpperCase();
-    const sla = slaTable[service];
-    if (sla) {
-      const startTime = new Date(healthEvent.startTime).getTime();
-      const endTime = new Date(healthEvent.endTime || new Date()).getTime();
-      const durationMs = endTime - startTime;
-      const durationMinutes = durationMs / 60000;
-      const monthlyAllowedDowntime = (1.0 - sla.uptime) * 30 * 24 * 60;
-      const violation = durationMinutes > monthlyAllowedDowntime;
-      if (violation) {
-        potentialCredit = impactedCost * sla.creditPercent;
-        console.log(`SLA violation for ${service}: duration ${durationMinutes.toFixed(2)} min > ${monthlyAllowedDowntime.toFixed(2)} min allowed. Potential credit: $${potentialCredit.toFixed(2)}`);
-      } else {
-        console.log(`No SLA violation for ${service}: duration ${durationMinutes.toFixed(2)} min <= ${monthlyAllowedDowntime.toFixed(2)} min allowed.`);
+    let durationMinutes = 0;
+    let violation = false;
+
+    try {
+      // Validação de dados do evento
+      if (!healthEvent || !healthEvent.service) {
+        throw new Error('healthEvent.service é obrigatório');
       }
-    } else {
-      console.warn(`No SLA data for service ${service}`);
+      if (!healthEvent.startTime) {
+        throw new Error('healthEvent.startTime é obrigatório');
+      }
+
+      const service = String(healthEvent.service).toUpperCase();
+      const sla = slaTable[service];
+
+      if (!sla) {
+        console.warn(`No SLA data for service ${service}. Usando valores padrão.`);
+        // Valores padrão caso o serviço não esteja na tabela
+        slaTable[service] = { uptime: 0.999, creditPercent: 0.1 };
+      }
+
+      // Validação de timestamps
+      const startTime = new Date(healthEvent.startTime).getTime();
+      const endTime = healthEvent.endTime 
+        ? new Date(healthEvent.endTime).getTime() 
+        : new Date().getTime();
+
+      if (isNaN(startTime) || isNaN(endTime)) {
+        throw new Error('Timestamps inválidos no healthEvent');
+      }
+
+      const durationMs = endTime - startTime;
+      
+      // Proteção contra durações negativas ou inválidas
+      if (durationMs < 0) {
+        throw new Error(`Duração negativa detectada: endTime (${endTime}) < startTime (${startTime})`);
+      }
+
+      durationMinutes = durationMs / 60000;
+      
+      // Validação: duração muito longa (mais de 30 dias) pode ser erro
+      const maxDurationMinutes = 30 * 24 * 60; // 30 dias
+      if (durationMinutes > maxDurationMinutes) {
+        console.warn(`Duração suspeita: ${durationMinutes.toFixed(2)} min (> 30 dias). Limitando para análise.`);
+        durationMinutes = Math.min(durationMinutes, maxDurationMinutes);
+      }
+
+      const currentSla = slaTable[service];
+      const monthlyAllowedDowntime = (1.0 - currentSla.uptime) * 30 * 24 * 60;
+
+      violation = durationMinutes > monthlyAllowedDowntime;
+
+      if (violation) {
+        // Validação: impactedCost deve ser positivo
+        if (impactedCost <= 0) {
+          console.warn('impactedCost é zero ou negativo. Não há crédito a calcular.');
+          potentialCredit = 0;
+        } else {
+          potentialCredit = impactedCost * currentSla.creditPercent;
+          
+          // Validação: crédito não pode ser maior que o custo
+          if (potentialCredit > impactedCost) {
+            console.warn(`Crédito calculado (${potentialCredit}) > custo impactado (${impactedCost}). Limitando.`);
+            potentialCredit = impactedCost;
+          }
+
+          console.log(`✓ SLA violation for ${service}: duration ${durationMinutes.toFixed(2)} min > ${monthlyAllowedDowntime.toFixed(2)} min allowed. Potential credit: $${potentialCredit.toFixed(2)}`);
+        }
+      } else {
+        console.log(`✗ No SLA violation for ${service}: duration ${durationMinutes.toFixed(2)} min <= ${monthlyAllowedDowntime.toFixed(2)} min allowed.`);
+      }
+    } catch (slaError) {
+      console.error('Erro ao calcular SLA credit:', slaError);
+      // Em caso de erro, assume sem violação/crédito para não bloquear o fluxo
+      potentialCredit = 0;
+      violation = false;
+      // Registra o erro mas não lança exceção para permitir continuidade
     }
 
     // Save potentialCredit to DB

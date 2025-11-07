@@ -416,11 +416,11 @@ export class CostGuardianStack extends cdk.Stack {
       // eslint-disable-next-line @typescript-eslint/no-var-requires
       const { NodejsFunction } = require('aws-cdk-lib/aws-lambda-nodejs');
       apiHandlerLambda = new NodejsFunction(this, 'ApiHandler', {
-        entry: path.join(backendPath, 'handler-simple.js'),
+        entry: path.join(backendPath, 'handler.js'),
         handler: 'app',
         runtime: lambda.Runtime.NODEJS_18_X,
         bundling: {
-          externalModules: [], // Bundla tudo (inclui @aws-sdk v3)
+          externalModules: ['serverless-http'], // Excluir serverless-http do bundling
           minify: true, // Minificar para produção
           sourceMap: true,
           depsLockFilePath: props.depsLockFilePath,

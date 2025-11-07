@@ -8,7 +8,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { useNotify } from '@/hooks/useNotify';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Cloud, CheckCircle, ArrowRight, FileText, ShieldCheck, BarChart2 } from 'lucide-react';
+import { Cloud, CheckCircle, ArrowRight, FileText, ShieldCheck, BarChart2, DollarSign, Clock } from 'lucide-react';
 import { useAuth } from '@/components/auth/AuthProvider';
 import { apiClient } from '@/lib/api';
 import { joinUrl } from '@/lib/url';
@@ -22,12 +22,18 @@ const steps = [
   },
   {
     id: 2,
-    title: 'Análise de Recursos',
-    description: 'Nossos algoritmos analisam seus recursos em busca de otimizações de custo e segurança.',
-    icon: BarChart2,
+    title: 'Verificação de SLA',
+    description: 'Verificamos seu plano de suporte AWS e créditos SLA disponíveis para recuperação automática.',
+    icon: ShieldCheck,
   },
   {
     id: 3,
+    title: 'Análise Otimizada',
+    description: 'Analisamos seus recursos com foco em custos, sem consumir recursos caros da AWS.',
+    icon: BarChart2,
+  },
+  {
+    id: 4,
     title: 'Receba Recomendações',
     description: 'Visualize um relatório detalhado com todas as economias potenciais encontradas.',
     icon: FileText,
@@ -41,6 +47,8 @@ export default function Onboard() {
     const [isConnecting, setIsConnecting] = useState(false);
     const [loading, setLoading] = useState(true);
     const [step, setStep] = useState(1);
+    const [slaCredits, setSlaCredits] = useState<any>(null);
+    const [syncStatus, setSyncStatus] = useState<any>(null);
 
     const router = useRouter();
     const searchParams = useSearchParams();
@@ -61,7 +69,19 @@ export default function Onboard() {
             }
             setOnboardingStatus(config.status);
             if (config.status === 'COMPLETED') {
-                router.push('/dashboard');
+                // Buscar informações de créditos SLA e status de sync
+                try {
+                    const [slaData, syncData] = await Promise.all([
+                        apiClient.get('/api/sla-credits', { signal }),
+                        apiClient.get('/api/sync-status', { signal })
+                    ]);
+                    setSlaCredits(slaData);
+                    setSyncStatus(syncData);
+                } catch (infoError) {
+                    console.warn('Erro ao buscar informações adicionais:', infoError);
+                }
+                // Não redirecionar automaticamente, mostrar informações primeiro
+                setStep(4);
             }
         } catch (e: any) {
             if (e.name === 'AbortError') return;
@@ -169,35 +189,152 @@ export default function Onboard() {
                         </Card>
                     </motion.div>
                 ) : onboardingStatus === 'COMPLETED' ? (
-                    <motion.div
-                        key="completed"
-                        initial={{ opacity: 0, scale: 0.95 }}
-                        animate={{ opacity: 1, scale: 1 }}
-                        exit={{ opacity: 0 }}
-                    >
-                        <Card className="border-green-500/30 bg-green-500/5 dark:bg-green-500/10">
-                            <CardContent className="p-8">
-                                <div className="flex flex-col items-center text-center">
-                                    <motion.div
-                                        initial={{ scale: 0 }}
-                                        animate={{ scale: 1 }}
-                                        transition={{ type: "spring", stiffness: 200 }}
-                                    >
-                                        <ShieldCheck className="w-16 h-16 text-green-500 mb-4" />
-                                    </motion.div>
-                                    <h3 className="text-2xl font-bold text-foreground mb-2">Configuração Concluída!</h3>
-                                    <p className="text-muted-foreground mb-6">Sua conta AWS está conectada e pronta para começar a economizar.</p>
-                                    <Button
-                                        size="lg"
-                                        onClick={() => router.push('/dashboard')}
-                                        className="bg-primary text-primary-foreground hover:bg-primary/90"
-                                    >
-                                        Ir para o Dashboard <ArrowRight className="ml-2 w-4 h-4" />
-                                    </Button>
-                                </div>
-                            </CardContent>
-                        </Card>
-                    </motion.div>
+                <motion.div
+                key="completed"
+                initial={{ opacity: 0, scale: 0.95 }}
+                animate={{ opacity: 1, scale: 1 }}
+                exit={{ opacity: 0 }}
+                    className="space-y-6"
+                >
+                <Card className="border-green-500/30 bg-green-500/5 dark:bg-green-500/10">
+                <CardContent className="p-8">
+                <div className="flex flex-col items-center text-center">
+                <motion.div
+                initial={{ scale: 0 }}
+                animate={{ scale: 1 }}
+                    transition={{ type: "spring", stiffness: 200 }}
+                >
+                    <ShieldCheck className="w-16 h-16 text-green-500 mb-4" />
+                </motion.div>
+                <h3 className="text-2xl font-bold text-foreground mb-2">Configuração Concluída!</h3>
+                <p className="text-muted-foreground mb-6">Sua conta AWS está conectada e pronta para começar a economizar.</p>
+                </div>
+                </CardContent>
+                </Card>
+
+                {/* SLA Credits Information */}
+                {slaCredits && (
+                <motion.div
+                    initial={{ opacity: 0, y: 20 }}
+                        animate={{ opacity: 1, y: 0 }}
+                            transition={{ delay: 0.2 }}
+                             >
+                                 <Card className="border-blue-500/30 bg-blue-500/5 dark:bg-blue-500/10">
+                                     <CardHeader>
+                                         <CardTitle className="flex items-center gap-2">
+                                             <DollarSign className="w-5 h-5 text-blue-500" />
+                                             Créditos SLA Disponíveis
+                                         </CardTitle>
+                                     </CardHeader>
+                                     <CardContent>
+                                         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+                                             <div className="text-center">
+                                                 <div className="text-2xl font-bold text-blue-600">
+                                                     ${slaCredits.availableCredits?.toLocaleString() || '0'}
+                                                 </div>
+                                                 <div className="text-sm text-muted-foreground">Disponíveis</div>
+                                             </div>
+                                             <div className="text-center">
+                                                 <div className="text-2xl font-bold text-orange-600">
+                                                     ${slaCredits.usedCredits?.toLocaleString() || '0'}
+                                                 </div>
+                                                 <div className="text-sm text-muted-foreground">Utilizados</div>
+                                             </div>
+                                             <div className="text-center">
+                                                 <div className="text-2xl font-bold text-green-600">
+                                                     ${slaCredits.remainingCredits?.toLocaleString() || '0'}
+                                                 </div>
+                                                 <div className="text-sm text-muted-foreground">Restantes</div>
+                                             </div>
+                                         </div>
+                                         <div className="text-sm text-muted-foreground text-center">
+                                             {slaCredits.message}
+                                         </div>
+                                         {slaCredits.hasSupportPlan && (
+                                             <div className="mt-4 p-3 bg-green-500/10 rounded-md border border-green-500/20">
+                                                 <div className="flex items-center gap-2 text-green-700 dark:text-green-300">
+                                                     <CheckCircle className="w-4 h-4" />
+                                                     <span className="text-sm font-medium">
+                                                         Créditos SLA automáticos ativados para seu plano {slaCredits.supportLevel}
+                                                     </span>
+                                                 </div>
+                                             </div>
+                                         )}
+                                     </CardContent>
+                                 </Card>
+                             </motion.div>
+                         )}
+
+                         {/* Sync Control */}
+                         {syncStatus && (
+                             <motion.div
+                                 initial={{ opacity: 0, y: 20 }}
+                                 animate={{ opacity: 1, y: 0 }}
+                                 transition={{ delay: 0.4 }}
+                             >
+                                 <Card className="border-purple-500/30 bg-purple-500/5 dark:bg-purple-500/10">
+                                     <CardHeader>
+                                         <CardTitle className="flex items-center gap-2">
+                                             <Clock className="w-5 h-5 text-purple-500" />
+                                             Controle de Sincronização
+                                         </CardTitle>
+                                     </CardHeader>
+                                     <CardContent>
+                                         <div className="space-y-4">
+                                             <div className="flex items-center justify-between">
+                                                 <div>
+                                                     <div className="font-medium">Sincronização Automática</div>
+                                                     <div className="text-sm text-muted-foreground">
+                                                         Frequência: {syncStatus.syncFrequency}
+                                                     </div>
+                                                 </div>
+                                                 <div className={`px-3 py-1 rounded-full text-sm font-medium ${
+                                                     syncStatus.syncEnabled
+                                                         ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200'
+                                                         : 'bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-200'
+                                                 }`}>
+                                                     {syncStatus.syncEnabled ? 'Ativada' : 'Desativada'}
+                                                 </div>
+                                             </div>
+
+                                             {syncStatus.lastSync && (
+                                                 <div className="text-sm text-muted-foreground">
+                                                     Última sincronização: {new Date(syncStatus.lastSync).toLocaleString()}
+                                                 </div>
+                                             )}
+
+                                             <div className="p-3 bg-blue-500/10 rounded-md border border-blue-500/20">
+                                                 <div className="text-sm text-blue-700 dark:text-blue-300">
+                                                     <strong>Otimização de Custos:</strong> A sincronização consome apenas APIs de leitura gratuitas
+                                                     e pode ser controlada para economizar recursos quando necessário.
+                                                 </div>
+                                             </div>
+                                         </div>
+                                     </CardContent>
+                                 </Card>
+                             </motion.div>
+                         )}
+
+                         <motion.div
+                             initial={{ opacity: 0, y: 20 }}
+                             animate={{ opacity: 1, y: 0 }}
+                             transition={{ delay: 0.6 }}
+                         >
+                             <Card>
+                                 <CardContent className="p-6">
+                                     <div className="flex justify-center">
+                                         <Button
+                                             size="lg"
+                                             onClick={() => router.push('/dashboard')}
+                                             className="bg-primary text-primary-foreground hover:bg-primary/90"
+                                         >
+                                             Ir para o Dashboard <ArrowRight className="ml-2 w-4 h-4" />
+                                         </Button>
+                                     </div>
+                                 </CardContent>
+                             </Card>
+                         </motion.div>
+                     </motion.div>
                 ) : (
                     <motion.div
                         key="connect"
